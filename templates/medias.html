@@ -15,6 +15,8 @@
   </select></div>
   <div><label>Vitesse ({{ tts.vitesse }})</label>
    <input type="range" name="vitesse" min="0.6" max="1.3" step="0.01" value="{{ tts.vitesse }}"></div>
+  <div><label>Tonalité ({{ tts.tonalite }})</label>
+   <input type="range" name="tonalite" min="0.7" max="1.4" step="0.01" value="{{ tts.tonalite }}"></div>
   <div style="display:flex;gap:8px">
    <button>Enregistrer</button>
    <button type="button" class="mini" onclick="testerVoix('fr')">Tester FR</button>
@@ -51,9 +53,46 @@ function testerVoix(lang){
  const u=new SpeechSynthesisUtterance(lang==="de"
   ?"Willkommen bei BUS XPERIENCE! Schön, bist du da.":"Bienvenue dans BUS XPERIENCE ! Ravi de t'entendre.");
  u.lang=lang==="de"?"de-CH":"fr-CH";if(v)u.voice=v;
- u.rate=parseFloat(document.querySelector("[name=vitesse]").value);u.pitch=1.05;
+ u.rate=parseFloat(document.querySelector("[name=vitesse]").value);
+ u.pitch=parseFloat(document.querySelector("[name=tonalite]").value);
  speechSynthesis.cancel();speechSynthesis.speak(u);}
 </script>
+<h2>Buzzer unique</h2>
+<div class="carte">
+ <form method="post" action="/admin/buzzer" style="display:flex;gap:14px;align-items:end;flex-wrap:wrap">
+  <label style="margin:0;display:flex;gap:6px;font-weight:400">
+   <input type="checkbox" name="buzzer_unique" value="1" {{ 'checked' if buzzer.unique }}>
+   mode « Buzzer unique + voix » (les choix sont annoncés un à un, on buzze sur la bonne réponse)</label>
+  <div><label>Vitesse de lecture des choix</label><select name="lecture_vitesse">
+   {% for v in ['lente','normale','rapide'] %}
+   <option value="{{ v }}" {{ 'selected' if buzzer.lecture==v }}>{{ v }}</option>{% endfor %}
+  </select></div>
+  <div><label>Validation des étoiles (ms)</label>
+   <input type="number" name="etoiles_delai_ms" min="1000" max="6000" step="100"
+    value="{{ buzzer.etoiles_delai_ms }}" style="width:110px"></div>
+  <button>Enregistrer</button>
+ </form>
+ <p class="petit" style="margin-top:10px">
+  <button type="button" class="mini" id="test-buzzer">Test du buzzer (appui court)</button>
+  <button type="button" class="mini" id="test-long">Test de l'appui long</button>
+  <span class="gris" id="buzzer-etat"></span></p>
+ <script>
+ let tDeb=0;const etatB=document.getElementById("buzzer-etat");
+ function brancher(btn,libc,libl){let t0=0;
+  const bas=()=>{t0=Date.now();};
+  const haut=()=>{const d=Date.now()-t0;
+   etatB.textContent=d>=700?"→ appui LONG détecté ("+d+" ms) ✓":"→ appui court détecté ("+d+" ms) ✓";};
+  btn.addEventListener("pointerdown",bas);btn.addEventListener("pointerup",haut);}
+ brancher(document.getElementById("test-buzzer"));
+ brancher(document.getElementById("test-long"));
+ document.addEventListener("keydown",e=>{if(e.code==="Space"&&!e.repeat)tDeb=Date.now();});
+ document.addEventListener("keyup",e=>{if(e.code==="Space"&&tDeb){
+  const d=Date.now()-tDeb;tDeb=0;
+  etatB.textContent=(d>=700?"→ Espace: appui LONG (":"→ Espace: appui court (")+d+" ms) ✓";}});
+ </script>
+ <p class="gris petit">Le futur buzzer physique doit envoyer la touche Espace: le clic,
+ Espace et le buzzer déclenchent exactement la même action.</p>
+</div>
 <h2>Sons</h2>
 <div class="carte">
  <form method="post" action="/admin/sons" style="display:flex;gap:14px;align-items:end;flex-wrap:wrap">

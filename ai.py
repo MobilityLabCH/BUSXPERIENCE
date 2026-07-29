@@ -105,39 +105,55 @@ TONS = {
 
 PROMPT_PARTICIPANT = """Tu es BUS XPERIENCE, une installation qui écoute les
 voyageurs parler de l'expérience du bus. Rédige le rapport officiel de la
-personne, en {langue}, ton {ton}. Structure imposée: TITRE DÉCERNÉ (un titre
-de fantaisie flatteur lié à ses réponses), puis 3 à 5 phrases qui reprennent
-fidèlement: ce qu'elle apprécie, son principal irritant, le concept qu'elle a
-préféré (avec sa note), et une courte citation exacte de sa réponse ouverte si
-elle existe. Termine par une chute souriante. Maximum 100 mots. N'invente
-RIEN: uniquement les données fournies. Jamais moqueur, jamais infantilisant.
+personne en {langue}, ton {ton}, comme une MINI-HISTOIRE en trois actes:
+Acte 1, la personne et sa relation au bus (fréquence, note en étoiles).
+Acte 2, le petit méchant de son voyage (moment de friction, irritant,
+niveau de confiance). Acte 3, le rebondissement: le concept qu'elle a préféré
+(avec sa note) et, si elle existe, une courte citation exacte de sa réponse
+vocale. Termine par « Verdict officiel : » suivi d'un titre de fantaisie
+flatteur lié à ses réponses. 80 à 120 mots. N'invente RIEN: uniquement les
+données fournies. Jamais moqueur, jamais infantilisant, jamais administratif.
 Réponds au format JSON strict: {{"titre": "...", "texte": "..."}}"""
 
 TITRES = {
     "fr": {
-        "correspondance": ["Ministre officieux des correspondances réussies",
-                           "Grand stratège des trajets sans mauvaise surprise"],
+        "correspondance": ["Ministre des correspondances sans sprint",
+                           "Grand stratège des trajets sans mauvaise surprise",
+                           "Gardienne officielle des correspondances qui attendent",
+                           "Négociateur en chef des changements de quai sereins"],
         "retard": ["Chevalier de l'information en temps réel",
-                   "Ambassadeur du bus qui arrive quand il l'annonce"],
+                   "Ambassadeur des bus qui tiennent leurs promesses",
+                   "Vigie suprême des horaires qui disent la vérité",
+                   "Commissaire aux retards enfin annoncés"],
         "attente": ["Grande enquêtrice des arrêts sous la pluie",
-                    "Président du comité des abris enfin dignes"],
+                    "Président du comité des abris enfin dignes",
+                    "Sentinelle des quais éclairés et des bancs secs"],
         "confort": ["Présidente du comité des sièges enfin confortables",
-                    "Inspecteur général du voyage agréable"],
-        "billet": ["Docteur honoris causa en billets sans prise de tête"],
+                    "Inspecteur général du voyage agréable",
+                    "Défenseur officiel de la place assise côté fenêtre"],
+        "billet": ["Docteur honoris causa en billets sans prise de tête",
+                   "Championne du voyage sans calcul mental"],
         "defaut": ["Voix remarquable de l'expérience bus",
                    "Experte internationale du dernier kilomètre",
-                   "Conseiller spécial de la ligne idéale"],
+                   "Conseiller spécial de la ligne idéale",
+                   "Éclaireuse en chef des trajets qui donnent envie",
+                   "Ambassadeur itinérant du bus de demain"],
     },
     "de": {
-        "correspondance": ["Inoffizieller Minister der gelungenen Anschlüsse",
-                           "Grossstratege der Reisen ohne böse Überraschung"],
+        "correspondance": ["Minister der Anschlüsse ohne Sprint",
+                           "Grossstratege der Reisen ohne böse Überraschung",
+                           "Hüterin der Anschlüsse, die wirklich warten"],
         "retard": ["Ritterin der Echtzeit-Information",
-                   "Botschafter des Busses, der kommt, wenn er es sagt"],
-        "attente": ["Grosse Erforscherin der Haltestellen im Regen"],
-        "confort": ["Präsident des Komitees der endlich bequemen Sitze"],
+                   "Botschafter der Busse, die ihr Wort halten",
+                   "Oberste Wache der ehrlichen Fahrpläne"],
+        "attente": ["Grosse Erforscherin der Haltestellen im Regen",
+                    "Wächter der beleuchteten, trockenen Haltestellen"],
+        "confort": ["Präsident des Komitees der endlich bequemen Sitze",
+                    "Verteidigerin des Fensterplatzes"],
         "billet": ["Ehrendoktor der Billette ohne Kopfzerbrechen"],
         "defaut": ["Bemerkenswerte Stimme des Buserlebnisses",
-                   "Internationale Expertin der letzten Meile"],
+                   "Internationale Expertin der letzten Meile",
+                   "Reisender Botschafter des Busses von morgen"],
     },
 }
 
@@ -158,47 +174,82 @@ def _choisir_titre(lang: str, donnees: dict) -> str:
 
 
 def _rapport_regles(lang: str, d: dict) -> tuple[str, str]:
-    """Rapport automatique sans IA: personnel, varié, fondé sur les réponses."""
+    """Sans IA: une mini-histoire en trois actes, variée, fidèle aux réponses.
+    Acte 1 la relation au bus, acte 2 le petit méchant, acte 3 le rebondissement."""
     fr = lang != "de"
     titre = _choisir_titre("fr" if fr else "de", d)
-    p = []
-    intro = random.choice(
-        ["Le verdict est tombé, et il est excellent.",
-         "Analyse terminée, contradictions comprises.",
-         "Témoignage reçu, vérifié, apprécié."] if fr else
-        ["Das Urteil ist da, und es ist ausgezeichnet.",
-         "Analyse abgeschlossen, Widersprüche inklusive.",
-         "Aussage erhalten, geprüft, geschätzt."])
-    p.append(intro)
-    if d.get("etoiles"):
-        p.append((f"Ton dernier trajet récolte {d['etoiles']} étoile(s) sur 5, c'est noté."
-                  if fr else
-                  f"Deine letzte Fahrt erhält {d['etoiles']} von 5 Sternen, notiert."))
-    if d.get("irritant") and d["irritant"] not in ("Rien ne me stresse", "Nichts stresst mich"):
-        p.append((f"Ton ennemi juré: {d['irritant'].lower()}."
-                  if fr else f"Dein Erzfeind: {d['irritant']}."))
-    if d.get("confiance") is not None:
-        p.append((f"Confiance dans la ponctualité: {d['confiance']}/10, message reçu cinq sur cinq."
-                  if fr else
-                  f"Vertrauen in die Pünktlichkeit: {d['confiance']}/10, klar angekommen."))
-    if d.get("concept"):
-        note = f" ({d['concept_note']}/10)" if d.get("concept_note") is not None else ""
-        p.append((f"Ton idée favorite: «{d['concept']}»{note}, presque une déclaration d'amour."
-                  if fr else
-                  f"Deine Lieblingsidee: «{d['concept']}»{note}, fast eine Liebeserklärung."))
-    if d.get("verbatim"):
-        v = d["verbatim"][:110].strip()
-        p.append((f"Ta proposition officielle: «{v}»." if fr
-                  else f"Dein offizieller Vorschlag: «{v}»."))
-    chute = random.choice(
-        ["BUS XPERIENCE transmet. Elle ne peut pas encore retenir le bus, mais elle travaille son pouvoir de persuasion.",
-         "Tout ceci sera vraiment lu. Le bus ne le sait pas encore, mais il va s'améliorer.",
-         "Merci. Tes idées prennent la prochaine correspondance vers les bonnes personnes."] if fr else
-        ["BUS XPERIENCE leitet weiter. Den Bus aufhalten kann sie noch nicht, aber sie arbeitet an ihrer Überzeugungskraft.",
-         "All das wird wirklich gelesen. Der Bus weiss es noch nicht, aber er wird besser.",
-         "Danke. Deine Ideen nehmen den nächsten Anschluss zu den richtigen Leuten."])
-    p.append(chute)
-    return titre, " ".join(p)
+
+    # --- acte 1: la personne et le bus (fréquence + étoiles)
+    freq = (d.get("frequence") or "").lower()
+    if fr:
+        if "jamais" in freq:
+            a1 = "Tout commence par un aveu: le bus et toi, c'est encore une histoire à écrire."
+        elif "jours" in freq or "semaine" in freq:
+            a1 = random.choice([
+                "Tout commence plutôt bien: toi, le bus, une vieille histoire qui roule.",
+                "Acte un: un·e habitué·e monte à bord, et le bus le sent."])
+        else:
+            a1 = "Tout commence prudemment: toi et le bus, vous vous voyez de temps en temps."
+        if d.get("etoiles"):
+            a1 += f" Dernier trajet: {d['etoiles']} étoile(s) sur 5, la critique est tombée."
+    else:
+        if "nie" in freq:
+            a1 = "Alles beginnt mit einem Geständnis: du und der Bus, das ist noch eine unbeschriebene Geschichte."
+        elif "täglich" in freq or "woche" in freq:
+            a1 = "Alles beginnt gut: du, der Bus, eine eingespielte Geschichte."
+        else:
+            a1 = "Alles beginnt vorsichtig: du und der Bus, ihr seht euch ab und zu."
+        if d.get("etoiles"):
+            a1 += f" Letzte Fahrt: {d['etoiles']} von 5 Sternen, das Urteil steht."
+
+    # --- acte 2: le petit méchant (moment, irritant, confiance)
+    mechant = d.get("irritant") or d.get("moment")
+    if fr:
+        if mechant and mechant not in ("Rien ne me stresse", "Rien de tout ça"):
+            a2 = random.choice([
+                f"Puis entre en scène ton adversaire officiel: {mechant.lower()}.",
+                f"Mais chaque histoire a son petit méchant, et le tien s'appelle: {mechant.lower()}."])
+        else:
+            a2 = "Petit rebondissement: aucun méchant déclaré, le suspense reste entier."
+        if d.get("confiance") is not None:
+            a2 += f" Confiance pour arriver à l'heure: {d['confiance']}/10, tout est dit."
+    else:
+        if mechant and mechant not in ("Nichts stresst mich", "Nichts davon"):
+            a2 = f"Dann betritt dein offizieller Gegenspieler die Bühne: {mechant}."
+        else:
+            a2 = "Kleine Wendung: kein erklärter Bösewicht, die Spannung bleibt."
+        if d.get("confiance") is not None:
+            a2 += f" Vertrauen, pünktlich anzukommen: {d['confiance']}/10, alles gesagt."
+
+    # --- acte 3: le rebondissement (concept + verbatim)
+    if fr:
+        if d.get("concept"):
+            note = f" ({d['concept_note']}/10)" if d.get("concept_note") is not None else ""
+            a3 = random.choice([
+                f"Heureusement, tu as choisi ton arme secrète: «{d['concept']}»{note}. "
+                "Avec ça, la voiture pourrait bien se reposer un peu.",
+                f"Le rebondissement porte un nom: «{d['concept']}»{note}. "
+                "Presque une déclaration d'amour, avec horaire fiable."])
+        else:
+            a3 = "Le rebondissement reste à écrire, et c'est exactement pour ça qu'on t'a écouté."
+        if d.get("verbatim"):
+            a3 += f" Ta réplique culte: «{d['verbatim'][:100].strip()}»."
+        a3 += " " + random.choice([
+            "Tout ceci part vraiment vers les bonnes personnes.",
+            "BUS XPERIENCE transmet, le bus ne le sait pas encore, mais il va s'améliorer.",
+            "Tes idées prennent la prochaine correspondance vers ceux qui décident."])
+    else:
+        if d.get("concept"):
+            note = f" ({d['concept_note']}/10)" if d.get("concept_note") is not None else ""
+            a3 = (f"Zum Glück hast du deine Geheimwaffe gewählt: «{d['concept']}»{note}. "
+                  "Damit könnte das Auto sich mal ausruhen.")
+        else:
+            a3 = "Die Wendung ist noch offen, genau darum haben wir dir zugehört."
+        if d.get("verbatim"):
+            a3 += f" Dein Kultsatz: «{d['verbatim'][:100].strip()}»."
+        a3 += " Alles geht wirklich an die richtigen Leute."
+
+    return titre, "\n\n".join([a1, a2, a3])
 
 
 def rapport_participant(lang: str, donnees: dict, ton: str = "complice") -> dict:

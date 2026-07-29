@@ -90,6 +90,10 @@
 {% endfor %}
 {% endif %}
 
+{% if recommandations %}
+<h2>Recommandations fondées sur les réponses</h2>
+<div class="carte">{% for reco in recommandations %}<p class="petit">• {{ reco }}</p>{% endfor %}</div>
+{% endif %}
 <h2>Limites méthodologiques</h2>
 <div class="carte">{% for l in limites %}<p class="petit">• {{ l }}</p>{% endfor %}</div>
 

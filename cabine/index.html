@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BUS XPERIENCE</title>
+<link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
 <style>
 /* BUS XPERIENCE. Jaune CarPostal sur noir, aucune ressource externe:
    pile de polices système, sons synthétisés, tout fonctionne hors ligne. */
@@ -11,14 +12,14 @@
 *{box-sizing:border-box;margin:0;user-select:none}
 html,body{height:100%}
 body{background:var(--noir);color:var(--jaune);overflow:hidden;
- font:22px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.titre{font-weight:800;letter-spacing:-.02em;line-height:1.06;text-align:left}
+ font:400 22px/1.35 "Swiss Post Sans",Arial,system-ui,sans-serif}
+.titre{font-weight:900;letter-spacing:-.02em;line-height:1.06;text-align:left}
 .ecran{position:absolute;inset:0;display:none;flex-direction:column;
  justify-content:center;padding:11vh 8vw 8vh;gap:3.4vh}
 .ecran.actif{display:flex}
 .centre{align-items:center;text-align:center}
 h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
-.sous{color:var(--blanc);font-weight:600;font-size:2.6vh}
+.sous{color:var(--blanc);font-weight:700;font-size:2.6vh}
 .gris{color:var(--gris)}.blanc{color:var(--blanc)}
 .mini{font-size:1.9vh}
 
@@ -31,14 +32,36 @@ h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
 #barre i{display:block;height:100%;background:var(--jaune);width:0;transition:width .5s}
 #retour{position:fixed;bottom:2.4vh;left:8vw;z-index:6;display:none;background:none;
  border:2px solid var(--gris);color:var(--gris);border-radius:99px;
- padding:.9vh 2vh;font:600 2vh system-ui,sans-serif;cursor:pointer}
+ padding:.9vh 2vh;font:700 2vh "Swiss Post Sans",Arial,sans-serif;cursor:pointer}
 #retour:hover{border-color:var(--jaune);color:var(--jaune)}
 #signature{position:fixed;bottom:2.6vh;right:8vw;color:#3d3d42;font-size:1.7vh;z-index:4}
 
-/* pastille buzzer */
-.pastille{width:6.4vh;height:6.4vh;border-radius:50%;background:var(--orange);
- box-shadow:0 0 0 0 rgba(255,106,19,.7);animation:bat 1.6s infinite}
-@keyframes bat{70%{box-shadow:0 0 0 3.2vh rgba(255,106,19,0)}100%{box-shadow:0 0 0 0 rgba(255,106,19,0)}}
+/* Le buzzer rouge: rond, massif, légèrement brillant, enfoncement au clic,
+   halo lumineux qui pulse. Clic = Espace = futur buzzer physique. */
+:root{--rouge:#E30613}
+.buzzer{width:22vh;height:22vh;border-radius:50%;cursor:pointer;position:relative;
+ background:radial-gradient(circle at 32% 26%, #ff6b6b 0%, var(--rouge) 42%, #8f040c 100%);
+ box-shadow:0 2.6vh 0 #6d030a, 0 3.4vh 4vh rgba(0,0,0,.6),
+  inset 0 -1.2vh 2.4vh rgba(0,0,0,.35), 0 0 0 0 rgba(227,6,19,.55);
+ animation:halo 1.8s infinite;transition:transform .07s, box-shadow .07s}
+.buzzer::after{content:"";position:absolute;left:16%;top:10%;width:46%;height:26%;
+ border-radius:50%;background:rgba(255,255,255,.35);filter:blur(.6vh)}
+.buzzer.presse,.buzzer:active{transform:translateY(1.8vh);
+ box-shadow:0 .8vh 0 #6d030a, 0 1.4vh 2vh rgba(0,0,0,.55),
+  inset 0 -0.6vh 1.6vh rgba(0,0,0,.4), 0 0 6vh 1vh rgba(227,6,19,.65);animation:none}
+@keyframes halo{60%{box-shadow:0 2.6vh 0 #6d030a,0 3.4vh 4vh rgba(0,0,0,.6),
+  inset 0 -1.2vh 2.4vh rgba(0,0,0,.35),0 0 0 3.6vh rgba(227,6,19,0)}
+ 100%{box-shadow:0 2.6vh 0 #6d030a,0 3.4vh 4vh rgba(0,0,0,.6),
+  inset 0 -1.2vh 2.4vh rgba(0,0,0,.35),0 0 0 0 rgba(227,6,19,0)}}
+.buzzer.petit{position:fixed;bottom:3vh;left:50%;transform:translateX(-50%) scale(.34);
+ transform-origin:bottom center;z-index:6;display:none}
+.buzzer.petit.presse{transform:translateX(-50%) scale(.34) translateY(1.8vh)}
+.opt.lu{border-color:var(--rouge);transform:translateX(1.6vh) scale(1.02);
+ box-shadow:0 0 3vh rgba(227,6,19,.45)}
+.carte-duel.lu{border-color:var(--rouge);transform:scale(1.06);
+ box-shadow:0 0 3.4vh rgba(227,6,19,.5)}
+.marque-bx{font-weight:900;letter-spacing:.12em;opacity:0;animation:apparait 1.6s .3s forwards}
+@keyframes apparait{to{opacity:1}}
 
 /* cartes et options */
 .options{display:flex;flex-direction:column;gap:1.8vh;max-width:74vw;width:100%}
@@ -85,7 +108,7 @@ h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
  border-radius:99px;padding:.9vh 2.4vh;font-variant-numeric:tabular-nums}
 .rangee{display:flex;gap:2vh;flex-wrap:wrap;justify-content:center}
 .bouton{background:var(--jaune);color:var(--noir);border:0;border-radius:1.6vh;
- padding:1.8vh 3vh;font:800 2.8vh system-ui,sans-serif;cursor:pointer;
+ padding:1.8vh 3vh;font:700 2.8vh "Swiss Post Sans",Arial,sans-serif;cursor:pointer;
  border:.5vh solid transparent}
 .bouton.second{background:transparent;color:var(--jaune);border-color:var(--jaune)}
 .bouton.vise{border-color:var(--blanc)}
@@ -116,18 +139,6 @@ h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
 .joue .mot{animation:monte .4s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes monte{to{opacity:1;transform:none}}
 </style>
-  <link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
-  <style>
-    body, button, input, select, textarea {
-      font-family: "Swiss Post Sans", Arial, sans-serif !important;
-    }
-    h1, h2, h3, .logo, .brand {
-      font-weight: 900;
-    }
-    nav, th, strong, .btn, button {
-      font-weight: 700;
-    }
-  </style>
 </head>
 <body>
 <div class="voile" id="voile"></div>
@@ -141,10 +152,11 @@ h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
 <div id="signature">Powered by MobilityLab Sion</div>
 
 <!-- ATTENTE -->
-<section class="ecran actif" id="e-attente">
- <div class="pastille"></div>
- <h1 class="titre" id="attente-titre">Appuie sur le buzzer.</h1>
- <p class="sous" id="attente-sous">Quelques minutes pour améliorer l'expérience du bus.</p>
+<section class="ecran centre actif" id="e-attente">
+ <p class="sous marque-bx" style="color:var(--jaune)">BUS XPERIENCE</p>
+ <h1 class="titre" id="attente-titre" style="text-align:center;max-width:16ch">ET SI LE BUS T'ÉCOUTAIT VRAIMENT ?</h1>
+ <p class="sous" id="attente-sous">Un buzzer. Ta voix. Quelques minutes pour changer la suite du voyage.</p>
+ <div class="buzzer" id="buzzer-intro" role="button" aria-label="buzzer"></div>
  <p class="gris mini">Powered by MobilityLab Sion</p>
 </section>
 
@@ -291,9 +303,10 @@ const TXT = {
      adoption:"Avec ça, tu prendrais le bus plus souvent ?",
      rien:"Rien du tout", enorme:"Énormément", pasdutout:"Sûrement pas", certain:"Certainement",
      calc:["BUS XPERIENCE analyse ton précieux témoignage…",
-           "…et deux ou trois petites contradictions.",
-           "Vérification des correspondances émotionnelles…",
-           "Impression du rapport officiel…"],
+           "Analyse du niveau de patience…",
+           "Recherche de la correspondance disparue…",
+           "Consultation du comité très officiel des arrêts de bus…",
+           "Vérification de deux ou trois petites contradictions…"],
      merciNon:"Pas de souci, bonne route ! 👋", duoTitre:"Tu participes…", duoVous:"Vous participez…"},
  de:{q:"Frage", reste:"noch ~", choixAide:"← → zum Zielen · Buzzer zum Bestätigen · oder Bildschirm berühren",
      etoilesAide:"Ein Buzz = ein Stern. Warte auf den Ring oder buzze erneut. ← zum Entfernen.",
@@ -307,9 +320,10 @@ const TXT = {
      adoption:"Würdest du damit öfter den Bus nehmen?",
      rien:"Gar nichts", enorme:"Sehr viel", pasdutout:"Sicher nicht", certain:"Ganz sicher",
      calc:["BUS XPERIENCE analysiert deine wertvolle Aussage…",
-           "…und zwei, drei kleine Widersprüche.",
-           "Prüfung der emotionalen Anschlüsse…",
-           "Druck des offiziellen Berichts…"],
+           "Analyse des Geduldspegels…",
+           "Suche nach dem verschwundenen Anschluss…",
+           "Anhörung des sehr offiziellen Haltestellen-Komitees…",
+           "Prüfung von zwei, drei kleinen Widersprüchen…"],
      merciNon:"Kein Problem, gute Fahrt! 👋", duoTitre:"Du nimmst teil…", duoVous:"Ihr nehmt teil…"},
 };
 const DEMO_CFG = {campagne:{nom:"Démo", consent_fr:"Mode démo hors ligne. Rien n'est enregistré.",
@@ -392,10 +406,10 @@ function musiqueStopFinal(){if(musique){fondu(0,1800);apres(1900,()=>{musique&&m
 
 /* ------------------------------------------------ voix des questions */
 let voixQ=null;
-function jouerVoix(q){
+function jouerVoix(q,apresVoix){
  taireVoix(); musiqueDuck();
  const f=q["audio_"+lang];
- const fini=()=>musiqueNormale();
+ const fini=()=>{musiqueNormale();if(apresVoix)apresVoix();};
  const parle=(q["parle_"+lang]||"").trim()
   ||(q.texteAffiche||q[lang]||"").replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");
  if(f){voixQ=new Audio("/voix/"+f);voixQ.onended=fini;
@@ -420,8 +434,13 @@ if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>{voixCache={f
 function dire(txt,fini){try{const u=new SpeechSynthesisUtterance(txt);
  u.lang=lang==="de"?"de-CH":"fr-CH";
  const v=choisirVoixTTS(lang);if(v)u.voice=v;
- u.rate=(cfg.tts&&cfg.tts.vitesse)||0.97;u.pitch=1.05;u.onend=fini||null;
- speechSynthesis.cancel();speechSynthesis.speak(u);}catch{if(fini)fini();}}
+ u.rate=(cfg.tts&&cfg.tts.vitesse)||0.97;
+ u.pitch=(cfg.tts&&cfg.tts.tonalite)||1.05;
+ let fait=false;const fin=()=>{if(!fait){fait=true;if(fini)fini();}};
+ u.onend=fin;u.onerror=fin;
+ speechSynthesis.cancel();speechSynthesis.speak(u);
+ // filet: certains navigateurs n'emettent pas onend
+ setTimeout(fin, 1200 + txt.length*90);}catch{if(fini)fini();}}
 function taireVoix(){speechSynthesis.cancel();
  if(voixQ){voixQ.pause();voixQ=null;}}
 
@@ -532,7 +551,7 @@ async function lancerParcours(nb){
  construireSequence();etat="parcours";prochaine(0);}
 
 function prochaine(delta=1){
- purge();taireVoix();
+ purge();stopCycle();taireVoix();
  let i=iEtape+delta;
  while(i<seq.length&&conditionCachee(seq[i]))i+=delta>=0?1:-1;
  if(i<0)i=0;
@@ -557,10 +576,30 @@ function montrerQuestion(q){
  else if(q.type==="compare")montrerCompare(q);
  else montrerVoixQ(q);}
 
+/* ---------------- mode buzzer unique: cycle annonce les options ---------------- */
+let cycleActif=false,cycleTimer=null;
+const buzzerUnique=()=>!!(cfg.buzzer&&cfg.buzzer.unique);
+const dweller=()=>({lente:1100,normale:650,rapide:320}[(cfg.buzzer&&cfg.buzzer.lecture)||"normale"]);
+function stopCycle(){cycleActif=false;clearTimeout(cycleTimer);}
+function cyclerChoix(items,marquer){
+ // annonce chaque reponse a voix haute, met en evidence celle qui est lue,
+ // boucle sans fin; le buzz selectionne la reponse en cours de lecture
+ stopCycle();cycleActif=true;
+ (function tour(){
+  if(!cycleActif)return;
+  marquer(viser);
+  dire(items[viser],()=>{
+   if(!cycleActif)return;
+   cycleTimer=setTimeout(()=>{
+    if(!cycleActif)return;
+    viser=(viser+1)%items.length;tour();},dweller());});
+ })();}
+
 /* ---------------- choix ---------------- */
 let viser=0,optsCourantes=[];
-function surligne(){document.querySelectorAll("#choix-opts .opt")
- .forEach((o,i)=>o.classList.toggle("vise",i===viser));}
+function surligne(lu){document.querySelectorAll("#choix-opts .opt")
+ .forEach((o,i)=>{o.classList.toggle("vise",i===viser);
+  o.classList.toggle("lu",!!lu&&i===viser);});}
 function montrerChoix(q){
  etat="choix";viser=0;
  $("#choix-texte").textContent=q.texteAffiche;
@@ -571,12 +610,13 @@ function montrerChoix(q){
   const d=document.createElement("div");
   d.className="opt";d.innerHTML=`<span class="n">${i+1}</span><span>${o}</span>`;
   d.style.cssText=`opacity:0;transform:translateX(-2vh);transition:all .35s ${150+i*70}ms`;
-  d.onclick=()=>{viser=i;surligne();validerChoix(q);};
+  d.onclick=()=>{stopCycle();viser=i;surligne();validerChoix(q);};
   zone.appendChild(d);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{d.style.opacity=1;d.style.transform="none";}));});
- surligne();ecran("e-choix");jouerVoix(q);}
+ surligne();ecran("e-choix");
+ jouerVoix(q,()=>{if(etat==="choix"&&buzzerUnique())cyclerChoix(optsCourantes,i=>surligne(true));});}
 async function validerChoix(q){
- if(etat!=="choix")return;etat="envoi";
+ if(etat!=="choix")return;etat="envoi";stopCycle();taireVoix();
  const valeur=optsCourantes[viser];
  document.querySelectorAll("#choix-opts .opt")[viser].classList.add("choisi");
  sonValide();reponsesLocales["q"+q.id]=valeur;
@@ -603,12 +643,17 @@ function buzzEtoile(){
  if(nbEtoiles<max){nbEtoiles++;majEtoiles();}
  armerAnneau();}
 function moinsEtoile(){if(nbEtoiles>0){nbEtoiles--;majEtoiles();}armerAnneau();}
+function annulerEtoiles(){ // appui long: on annule et on recommence
+ if(etat!=="etoiles")return;
+ clearInterval(anneauT);nbEtoiles=0;majEtoiles();
+ $("#etoiles-anneau").hidden=true;sonErreur();}
 function armerAnneau(){
- // fenêtre de 2,5 s pour ajouter/enlever, anneau visible, puis validation claire
+ // fenêtre réglable (admin) pour ajouter, anneau visible, puis validation claire
  clearInterval(anneauT);
  const a=$("#etoiles-anneau");a.hidden=nbEtoiles===0;
  const arc=$("#anneau-arc"),lab=$("#anneau-s");
- let restant=2500;const total=2500;
+ const total=(cfg.buzzer&&cfg.buzzer.etoiles_delai_ms)||2500;
+ let restant=total;
  anneauT=setInterval(()=>{restant-=50;
   arc.style.strokeDashoffset=String(106.8*(1-restant/total));
   lab.textContent=Math.ceil(restant/1000);
@@ -632,7 +677,20 @@ function montrerEchelle(q){
  $("#borne-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";
  $("#borne-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||"10";
  majEchelle();ecran("e-echelle");
- if(q.concept)jouerVoix({[lang]:q[lang]});else jouerVoix(q);}
+ const apresV=()=>{if(etat==="echelle"&&buzzerUnique())cyclerEchelle();};
+ if(q.concept)jouerVoix({[lang]:q[lang]},apresV);else jouerVoix(q,apresV);}
+function cyclerEchelle(){
+ stopCycle();cycleActif=true;valEchelle=0;majEchelle();
+ const max=(echelleQ.params&&echelleQ.params.max)||10;
+ (function tour(){
+  if(!cycleActif)return;
+  majEchelle();bip([420+40*valEchelle],.05);
+  dire(String(valEchelle),()=>{
+   if(!cycleActif)return;
+   cycleTimer=setTimeout(()=>{
+    if(!cycleActif)return;
+    valEchelle=(valEchelle+1)%(max+1);tour();},Math.max(150,dweller()-250));});
+ })();}
 function majEchelle(){
  const max=(echelleQ.params&&echelleQ.params.max)||10;
  const pc=100*valEchelle/max;
@@ -646,7 +704,7 @@ function echelleDepuisPointeur(ev){
  const max=(echelleQ.params&&echelleQ.params.max)||10;
  valEchelle=Math.max(0,Math.min(max,Math.round(max*x/r.width)));majEchelle();}
 async function validerEchelle(){
- if(etat!=="echelle")return;etat="envoi";sonValide();
+ if(etat!=="echelle")return;etat="envoi";stopCycle();taireVoix();sonValide();
  const q=echelleQ;
  if(q.concept){await envoyer({concept_id:q.concept.id,cle:"adoption",valeur:valEchelle});}
  else{reponsesLocales["q"+q.id]=String(valEchelle);
@@ -656,19 +714,25 @@ async function validerEchelle(){
 /* ---------------- compare ---------------- */
 let compareQ=null,coteVise=0;
 function montrerCompare(q){
- etat="compare";compareQ=q;coteVise=-1;
+ etat="compare";compareQ=q;coteVise=-1;viser=0;
  $("#compare-texte").textContent=q.texteAffiche;
  $("#compare-aide").textContent=t().compareAide;
  const opts=(q["options_"+lang]&&q["options_"+lang].length?q["options_"+lang]:q.options_fr);
  $("#duel-a").textContent=opts[0]||"A";$("#duel-b").textContent=opts[1]||"B";
- $("#duel-a").onclick=()=>{coteVise=0;majDuel();validerCompare();};
- $("#duel-b").onclick=()=>{coteVise=1;majDuel();validerCompare();};
- majDuel();ecran("e-compare");jouerVoix(q);}
+ $("#duel-a").onclick=()=>{stopCycle();coteVise=0;majDuel();validerCompare();};
+ $("#duel-b").onclick=()=>{stopCycle();coteVise=1;majDuel();validerCompare();};
+ majDuel();ecran("e-compare");
+ jouerVoix(q,()=>{if(etat==="compare"&&buzzerUnique()){
+  coteVise=0;
+  cyclerChoix(opts,i=>{coteVise=i%2;majDuelLu();});
+ }});}
+function majDuelLu(){$("#duel-a").classList.toggle("lu",coteVise===0);
+ $("#duel-b").classList.toggle("lu",coteVise===1);}
 function majDuel(){$("#duel-a").classList.toggle("vise",coteVise===0);
  $("#duel-b").classList.toggle("vise",coteVise===1);}
 async function validerCompare(){
  if(etat!=="compare"||coteVise<0){sonErreur();return;}
- etat="envoi";sonValide();
+ etat="envoi";stopCycle();taireVoix();sonValide();
  const opts=(compareQ["options_"+lang]&&compareQ["options_"+lang].length
   ?compareQ["options_"+lang]:compareQ.options_fr);
  reponsesLocales["q"+compareQ.id]=opts[coteVise];
@@ -812,7 +876,7 @@ async function finParcours(){
  musiqueStopFinal();
  apres(40000,retourAttente);}
 function retourAttente(){
- purge();etat="attente";$("#tete").style.display="none";
+ purge();stopCycle();taireVoix();etat="attente";$("#tete").style.display="none";
  $("#retour").style.display="none";ecran("e-attente");}
 
 /* ---------------- entrées globales ---------------- */
@@ -842,8 +906,17 @@ function droite(){relanceInactivite();
  if(etat==="echelle")return bougeEchelle(1);
  if(etat==="compare"){coteVise=1;majDuel();}}
 
+const LONG_MS=700;let buzzT0=0;
+function buzzVisuel(on){document.querySelectorAll(".buzzer")
+ .forEach(b=>b.classList.toggle("presse",on));}
+function buzzBas(){if(buzzT0)return;buzzT0=Date.now();buzzVisuel(true);}
+function buzzHaut(){if(!buzzT0)return;
+ const duree=Date.now()-buzzT0;buzzT0=0;buzzVisuel(false);
+ relanceInactivite();
+ if(duree>=LONG_MS&&etat==="etoiles")return annulerEtoiles();
+ buzzer();}
 document.addEventListener("keydown",e=>{
- if(e.code==="Space"||e.code==="Enter"){e.preventDefault();return buzzer();}
+ if(e.code==="Space"||e.code==="Enter"){e.preventDefault();if(!e.repeat)buzzBas();return;}
  if(e.code==="ArrowLeft")return gauche();
  if(e.code==="ArrowRight")return droite();
  if(e.code==="ArrowUp"&&etat==="choix"){viser=Math.max(0,viser-1);surligne();return;}
@@ -853,9 +926,14 @@ document.addEventListener("keydown",e=>{
  if(!isNaN(n)&&etat==="choix"&&n>=1&&n<=optsCourantes.length){
   viser=n-1;surligne();validerChoix(seqQuestionCourante());}});
 
+document.addEventListener("keyup",e=>{
+ if(e.code==="Space"||e.code==="Enter"){e.preventDefault();buzzHaut();}});
+["#buzzer-intro"].forEach(sel=>{const b=document.querySelector(sel);if(!b)return;
+ b.addEventListener("pointerdown",e=>{e.stopPropagation();buzzBas();});
+ b.addEventListener("pointerup",e=>{e.stopPropagation();buzzHaut();});});
 document.addEventListener("click",e=>{
  relanceInactivite();
- if(etat==="attente")demarrer();});
+ if(etat==="attente"&&!e.target.closest(".buzzer"))demarrer();});
 $("#retour").onclick=retourArriere;
 document.querySelectorAll("#e-langue .bouton").forEach(b=>
  b.onclick=()=>choisirLangue(b.dataset.l));
@@ -877,7 +955,7 @@ $("#btn-valider-voix").onclick=voixValider;
  $("#rail").addEventListener(ev,e=>{
   if(etat!=="echelle")return;
   if(ev.includes("move")&&!(e.buttons||e.touches))return;
-  echelleDepuisPointeur(e);},{passive:true}));
+  stopCycle();echelleDepuisPointeur(e);},{passive:true}));
 
 /* inactivité: retour à l'attente après 2 min, jamais pendant un enregistrement */
 function relanceInactivite(){

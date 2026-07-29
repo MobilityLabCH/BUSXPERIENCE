@@ -5,13 +5,36 @@ et ameliorer l'experience client du bus. Parcours FR/DE de 4 a 5 minutes,
 buzzer, ecran tactile, concepts a tester, rapport final personnalise, rapport
 d'analyse pour l'administrateur. Powered by MobilityLab Sion.
 
+## Typographie
+
+Toute l'application (cabine, admin, rapports, impressions) utilise Swiss Post
+Sans via la feuille officielle fonts.post.ch (Black 900 pour les grands
+titres, Bold 700 pour boutons et intertitres, Regular 400 pour les textes),
+avec repli Arial/sans-serif si la police ne charge pas ou hors ligne. Aucun
+fichier de police n'est inclus dans le projet.
+
+## Un seul buzzer rouge
+
+Le parcours est entierement utilisable avec un seul gros buzzer rouge (le
+clic sur le bouton visuel, la touche Espace et le futur buzzer physique
+declenchent exactement la meme action). Pour les choix, la voix annonce les
+reponses une a une, la reponse lue est fortement mise en evidence, on buzze
+quand la bonne est annoncee. Etoiles: un buzz = une etoile, anneau de
+validation reglable, appui long (>= 0,7 s) pour annuler et recommencer.
+Echelle 0-10: les valeurs defilent vocalement et visuellement, on buzze sur
+la bonne. Voix: un appui demarre, un appui arrete, le silence arrete aussi.
+Un appui ne saute jamais une question sans reponse. Le tactile reste une
+solution de secours. Admin -> Medias: mode « Buzzer unique + voix », vitesse
+de lecture lente/normale/rapide, duree de validation des etoiles, test du
+buzzer et de l'appui long.
+
 ## Lancement (Codespaces ou local)
 
 1. Pousser ces fichiers dans le depot GitHub (y compris `.devcontainer/`).
 2. Code -> Codespaces -> Create codespace on main (les dependances s'installent seules).
 3. Dans le terminal:
 
-       ADMIN_PASS="mot-de-passe" SECRET_KEY="secret-local" AI_PROVIDER="none" ./start.sh
+       ADMIN_PASS="admin" SECRET_KEY="secret-local" AI_PROVIDER="none" TTS_PROVIDER="browser" ./start.sh
 
 4. Ouvrir le port 8000 propose par Codespaces:
    - `/cabine/`  le parcours participant (F11 pour le plein ecran)
@@ -115,3 +138,22 @@ constitue pas a lui seul une validation juridique. A faire valider: duree de
 conservation, procedure d'effacement sur demande, registre des traitements,
 information sur le fournisseur IA actif lorsqu'un service externe est utilise,
 affichage sur site.
+
+## Suppression des anciennes reponses
+
+Admin -> Resultats, zone dangereuse clairement separee: suppression d'une
+session precise, des donnees d'une campagne, ou de tout (premier clic, saisie
+exacte du mot SUPPRIMER, confirmation finale; une sauvegarde datee de la base
+est creee automatiquement avant). Sont effaces: sessions, reponses, audios,
+transcriptions, rapports participants. Ne sont jamais touches: questions,
+concepts, campagnes, reglages, musique, klaxon, voix. Le nombre d'elements
+supprimes est affiche, et rien n'est recree au redemarrage.
+
+## Procedure de migration
+
+Remplacer les fichiers du depot par ceux du ZIP et relancer ./start.sh. La
+migration v4 s'applique automatiquement avec sauvegarde prealable dans
+data/backups/ (reglages buzzer et tonalite; la question vocale par defaut
+devient « Termine cette phrase : je prendrais le bus plus souvent si… » si
+elle n'avait pas ete modifiee a la main). Les donnees, reglages et medias
+existants sont conserves entre les redemarrages.

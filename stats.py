@@ -135,3 +135,30 @@ LIMITES_FR = [
     "Les réponses sont déclaratives, pas des comportements observés.",
     "Résultats à interpréter comme des signaux et des pistes d'amélioration, pas des mesures définitives.",
 ]
+
+
+def recommandations(r: dict) -> list[str]:
+    """Pistes d'action, chacune reliée à un chiffre réel du rapport."""
+    recos = []
+    if r.get("vide"):
+        return recos
+    if r.get("frictions"):
+        nom, n = r["frictions"][0]
+        total = sum(x[1] for x in r["frictions"])
+        recos.append(
+            f"Irritant dominant: «{nom}» ({n} réponses, {round(100 * n / total)}%). "
+            "Piste: traiter ce moment du parcours en priorité.")
+    for co in (r.get("concepts") or [])[:2]:
+        if co.get("adoption_moyenne") is not None:
+            recos.append(
+                f"Concept «{co['nom']}»: adoption {co['adoption_moyenne']}/10"
+                f" (n={co['n']}"
+                + (f", {co['adoption_8plus']}% de notes ≥ 8" if co.get("adoption_8plus") is not None else "")
+                + "). Piste: candidat à un pilote terrain.")
+    for q in r.get("questions", []):
+        if q["type"] == "echelle" and q.get("moyenne") is not None:
+            recos.append(
+                f"Confiance moyenne {q['moyenne']}/10 (n={q['n']}) sur «{q['fr'][:60]}». "
+                + ("Piste: la fiabilité perçue est le levier n°1."
+                   if q["moyenne"] < 7 else "Signal plutôt positif à entretenir."))
+    return recos

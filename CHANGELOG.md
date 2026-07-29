@@ -1,5 +1,65 @@
 # CHANGELOG
 
+## v3.0 — Buzzer unique, Swiss Post Sans, storytelling (2026-07-29)
+
+- Typographie Swiss Post Sans partout via la feuille officielle fonts.post.ch
+  (900/700/400), repli Arial, aucun fichier de police dans le ZIP.
+- Buzzer rouge massif et brillant avec enfoncement et halo; clic, Espace et
+  buzzer physique identiques. Mode « Buzzer unique + voix »: lecture
+  successive des choix avec mise en evidence forte, selection au buzz;
+  echelle 0-10 par defilement vocal et visuel; etoiles avec delai reglable et
+  appui long pour annuler; jamais de saut sans reponse; tactile en secours.
+  Reglages et tests (appui court/long) dans Admin -> Medias.
+- Nouvelle introduction: « ET SI LE BUS T'ECOUTAIT VRAIMENT ? », apparition
+  progressive de BUS XPERIENCE, pulsation du buzzer, FR/DE en alternance.
+- Question vocale repensee en phrase projective: « Termine cette phrase : je
+  prendrais le bus plus souvent si… » (migration douce des installations
+  existantes non modifiees).
+- Rapport final en mini-histoire a trois actes (relation au bus, petit
+  mechant, rebondissement), utilisant reellement frequence, etoiles, moment
+  de friction, irritant, confiance, concept prefere et verbatim; beaucoup
+  plus de titres; messages d'attente amusants; toujours honnete sur IA/auto.
+- Rapport admin: recommandations chacune reliee a un chiffre reel (irritant
+  dominant avec n et %, concepts avec adoption moyenne et n, confiance).
+- Suppression securisee des donnees (session, campagne, tout) avec mot
+  SUPPRIMER, sauvegarde datee prealable, decompte affiche, questions/
+  reglages/medias toujours conserves, rien de recree au redemarrage.
+- TTS: reglage de tonalite en plus de la vitesse, filet anti-onend manquant,
+  fr-CH/de-CH pris via u.lang. start.sh corrige (python3 -m uvicorn) et
+  copie reellement les medias par defaut avant le demarrage.
+- Migration v4 automatique avec sauvegarde. 25 tests.
+
+### Teste reellement (pytest 25/25 + serveur lance via start.sh)
+- start.sh (python3 -m uvicorn), /health, /cabine/, /admin, config buzzer/
+  tonalite/sons exposee, mp3 servis, migrations v4, seed unique, parcours
+  complet par API, rapport storytelling (3 actes, frequence et moment
+  utilises), rapport IA simule (mocks Anthropic/Gemini + echec reseau),
+  suppressions (session precise avec decompte, refus sans mot exact,
+  globale avec sauvegarde creee et conservation questions/concepts/
+  campagnes/reglages, rien de recree apres re-migration), reglages admin
+  buzzer/TTS/sons, exports CSV/JSON, rapport admin avec recommandations et
+  limites.
+
+### Simule
+- Fournisseurs IA (mocks), parcours via API.
+
+### Non teste automatiquement (a verifier sur la borne, vrai navigateur)
+- Rendu Swiss Post Sans (depend du chargement de fonts.post.ch), animations,
+  enfoncement du buzzer, lecture successive audible des choix et son timing,
+  appui long au vrai buzzer physique, enregistrement micro reel, coupure/
+  reprise de la musique a l'oreille, voix naturelles FR/DE d'Edge, klaxon.
+  La logique correspondante est couverte par la validation de syntaxe JS et
+  les reglages testes cote serveur.
+
+### Limites restantes
+- Hors ligne, la police retombe sur Arial (la feuille fonts.post.ch est un
+  chargement reseau, par choix de ne pas embarquer les fichiers de police).
+- Le defilement vocal de l'echelle 0-10 depend du rythme du TTS du
+  navigateur; ajuster la vitesse de lecture dans l'admin selon la voix.
+- Les textes des questions restent au tutoiement en mode duo (interface en
+  vous); rediger des variantes si necessaire.
+- L'ecran de consentement reste a valider juridiquement (LPD).
+
 ## v2.1 — Voix naturelles et sons integres (2026-07-29)
 
 - TTS navigateur (TTS_PROVIDER=browser, gratuit, sans cle): selection

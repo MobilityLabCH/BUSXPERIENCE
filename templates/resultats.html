@@ -12,6 +12,13 @@
   <a href="/admin/export.json"><button type="button" class="mini">Export JSON</button></a>
  </form>
 </div>
+{% if supprime %}<div class="carte" style="border-color:#1F8A4C">
+ <b>Suppression effectuée:</b> {{ supprime.split('-')[0] }}essions,
+ {{ supprime.split('-')[1] }}éponses, {{ supprime.split('-')[2] }}udios,
+ {{ supprime.split('-')[3][:-3] }} rapports participants supprimés.
+ Questions, concepts, campagnes, réglages et médias conservés.</div>{% endif %}
+{% if erreur %}<div class="carte" style="border-color:#B3261E">
+ Suppression refusée ({{ 'mot de confirmation incorrect' if erreur=='confirmation' else 'paramètres incomplets' }}).</div>{% endif %}
 {% for r in reponses %}
 <div class="carte">
  <p class="gris petit">{{ r.cree_le[:16].replace('T',' · ') }} · {{ (r.lang or '?')|upper }}
@@ -27,4 +34,36 @@
  {% endif %}
 </div>
 {% else %}<div class="carte">Aucune réponse avec ces filtres.</div>{% endfor %}
+<h2 style="color:#B3261E">Zone dangereuse · supprimer des données de test</h2>
+<div class="carte no-print" style="border-color:#B3261E">
+ <p class="petit gris">Ces actions effacent sessions, réponses, audios, transcriptions et
+ rapports participants. Elles ne touchent JAMAIS aux questions, concepts, campagnes,
+ réglages, musique, klaxon ni voix. Rien n'est recréé au redémarrage.</p>
+ <div class="deux" style="margin-top:10px">
+  <form method="post" action="/admin/donnees/supprimer"
+   onsubmit="return confirm('Supprimer définitivement cette session ?')">
+   <input type="hidden" name="portee" value="session">
+   <label>Supprimer une session précise</label>
+   <div style="display:flex;gap:8px"><input name="session_id" placeholder="uuid de la session" required>
+   <button class="danger">Supprimer</button></div>
+  </form>
+  <form method="post" action="/admin/donnees/supprimer"
+   onsubmit="return confirm('Supprimer toutes les données de cette campagne ?')">
+   <input type="hidden" name="portee" value="campagne">
+   <label>Supprimer les données d'une campagne</label>
+   <div style="display:flex;gap:8px"><select name="campagne_id">
+    {% for ca in campagnes %}<option value="{{ ca.id }}">{{ ca.nom }}</option>{% endfor %}
+   </select><button class="danger">Supprimer</button></div>
+  </form>
+ </div>
+ <form method="post" action="/admin/donnees/supprimer" style="margin-top:14px"
+  onsubmit="return confirm('Dernière confirmation: tout supprimer ? Une sauvegarde datée est créée avant.')">
+  <input type="hidden" name="portee" value="tout">
+  <label>Tout supprimer (une sauvegarde datée de la base est créée automatiquement avant)</label>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+   <input name="confirmation" placeholder="Tapez exactement SUPPRIMER" required
+    pattern="SUPPRIMER" title="Tapez exactement SUPPRIMER">
+   <button class="danger">Tout supprimer</button></div>
+ </form>
+</div>
 {% endblock %}

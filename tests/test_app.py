@@ -65,7 +65,7 @@ def _login(client):
 
 def test_health(client):
     d = client.get("/health").json()
-    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 3
+    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 4
     assert d["ai_provider"] == "none"
 
 
@@ -192,6 +192,7 @@ def test_rapport_participant_sans_ia(client):
     assert rep["titre"] and rep["label"] == "Rapport personnalisé automatiquement"
     assert "4" in rep["texte"] and "6/10" in rep["texte"]
     assert co["nom_fr"] in rep["texte"]
+    assert rep["texte"].count("\n\n") >= 2  # trois actes
     # idempotent
     rep2 = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
     assert rep2["texte"] == rep["texte"]
@@ -320,3 +321,105 @@ def test_reglages_tts_et_sons_admin(client):
     assert "Voix du navigateur" in h and "Tester le klaxon" in h
     # retour aux valeurs par defaut pour les autres tests
     client.post("/admin/tts", data={"voix_fr": "auto", "voix_de": "auto", "vitesse": "0.97"})
+
+
+# ------------------------------------------------------------- buzzer, v4
+
+def test_config_buzzer_et_tonalite(client):
+    d = client.get("/api/config").json()
+    assert d["buzzer"]["unique"] == 1
+    assert d["buzzer"]["lecture"] in ("lente", "normale", "rapide")
+    assert 1000 <= d["buzzer"]["etoiles_delai_ms"] <= 6000
+    assert 0.7 <= d["tts"]["tonalite"] <= 1.4
+
+
+def test_reglages_buzzer_admin(client):
+    _login(client)
+    client.post("/admin/buzzer", data={"buzzer_unique": "1",
+                "lecture_vitesse": "lente", "etoiles_delai_ms": "3000"})
+    d = client.get("/api/config").json()
+    assert d["buzzer"]["lecture"] == "lente" and d["buzzer"]["etoiles_delai_ms"] == 3000
+    client.post("/admin/buzzer", data={"buzzer_unique": "1",
+                "lecture_vitesse": "normale", "etoiles_delai_ms": "2500"})
+
+
+def test_rapport_storytelling_utilise_frequence_et_moment(client):
+    d = client.get("/api/config").json()
+    q_seg = next(q for q in d["questions"] if q["params"].get("segment"))
+    q_moment = next(q for q in d["questions"]
+                    if q["etape"] == "experience" and q["type"] == "choix"
+                    and not q["params"].get("segment"))
+    sid = None
+    r = client.post("/api/sessions", data={"lang": "fr", "participants": 1,
+                                           "consent_micro": 1})
+    sid = r.json()["session_id"]
+    client.post(f"/api/sessions/{sid}/reponses",
+                data={"question_id": q_seg["id"], "cle": "reponse",
+                      "valeur": "Presque tous les jours"})
+    client.post(f"/api/sessions/{sid}/reponses",
+                data={"question_id": q_moment["id"], "cle": "reponse",
+                      "valeur": "La correspondance"})
+    rep = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
+    assert "correspondance" in rep["texte"].lower() or "correspondance" in rep["titre"].lower()
+
+
+# ------------------------------------------------------------- suppression
+
+def _compte(client):
+    import db
+    with db.conn() as c:
+        return {t_: c.execute(f"SELECT COUNT(*) n FROM {t_}").fetchone()["n"]
+                for t_ in ("sessions", "reponses", "questions", "concepts",
+                           "campagnes", "reglages", "rapports")}
+
+
+def test_suppression_session_precise(client):
+    _login(client)
+    sid = client.post("/api/sessions", data={"lang": "fr", "participants": 1}).json()["session_id"]
+    d = client.get("/api/config").json()
+    q = d["questions"][0]
+    client.post(f"/api/sessions/{sid}/reponses",
+                data={"question_id": q["id"], "cle": "reponse", "valeur": "X"})
+    avant = _compte(client)
+    r = client.post("/admin/donnees/supprimer",
+                    data={"portee": "session", "session_id": sid},
+                    follow_redirects=False)
+    assert "supprime=1s-1r" in r.headers["location"]
+    apres = _compte(client)
+    assert apres["sessions"] == avant["sessions"] - 1
+    assert apres["reponses"] == avant["reponses"] - 1
+    assert apres["questions"] == avant["questions"]  # jamais touchées
+
+
+def test_suppression_globale_exige_confirmation(client):
+    _login(client)
+    avant = _compte(client)
+    r = client.post("/admin/donnees/supprimer",
+                    data={"portee": "tout", "confirmation": "supprimer"},
+                    follow_redirects=False)
+    assert "erreur=confirmation" in r.headers["location"]
+    assert _compte(client)["sessions"] == avant["sessions"]  # rien effacé
+
+
+def test_suppression_globale_avec_sauvegarde(client):
+    _login(client)
+    import db
+    avant = _compte(client)
+    assert avant["sessions"] > 0
+    n_sauvegardes = len(list(db.BACKUPS.iterdir()))
+    r = client.post("/admin/donnees/supprimer",
+                    data={"portee": "tout", "confirmation": "SUPPRIMER"},
+                    follow_redirects=False)
+    assert "supprime=" in r.headers["location"]
+    apres = _compte(client)
+    assert apres["sessions"] == 0 and apres["reponses"] == 0 and apres["rapports"] == 0
+    # questions, concepts, campagnes, réglages conservés
+    for garde in ("questions", "concepts", "campagnes", "reglages"):
+        assert apres[garde] == avant[garde], garde
+    # sauvegarde datée créée avant
+    assert len(list(db.BACKUPS.iterdir())) == n_sauvegardes + 1
+    assert any("avant_suppression_globale" in p.name for p in db.BACKUPS.iterdir())
+    # rien ne réapparaît après re-migration/seed (équivalent redémarrage)
+    import seed
+    db.migrer(); seed.semer()
+    assert _compte(client)["sessions"] == 0

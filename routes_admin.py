@@ -309,6 +309,8 @@ def resultats(request: Request, question: int = 0, session: str = ""):
         ctx["toutes"] = [dict(r) for r in c.execute(
             "SELECT id, ordre, type, fr FROM questions ORDER BY ordre")]
         ctx["question"], ctx["session"] = question, session
+        ctx["supprime"] = request.query_params.get("supprime")
+        ctx["erreur"] = request.query_params.get("erreur")
         cond, args = [], []
         if question:
             cond.append("r.question_id=?"); args.append(question)
@@ -322,6 +324,57 @@ def resultats(request: Request, question: int = 0, session: str = ""):
             LEFT JOIN sessions s ON s.id=r.session
             {sql_cond} ORDER BY r.id DESC LIMIT 300""", args)]
     return templates.TemplateResponse(request, "resultats.html", ctx)
+
+
+@router.post("/admin/donnees/supprimer")
+def supprimer_donnees(request: Request, portee: str = Form(...),
+                      session_id: str = Form(""), campagne_id: int = Form(0),
+                      confirmation: str = Form("")):
+    """Zone dangereuse: efface sessions, réponses, audios, transcriptions et
+    rapports participants. Questions, concepts, campagnes, réglages et médias
+    sont TOUJOURS conservés. Suppression globale: mot SUPPRIMER exigé et
+    sauvegarde datée de la base créée avant."""
+    if not connecte(request):
+        return page_login(request)
+    with db.conn() as c:
+        if portee == "session" and session_id.strip():
+            cible = "s.id=?"
+            args = [session_id.strip()]
+        elif portee == "campagne" and campagne_id:
+            cible = "s.campagne_id=?"
+            args = [campagne_id]
+        elif portee == "tout":
+            if confirmation.strip() != "SUPPRIMER":
+                return RedirectResponse("/admin/resultats?erreur=confirmation",
+                                        status_code=303)
+            sauvegarde = db._sauvegarder(db.DB_PATH, "avant_suppression_globale")
+            db.journaliser(c, "suppression",
+                           f"sauvegarde préalable: {sauvegarde.name if sauvegarde else '—'}")
+            cible, args = "1=1", []
+        else:
+            return RedirectResponse("/admin/resultats?erreur=portee", status_code=303)
+        ids = [r["id"] for r in c.execute(
+            f"SELECT s.id FROM sessions s WHERE {cible}", args)]
+        n = {"sessions": 0, "reponses": 0, "audios": 0, "rapports": 0}
+        if ids:
+            marque = ",".join("?" * len(ids))
+            for r in c.execute(
+                    f"SELECT audio FROM reponses WHERE session IN ({marque})"
+                    " AND audio IS NOT NULL", ids):
+                chemin = db.AUDIO / r["audio"]
+                if chemin.exists():
+                    chemin.unlink()
+                    n["audios"] += 1
+            n["reponses"] = c.execute(
+                f"DELETE FROM reponses WHERE session IN ({marque})", ids).rowcount
+            n["rapports"] = c.execute(
+                f"DELETE FROM rapports WHERE session IN ({marque})", ids).rowcount
+            n["sessions"] = c.execute(
+                f"DELETE FROM sessions WHERE id IN ({marque})", ids).rowcount
+        db.journaliser(c, "suppression", f"portée={portee} {n}")
+    return RedirectResponse(
+        f"/admin/resultats?supprime={n['sessions']}s-{n['reponses']}r-"
+        f"{n['audios']}a-{n['rapports']}rap", status_code=303)
 
 
 @router.post("/admin/reponses/{rid}/transcript")
@@ -352,6 +405,7 @@ def rapport_admin(request: Request):
         ctx = ctx_commun(c, "rapport")
     verbatims = [v for q in r.get("questions", []) for v in q.get("verbatims", [])]
     ctx.update({"r": r, "f": f, "limites": stats.LIMITES_FR,
+                "recommandations": stats.recommandations(r),
                 "qualitatif": ai.analyse_qualitative(verbatims) if verbatims else None,
                 "provider": ai.provider_actuel()})
     return templates.TemplateResponse(request, "rapport.html", ctx)
@@ -410,18 +464,39 @@ def medias(request: Request):
                       "vitesse": db.reglage(c, "tts_vitesse", "0.97")}
         ctx["sons"] = {"klaxon_actif": int(db.reglage(c, "klaxon_actif", "1")),
                        "klaxon_volume": db.reglage(c, "klaxon_volume", "0.9")}
+        ctx["tts"]["tonalite"] = db.reglage(c, "tts_tonalite", "1.05")
+        ctx["buzzer"] = {"unique": int(db.reglage(c, "buzzer_unique", "1")),
+                         "lecture": db.reglage(c, "lecture_vitesse", "normale"),
+                         "etoiles_delai_ms": int(db.reglage(c, "etoiles_delai_ms", "2500"))}
     return templates.TemplateResponse(request, "medias.html", ctx)
 
 
 @router.post("/admin/tts")
 def reglages_tts(request: Request, voix_fr: str = Form("auto"),
-                 voix_de: str = Form("auto"), vitesse: float = Form(0.97)):
+                 voix_de: str = Form("auto"), vitesse: float = Form(0.97),
+                 tonalite: float = Form(1.05)):
     if not connecte(request):
         return page_login(request)
     with db.conn() as c:
         db.poser_reglage(c, "tts_voix_fr", voix_fr.strip() or "auto")
         db.poser_reglage(c, "tts_voix_de", voix_de.strip() or "auto")
         db.poser_reglage(c, "tts_vitesse", str(max(0.5, min(1.5, vitesse))))
+        db.poser_reglage(c, "tts_tonalite", str(max(0.7, min(1.4, tonalite))))
+    return RedirectResponse("/admin/medias", status_code=303)
+
+
+@router.post("/admin/buzzer")
+def reglages_buzzer(request: Request, buzzer_unique: int = Form(0),
+                    lecture_vitesse: str = Form("normale"),
+                    etoiles_delai_ms: int = Form(2500)):
+    if not connecte(request):
+        return page_login(request)
+    if lecture_vitesse not in ("lente", "normale", "rapide"):
+        lecture_vitesse = "normale"
+    with db.conn() as c:
+        db.poser_reglage(c, "buzzer_unique", str(buzzer_unique))
+        db.poser_reglage(c, "lecture_vitesse", lecture_vitesse)
+        db.poser_reglage(c, "etoiles_delai_ms", str(max(1000, min(6000, etoiles_delai_ms))))
     return RedirectResponse("/admin/medias", status_code=303)
 
 

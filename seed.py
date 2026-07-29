@@ -76,11 +76,14 @@ QUESTIONS = [
 
     # ---------- ÉTAPE 4 · Ta priorité ----------------------------------
     # LA question ouverte, unique et forte. Voix, 45 s max.
+    # Phrase projective à compléter: réduit l'effet page blanche, produit des
+    # verbatims orientés solution, directement exploitables.
     (80, "priorite", "voix",
-     "Si tu pouvais changer une seule chose dans l'expérience du bus, tu changerais quoi en premier ?",
-     "Wenn du eine einzige Sache am Buserlebnis ändern könntest, was wäre es?",
+     "Termine cette phrase : je prendrais le bus plus souvent si…",
+     "Vervollständige diesen Satz: Ich würde öfter den Bus nehmen, wenn…",
      "", "", {"duree_voix": 45}, None,
-     "À toi. Une seule chose à changer… laquelle ?", "Jetzt du. Eine einzige Sache ändern… welche?"),
+     "Termine cette phrase… je prendrais le bus plus souvent si…",
+     "Vervollständige den Satz… ich würde öfter den Bus nehmen, wenn…"),
     # Touche d'humour utile: préférence de confort réelle, ton léger,
     # donne aussi une accroche au rapport final.
     (90, "priorite", "choix",
@@ -141,7 +144,7 @@ CONSENT_FR = """Bienvenue dans BUS XPERIENCE !
 Quelques minutes pour améliorer l'expérience du bus.
 
 Tes réponses servent à l'innovation, à la recherche utilisateur et à
-l'amélioration des services — pas à savoir ce que tu as mangé à midi.
+l'amélioration des services — pas pour analyser toute ta vie.
 Une ou deux réponses peuvent être enregistrées au micro puis transcrites
 et analysées automatiquement. La participation est volontaire et tu peux
 t'arrêter à tout moment."""
@@ -150,7 +153,7 @@ CONSENT_DE = """Willkommen bei BUS XPERIENCE!
 Ein paar Minuten, um das Buserlebnis zu verbessern.
 
 Deine Antworten dienen Innovation, Nutzerforschung und besseren
-Services — nicht dazu, herauszufinden, was du zu Mittag gegessen hast.
+Services — nicht, um dein ganzes Leben zu analysieren.
 Ein bis zwei Antworten können per Mikrofon aufgenommen, transkribiert und
 automatisch ausgewertet werden. Die Teilnahme ist freiwillig, du kannst
 jederzeit aufhören."""

@@ -32,7 +32,11 @@ def config():
         tts = {"provider": os.environ.get("TTS_PROVIDER", "browser"),
                "voix_fr": db.reglage(c, "tts_voix_fr", "auto"),
                "voix_de": db.reglage(c, "tts_voix_de", "auto"),
-               "vitesse": float(db.reglage(c, "tts_vitesse", "0.97"))}
+               "vitesse": float(db.reglage(c, "tts_vitesse", "0.97")),
+               "tonalite": float(db.reglage(c, "tts_tonalite", "1.05"))}
+        buzzer = {"unique": int(db.reglage(c, "buzzer_unique", "1")),
+                  "lecture": db.reglage(c, "lecture_vitesse", "normale"),
+                  "etoiles_delai_ms": int(db.reglage(c, "etoiles_delai_ms", "2500"))}
         sons = {"klaxon_actif": int(db.reglage(c, "klaxon_actif", "1")),
                 "klaxon_volume": float(db.reglage(c, "klaxon_volume", "0.9")),
                 "klaxon_present": (db.MEDIAS / "klaxon.mp3").exists()}
@@ -41,7 +45,7 @@ def config():
     musique = camp["musique"] if camp and camp["musique"] else (
         "musique-voyage.mp3" if (db.MEDIAS / "musique-voyage.mp3").exists() else None)
     return {
-        "tts": tts, "sons": sons,
+        "tts": tts, "sons": sons, "buzzer": buzzer,
         "campagne": {"id": camp["id"], "nom": camp["nom"],
                      "consent_fr": camp["consent_fr"], "consent_de": camp["consent_de"],
                      "musique": musique, "musique_volume": camp["musique_volume"],
@@ -156,10 +160,16 @@ def rapport(sid: str, lang: str = Form("fr")):
     donnees: dict = {}
     meilleur_concept, meilleure_note = None, -1
     for r in rows:
+        params_q = db.parse_json(r["params"]) if r["params"] else {}
         if r["q_type"] == "etoiles" and r["valeur"]:
             donnees["etoiles"] = r["valeur"]
         if r["q_type"] == "echelle" and r["valeur"]:
             donnees["confiance"] = r["valeur"]
+        if r["q_type"] == "choix" and r["etape"] == "experience" and r["valeur"]:
+            if params_q.get("segment"):
+                donnees["frequence"] = r["valeur"]
+            else:
+                donnees["moment"] = r["valeur"]
         if r["q_type"] == "choix" and r["etape"] == "friction" and r["valeur"]:
             donnees["irritant"] = r["valeur"]
         if r["q_type"] == "choix" and r["etape"] == "priorite" and r["valeur"]:

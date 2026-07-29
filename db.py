@@ -23,7 +23,7 @@ MEDIAS = DATA / "medias"        # musique, klaxon, images de concepts
 for d in (DATA, BACKUPS, AUDIO, VOIX, MEDIAS):
     d.mkdir(parents=True, exist_ok=True)
 
-VERSION_SCHEMA = 3
+VERSION_SCHEMA = 4
 
 
 def now() -> str:
@@ -230,13 +230,26 @@ def migrer() -> list[str]:
                 except sqlite3.OperationalError:
                     pass
             for cle, val in (("tts_voix_fr", "auto"), ("tts_voix_de", "auto"),
-                             ("tts_vitesse", "0.97"), ("klaxon_actif", "1"),
-                             ("klaxon_volume", "0.9")):
+                             ("tts_vitesse", "0.97"), ("tts_tonalite", "1.05"),
+                             ("klaxon_actif", "1"), ("klaxon_volume", "0.9"),
+                             ("buzzer_unique", "1"), ("lecture_vitesse", "normale"),
+                             ("etoiles_delai_ms", "2500")):
                 if reglage(c, cle) is None:
                     poser_reglage(c, cle, val)
             if version == 0:
                 detail = _importer_v1(c)
                 journal_migration.append(detail)
+            if 0 < version < 4:
+                # v4: la question vocale par défaut devient une phrase à compléter
+                c.execute("""UPDATE questions SET
+                    fr='Termine cette phrase : je prendrais le bus plus souvent si…',
+                    de='Vervollständige diesen Satz: Ich würde öfter den Bus nehmen, wenn…',
+                    texte_parle_fr='Termine cette phrase… je prendrais le bus plus souvent si…',
+                    texte_parle_de='Vervollständige den Satz… ich würde öfter den Bus nehmen, wenn…',
+                    version=version+1, modifie_le=?
+                    WHERE type='voix'
+                    AND fr='Si tu pouvais changer une seule chose dans l''expérience du bus, tu changerais quoi en premier ?'""",
+                    (now(),))
             c.execute("DELETE FROM schema_version")
             c.execute("INSERT INTO schema_version VALUES (?)", (VERSION_SCHEMA,))
             journaliser(c, "migration",
