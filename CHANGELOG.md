@@ -1,5 +1,123 @@
 # CHANGELOG
 
+## v4.0 — Micro obligatoire, consentement réellement explicite, protection des données (2026-07-29)
+
+Implémentation technique renforcée selon les principes de transparence,
+consentement explicite et minimisation des données. Validation juridique
+interne (Legal / Datenschutz de la Poste) encore nécessaire — ceci n'est PAS
+une certification juridique.
+
+### Participation et consentement
+- Suppression complète du parcours « sans microphone »: plus de choix
+  intermédiaire, plus de questionnaire de repli, plus de tableau fallback,
+  plus de branche `consent_micro=0`. Deux choix seulement, en FR comme en DE:
+  « Oui, je participe » / « Non merci ».
+- Nouveau texte de consentement exact (surtitre, titre, corps, mention de
+  ne pas se nommer, rappel du caractère volontaire et du droit d'arrêter).
+- Consentement réellement explicite: le microphone n'est JAMAIS ouvert avant
+  la validation « Oui » par appui long; le navigateur demande alors
+  l'autorisation, les pistes de test sont immédiatement arrêtées, la session
+  n'est créée que si l'autorisation est accordée, l'enregistrement réel ne
+  commence qu'à la question vocale.
+- Refus: aucun appel réseau, aucune session, retour à l'accueil avec un
+  message bref.
+- Microphone refusé ou indisponible (au consentement ou pendant le parcours):
+  message clair « aucune donnée n'a été enregistrée », jamais de repli vers
+  un questionnaire structuré, retour à l'accueil (session supprimée si elle
+  existait déjà).
+- QR code de la page de protection des données, généré **localement**
+  (bibliothèque `qrcode`, aucun service externe), à côté du lien discret
+  « Protection des données / Datenschutz » sur l'écran de consentement.
+
+### Arrêt pendant le parcours
+- Le buzzer unique gère désormais trois durées: appui court (parcourir),
+  appui long ≥ 0,7 s (valider), appui très long ≥ 4 s (ouvrir une
+  confirmation d'arrêt). Confirmé, l'arrêt supprime immédiatement la session,
+  ses réponses, audios, transcriptions et rapport éventuel, puis revient à
+  l'accueil.
+
+### Protection des données
+- Nouveau module `config.py`: toutes les valeurs de protection des données
+  (version de la notice, responsable, contact, durées de conservation, liens
+  officiels, destination et pays de traitement de l'IA) centralisées, lues
+  depuis des variables d'environnement, jamais codées en dur ailleurs.
+  Aucune durée de conservation par défaut inventée: tant qu'elle n'est pas
+  configurée, un avertissement explicite s'affiche au lieu d'un silence.
+- Nouvelles pages bilingues `/protection-des-donnees` et `/datenschutz`,
+  lisibles ordinateur/téléphone, avec lien vers la notice générale de La
+  Poste et affichage dynamique du fournisseur IA actif.
+- Nouveau code de participation aléatoire (`BX-XXXX-XXXX`) généré à la
+  création de chaque session consentie, affiché discrètement en fin de
+  parcours; recherche et suppression par ce code dans Admin -> Résultats.
+- Schéma v5: `sessions` gagne `consent_audio`, `consent_le`,
+  `consent_version`, `privacy_lang`, `participant_code`. `consent_micro` est
+  conservé (jamais supprimé) mais n'est plus le mécanisme de décision.
+  Migration idempotente, sauvegarde automatique préalable comme toujours.
+- Nouveau script `cleanup.py` (`--dry-run` disponible): supprime les audios
+  et les données personnelles au-delà des durées configurées, jamais les
+  réglages/campagnes/questions/concepts, journal sans texte de réponse,
+  idempotent.
+- Audit de `ai.py`: seules des réponses textuelles (dont une transcription si
+  nécessaire) sont envoyées à un fournisseur IA externe — jamais de fichier
+  audio, contenu binaire, chemin local, adresse IP ou identifiant technique.
+  Nouveau nettoyage best-effort (`masquer_donnees_personnelles`) avant tout
+  envoi externe (e-mails, téléphones, suites de chiffres, URL, « je
+  m'appelle X »); le prompt rappelle explicitement de ne pas reproduire ces
+  informations. Transcription toujours locale (faster-whisper); plus de
+  contenu de réponse dans les journaux techniques (`transcribe.py`).
+- Sécurité: fichiers audio retirés du montage statique public `/audio`,
+  servis uniquement par `/admin/audio/{nom}` derrière authentification, noms
+  de fichiers aléatoires (au lieu de `{session}_{question}.webm`); cookie
+  admin `httponly` + `samesite=lax` (+ `secure` en HTTPS); avertissement
+  fort si `ADMIN_PASS` garde une valeur par défaut connue; aucune clé API
+  jamais affichée; `.gitignore` ajouté (`data/`, secrets).
+- Admin -> Système: nouveau bloc « Protection des données » (version,
+  responsable, contact, durées de conservation, fournisseur IA et
+  destination déclarée, liens FR/DE, nombre de consentements enregistrés,
+  nombre de sessions sans information de consentement de l'ancienne version,
+  paramètres manquants signalés).
+- 40 tests (voir liste ci-dessous), tous passants.
+
+### Testé réellement (pytest 40/40 + serveur lancé, `node --check` sur le JS)
+- Santé, migration v1 et v5, cabine servie sans aucune mention « sans
+  microphone » ni fallback, exactement deux choix de consentement par langue.
+- Aucune session sans `mic_ok=1`; `consent_le`/`consent_version`/
+  `privacy_lang`/`participant_code` enregistrés; code au format `BX-XXXX-XXXX`.
+- Nom de fichier audio aléatoire; `/audio/...` renvoie 404 (retiré);
+  `/admin/audio/...` bloqué sans connexion, servi à l'admin connecté.
+- Abandon de session: suppression complète (session, réponses, audio sur
+  disque), idempotent.
+- Recherche et suppression par code de participation.
+- Pages `/protection-des-donnees` et `/datenschutz` accessibles, dans leur
+  langue respective; liens officiels de La Poste exacts.
+- Masquage des données personnelles (e-mail, téléphone, URL, suites de
+  chiffres, « je m'appelle »); aucun indice d'audio brut (`.webm`, chemin
+  local) dans la charge utile envoyée au fournisseur IA simulé.
+- `cleanup.py --dry-run` s'exécute sans modifier la base et sans écrire de
+  texte de réponse dans son journal.
+- Bloc « Protection des données » de Admin -> Système, sans fuite de clé API.
+- Rapport participant, rapport admin, exports, CRUD questions, réglages TTS/
+  buzzer/sons, suppression session/campagne/globale avec sauvegarde: inchangés
+  et toujours verts.
+
+### Non testé automatiquement (à vérifier sur la borne, vrai navigateur)
+- Rendu visuel de l'écran de consentement à 1366×768 (repose sur les mêmes
+  `clamp()`/`overflow:hidden` déjà en place, non vérifiés par capture d'écran
+  automatisée dans cette itération).
+- Comportement réel de `getUserMedia` (autorisation, refus, révocation en
+  cours de parcours) et de l'appui buzzer à exactement 4 secondes sur le
+  matériel physique.
+- QR code scanné par un téléphone réel.
+
+### Limites restantes
+- Le responsable précis du projet BUS XPERIENCE (`DATA_CONTROLLER_FR/DE`)
+  n'est pas confirmé: l'admin l'affiche comme « à confirmer » tant que les
+  variables d'environnement ne sont pas renseignées.
+- `AUDIO_RETENTION_DAYS`/`DATA_RETENTION_DAYS` ne sont pas définis par
+  défaut: aucune suppression automatique n'a lieu tant qu'ils ne le sont pas,
+  et un avertissement reste visible dans Admin -> Système.
+- Cette implémentation ne constitue pas une certification juridique.
+
 ## v3.2 — Cabine individuelle et interaction réellement au buzzer (2026-07-29)
 
 - Suppression complète du mode à deux: une session correspond toujours à une

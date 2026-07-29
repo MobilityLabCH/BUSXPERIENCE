@@ -7,6 +7,7 @@
    {% for t in toutes %}<option value="{{ t.id }}" {{ 'selected' if t.id==question }}>{{ t.ordre }} · {{ t.fr[:50] }}</option>{% endfor %}
   </select></div>
   <div><label>Session</label><input name="session" value="{{ session }}" placeholder="uuid"></div>
+  <div><label>Code de participation</label><input name="code" value="{{ code }}" placeholder="BX-XXXX-XXXX"></div>
   <button>Filtrer</button>
   <a href="/admin/export.csv"><button type="button" class="mini">Export CSV</button></a>
   <a href="/admin/export.json"><button type="button" class="mini">Export JSON</button></a>
@@ -22,12 +23,12 @@
 {% for r in reponses %}
 <div class="carte">
  <p class="gris petit">{{ r.cree_le[:16].replace('T',' · ') }} · {{ (r.lang or '?')|upper }}
-  · session {{ r.session[:8] }} · {{ r.cle }}</p>
+  · session {{ r.session[:8] }}{{ ' · ' + r.participant_code if r.participant_code }} · {{ r.cle }}</p>
  <p><b>{{ r.c_nom or r.q_fr }}</b></p>
  {% if r.valeur %}<p>→ {{ r.valeur }}</p>{% endif %}
  {% if r.transcript %}<p>« {{ r.transcript }} »</p>{% endif %}
  {% if r.audio %}
-  <audio controls preload="none" src="/audio/{{ r.audio }}" style="height:32px;width:100%"></audio>
+  <audio controls preload="none" src="/admin/audio/{{ r.audio }}" style="height:32px;width:100%"></audio>
   <form method="post" action="/admin/reponses/{{ r.id }}/transcript" style="display:flex;gap:8px;margin-top:6px">
    <input name="transcript" value="{{ r.transcript or '' }}" placeholder="Corriger ou saisir la transcription">
    <button class="mini">OK</button></form>
@@ -54,6 +55,13 @@
    <div style="display:flex;gap:8px"><select name="campagne_id">
     {% for ca in campagnes %}<option value="{{ ca.id }}">{{ ca.nom }}</option>{% endfor %}
    </select><button class="danger">Supprimer</button></div>
+  </form>
+  <form method="post" action="/admin/donnees/supprimer"
+   onsubmit="return confirm('Supprimer définitivement la session correspondant à ce code de participation ?')">
+   <input type="hidden" name="portee" value="code">
+   <label>Supprimer via un code de participation (demande d'un participant)</label>
+   <div style="display:flex;gap:8px"><input name="participant_code" placeholder="BX-XXXX-XXXX" required>
+   <button class="danger">Supprimer</button></div>
   </form>
  </div>
  <form method="post" action="/admin/donnees/supprimer" style="margin-top:14px"

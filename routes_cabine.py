@@ -7,16 +7,19 @@ import random
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 
 import ai
+import config as vieprivee
 import db
+import qr
 
 router = APIRouter(prefix="/api", tags=["cabine"])
 
 
 @router.get("/config")
-def config():
+def config(request: Request):
+    base = str(request.base_url)
     with db.conn() as c:
         camp_id = int(db.reglage(c, "campagne_courante", "1") or 1)
         lieu_id = int(db.reglage(c, "lieu_courant", "1") or 1)
@@ -63,24 +66,63 @@ def config():
             "audio_fr": q["audio_fr"], "audio_de": q["audio_de"],
         } for q in qs],
         "concepts": concepts[:nb_concepts],
+        "privacy": {
+            "version": vieprivee.PRIVACY_NOTICE_VERSION,
+            "url_fr": vieprivee.lien_consentement("fr", base),
+            "url_de": vieprivee.lien_consentement("de", base),
+        },
     }
+
+
+@router.get("/qr/{lang}.svg")
+def qr_consentement(lang: str, request: Request):
+    """QR code généré localement (aucun service externe) vers la notice
+    de protection des données, dans la langue de l'écran de consentement."""
+    base = str(request.base_url)
+    url = vieprivee.lien_consentement("de" if lang == "de" else "fr", base)
+    return Response(qr.qr_svg(url), media_type="image/svg+xml")
 
 
 @router.post("/sessions")
 def creer_session(lang: str = Form("fr"), participants: int = Form(1),
-                  consent_micro: int = Form(0)):
-    """Crée une session individuelle. Le mode à deux n'existe plus."""
+                  mic_ok: int = Form(0),
+                  consent_version: str = Form("")):
+    """Crée une session individuelle et strictement consentie.
+
+    BUS XPERIENCE ne fonctionne plus qu'avec le microphone: une session
+    n'est créée que si le navigateur a explicitement accordé l'accès au
+    microphone (mic_ok=1), après un consentement « Oui, je participe »
+    validé par appui long. Un refus, ou un microphone indisponible, ne crée
+    jamais de session ni de ligne en base.
+    """
     if participants != 1:
         raise HTTPException(400, "BUS XPERIENCE est une expérience individuelle")
+    if not mic_ok:
+        raise HTTPException(403, "consentement microphone requis")
     sid = str(uuid.uuid4())
+    code = db.code_participant()
     with db.conn() as c:
         c.execute(
             """INSERT INTO sessions (id, campagne_id, lieu_id, lang, participants,
-               consent_micro, demarree_le) VALUES (?,?,?,?,?,?,?)""",
+               consent_micro, consent_audio, consent_le, consent_version,
+               privacy_lang, participant_code, demarree_le)
+               VALUES (?,?,?,?,?,1,1,?,?,?,?,?)""",
             (sid, int(db.reglage(c, "campagne_courante", "1") or 1),
              int(db.reglage(c, "lieu_courant", "1") or 1),
-             lang, 1, consent_micro, db.now()))
-    return {"session_id": sid}
+             lang, 1, db.now(), consent_version or vieprivee.PRIVACY_NOTICE_VERSION,
+             lang, code, db.now()))
+    return {"session_id": sid, "participant_code": code}
+
+
+@router.post("/sessions/{sid}/abandonner")
+def abandonner(sid: str):
+    """Arrêt volontaire pendant le parcours (appui très long sur le buzzer,
+    confirmé). Supprime immédiatement et intégralement la session: réponses,
+    audios, transcriptions et rapport éventuel. Idempotent."""
+    with db.conn() as c:
+        n = db.supprimer_sessions(c, [sid])
+        db.journaliser(c, "abandon", f"session {sid[:8]} arrêtée par le participant")
+    return {"ok": True, **n}
 
 
 @router.post("/sessions/{sid}/reponses")
@@ -98,9 +140,11 @@ async def repondre(sid: str, question_id: int = Form(0), concept_id: int = Form(
             raise HTTPException(404, "session inconnue")
         chemin = None
         if audio is not None:
-            if not s["consent_micro"]:
+            if not s["consent_audio"]:
                 raise HTTPException(403, "pas de consentement micro pour cette session")
-            chemin = f"{sid}_{question_id}.webm"
+            # Nom de fichier aléatoire: jamais de schéma prévisible
+            # (session/question) qui permettrait de deviner une URL d'audio.
+            chemin = f"{uuid.uuid4().hex}.webm"
             (db.AUDIO / chemin).write_bytes(await audio.read())
         c.execute(
             """INSERT INTO reponses (session, question_id, concept_id, cle, valeur,
@@ -196,13 +240,8 @@ def rapport(sid: str, lang: str = Form("fr")):
                     with db.conn() as c:
                         c.execute("UPDATE reponses SET transcript=? WHERE id=?",
                                   (transcript, r["id"]))
-            # Dans le parcours sans micro, la question ouverte devient un choix
-            # structuré. Cette réponse reste exploitable dans le rapport final.
-            valeur_structuree = (r["valeur"] or "").strip()
             if transcript:
                 donnees["verbatim"] = transcript
-            elif valeur_structuree and not valeur_structuree.startswith("["):
-                donnees["verbatim"] = valeur_structuree
     if meilleur_concept:
         # La note sert uniquement à sélectionner l'idée favorite; elle ne doit
         # jamais apparaître dans le rapport participant ni être envoyée à l'IA.

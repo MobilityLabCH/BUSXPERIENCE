@@ -7,6 +7,7 @@ sont reprises automatiquement, jamais supprimées.
 from __future__ import annotations
 
 import json
+import secrets
 import shutil
 import sqlite3
 from contextlib import contextmanager
@@ -23,7 +24,7 @@ MEDIAS = DATA / "medias"        # musique, klaxon, images de concepts
 for d in (DATA, BACKUPS, AUDIO, VOIX, MEDIAS):
     d.mkdir(parents=True, exist_ok=True)
 
-VERSION_SCHEMA = 4
+VERSION_SCHEMA = 5
 
 
 def now() -> str:
@@ -224,7 +225,16 @@ def migrer() -> list[str]:
                 journal_migration.append(f"sauvegarde: {sauvegarde.name}")
             c.executescript(SCHEMA_V2)
             for alt in ("ALTER TABLE questions ADD COLUMN texte_parle_fr TEXT DEFAULT ''",
-                        "ALTER TABLE questions ADD COLUMN texte_parle_de TEXT DEFAULT ''"):
+                        "ALTER TABLE questions ADD COLUMN texte_parle_de TEXT DEFAULT ''",
+                        # v5: consentement micro explicite, plus de mécanisme ambigu
+                        # consent_micro. Les anciennes colonnes sont conservées
+                        # (jamais supprimées) pour ne jamais casser des données
+                        # existantes, mais ne sont plus utilisées comme logique.
+                        "ALTER TABLE sessions ADD COLUMN consent_audio INTEGER DEFAULT 0",
+                        "ALTER TABLE sessions ADD COLUMN consent_le TEXT",
+                        "ALTER TABLE sessions ADD COLUMN consent_version TEXT",
+                        "ALTER TABLE sessions ADD COLUMN privacy_lang TEXT",
+                        "ALTER TABLE sessions ADD COLUMN participant_code TEXT"):
                 try:
                     c.execute(alt)
                 except sqlite3.OperationalError:
@@ -258,6 +268,40 @@ def migrer() -> list[str]:
         else:
             journal_migration.append(f"schéma déjà en v{version}, rien à faire")
     return journal_migration
+
+
+_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # sans 0/O/1/I, ambiguïté réduite
+
+
+def code_participant() -> str:
+    """Code court, aléatoire et facile à recopier: BX-XXXX-XXXX."""
+    groupe = lambda: "".join(secrets.choice(_CODE_ALPHABET) for _ in range(4))
+    return f"BX-{groupe()}-{groupe()}"
+
+
+def supprimer_sessions(c, ids: list[str]) -> dict:
+    """Supprime intégralement des sessions: réponses, audios, transcriptions
+    (incluses dans les réponses) et rapports. Ne touche jamais aux questions,
+    concepts, campagnes, réglages ni médias. Utilisé par l'admin (zone
+    dangereuse) et par l'abandon volontaire pendant le parcours."""
+    n = {"sessions": 0, "reponses": 0, "audios": 0, "rapports": 0}
+    if not ids:
+        return n
+    marque = ",".join("?" * len(ids))
+    for r in c.execute(
+            f"SELECT audio FROM reponses WHERE session IN ({marque})"
+            " AND audio IS NOT NULL", ids):
+        chemin = AUDIO / r["audio"]
+        if chemin.exists():
+            chemin.unlink()
+            n["audios"] += 1
+    n["reponses"] = c.execute(
+        f"DELETE FROM reponses WHERE session IN ({marque})", ids).rowcount
+    n["rapports"] = c.execute(
+        f"DELETE FROM rapports WHERE session IN ({marque})", ids).rowcount
+    n["sessions"] = c.execute(
+        f"DELETE FROM sessions WHERE id IN ({marque})", ids).rowcount
+    return n
 
 
 def parse_json(texte: str | None, defaut=None):

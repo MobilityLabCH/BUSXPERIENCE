@@ -12,6 +12,7 @@ import db
 import seed
 import routes_admin
 import routes_cabine
+import routes_public
 
 app = FastAPI(title="BUS XPERIENCE", docs_url="/api/docs")
 
@@ -21,12 +22,17 @@ print(f"[seed] {seed.semer()}")
 for f in db.copier_medias_defaut():
     print(f"[medias] {f} installé")
 print(f"[ia] fournisseur: {ai.provider_actuel()}")
+if routes_admin.ADMIN_PASS_FAIBLE:
+    print("[securite] ATTENTION: ADMIN_PASS a encore une valeur par defaut. "
+          "A changer avant tout usage public.")
 
 app.include_router(routes_cabine.router)
 app.include_router(routes_admin.router)
+app.include_router(routes_public.router)
 
 app.mount("/cabine", StaticFiles(directory=db.RACINE / "cabine", html=True), name="cabine")
-app.mount("/audio", StaticFiles(directory=db.AUDIO), name="audio")
+# Les fichiers audio ne sont JAMAIS servis par une URL publique prévisible:
+# voir la route authentifiée /admin/audio/{nom} dans routes_admin.py.
 app.mount("/voix", StaticFiles(directory=db.VOIX), name="voix")
 app.mount("/medias", StaticFiles(directory=db.MEDIAS), name="medias")
 

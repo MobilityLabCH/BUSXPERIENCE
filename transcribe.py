@@ -22,7 +22,8 @@ def main():
         texte = " ".join(s.text.strip() for s in segments).strip() or "[silence]"
         c.execute("UPDATE reponses SET transcript=? WHERE id=?", (texte, r["id"]))
         c.commit()
-        print(f"#{r['id']} ({info.language}) {texte[:70]}")
+        # Jamais le contenu de la transcription dans un journal technique.
+        print(f"#{r['id']} ({info.language}) {len(texte)} caracteres transcrits")
 
 if __name__ == "__main__":
     main()

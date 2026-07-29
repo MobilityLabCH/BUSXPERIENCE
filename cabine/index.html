@@ -66,6 +66,11 @@ button{font:inherit}
 #e-intro .hero-stack{gap:clamp(12px,2vh,22px)}
 #consent-copy{white-space:pre-line;max-width:70ch;color:var(--paper);font-size:clamp(17px,1.8vw,26px);line-height:1.32;font-weight:600}
 #e-consent .choices{margin-top:4px}
+#consent-privacy{display:flex;align-items:center;gap:12px;margin-top:clamp(10px,2vh,20px)}
+#consent-qr{width:clamp(46px,5.5vh,64px);height:clamp(46px,5.5vh,64px);background:#fff;border-radius:6px;padding:4px}
+#consent-privacy-link{color:var(--muted);font-size:clamp(12px,1.15vw,16px);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+#participant-code-line{color:#77756d;font-size:clamp(12px,1.15vw,16px);font-weight:650;margin-top:8px;line-height:1.35}
+#participant-code-line b{color:var(--ink)}
 
 /* Étoiles */
 .stars{display:flex;align-items:center;gap:clamp(10px,2vw,28px);min-height:140px}
@@ -180,10 +185,29 @@ button{font:inherit}
  <p class="eyebrow" id="consent-kicker"></p>
  <h2 class="question compact" id="consent-title"></h2>
  <p id="consent-copy"></p>
- <div class="choices" id="consent-choices">
-  <button class="choice selected" data-consent="micro"><span class="number">1</span><span id="consent-micro"></span></button>
-  <button class="choice" data-consent="no-micro"><span class="number">2</span><span id="consent-no-micro"></span></button>
-  <button class="choice" data-consent="no"><span class="number">3</span><span id="consent-no"></span></button>
+ <div class="choices two" id="consent-choices">
+  <button class="choice selected" data-consent="oui"><span class="number">1</span><span id="consent-oui"></span></button>
+  <button class="choice" data-consent="non"><span class="number">2</span><span id="consent-non"></span></button>
+ </div>
+ <div id="consent-privacy">
+  <img id="consent-qr" alt="">
+  <a id="consent-privacy-link" href="#" target="_blank" rel="noopener"></a>
+ </div>
+</section>
+
+<section class="screen center" id="e-mic-unavailable">
+ <div class="hero-stack">
+  <p class="eyebrow">BUS XPERIENCE</p>
+  <h2 class="question compact" id="mic-unavailable-title"></h2>
+  <p class="lead" id="mic-unavailable-sub"></p>
+ </div>
+</section>
+
+<section class="screen question-layout" id="e-stop-confirm">
+ <h2 class="question compact" id="stop-confirm-title"></h2>
+ <div class="choices" id="stop-confirm-choices">
+  <button class="choice selected" data-stop="continue"><span class="number">1</span><span></span></button>
+  <button class="choice" data-stop="delete"><span class="number">2</span><span></span></button>
  </div>
 </section>
 
@@ -245,6 +269,7 @@ button{font:inherit}
   <div class="report-body" id="report-body"></div>
   <p class="report-conclusion" id="report-conclusion"></p>
   <p class="report-label"><span id="report-label"></span> · MobilityLab Sion</p>
+  <p id="participant-code-line" hidden></p>
  </article>
 </section>
 
@@ -263,13 +288,19 @@ const TXT={
   press:"Appuie pour continuer",choose:"Appuie pour parcourir · maintiens pour valider",
   introTitle:"TU MONTES À BORD. À PARTIR DE MAINTENANT, C’EST TON EXPÉRIENCE QUI COMPTE.",
   introSub:"5 minutes pour améliorer le bus.",consentKicker:"Avant de commencer",
-  consentTitle:"Tu choisis comment participer.",
-  consentMicro:"Participer avec le micro",consentNoMicro:"Participer sans micro",consentNo:"Non merci",
+  consentTitle:"À toi de décider.",
+  consentOui:"Oui, je participe",consentNon:"Non merci",
+  privacyLink:"Protection des données",
+  micUnavailableTitle:"Le microphone n’est pas disponible.",
+  micUnavailableSub:"Aucune donnée n’a été enregistrée.",
+  stopTitle:"Arrêter et supprimer cette session ?",
+  stopContinue:"Continuer",stopDelete:"Arrêter et supprimer",
+  participantCodeLabel:"Code de participation :",
+  participantCodeHint:"Conserve-le si tu souhaites demander la suppression de tes réponses.",
   noThanks:"Pas de souci. Bonne route !",concept:"Idée à tester",or:"ou",
   stars:"étoiles",star:"étoile",recordStart:"Appuie pour répondre librement.",
   recording:"On t’écoute. Appuie quand tu as terminé.",review:"Ta réponse est prête.",
   listen:"Réécouter",redo:"Recommencer",save:"Valider",
-  fallback:["Le bus était plus ponctuel","Les horaires étaient plus simples","Les correspondances étaient mieux assurées","Les arrêts étaient plus confortables","Le voyage à bord était plus agréable","Les billets étaient plus faciles à comprendre","Autre chose","Rien de particulier"],
   calc:["On rassemble l’essentiel…","On repère ce qui compte vraiment…","On prépare ton profil de voyage…"],
   reportKicker:"TON PROFIL DE VOYAGE"
  },
@@ -277,25 +308,31 @@ const TXT={
   press:"Drücken zum Weitergehen",choose:"Kurz drücken zum Auswählen · gedrückt halten zum Bestätigen",
   introTitle:"DU STEIGST EIN. AB JETZT GEHT ES UM DEIN ERLEBNIS.",
   introSub:"5 Minuten für ein besseres Bus-Erlebnis.",consentKicker:"Bevor es losgeht",
-  consentTitle:"Du entscheidest, wie du teilnimmst.",
-  consentMicro:"Mit Mikrofon teilnehmen",consentNoMicro:"Ohne Mikrofon teilnehmen",consentNo:"Nein danke",
+  consentTitle:"Du entscheidest.",
+  consentOui:"Ja, ich mache mit",consentNon:"Nein, danke",
+  privacyLink:"Datenschutz",
+  micUnavailableTitle:"Das Mikrofon ist nicht verfügbar.",
+  micUnavailableSub:"Es wurden keine Daten gespeichert.",
+  stopTitle:"Sitzung abbrechen und löschen?",
+  stopContinue:"Fortsetzen",stopDelete:"Abbrechen und löschen",
+  participantCodeLabel:"Teilnahmecode:",
+  participantCodeHint:"Bewahre ihn auf, falls du die Löschung deiner Antworten verlangen möchtest.",
   noThanks:"Kein Problem. Gute Fahrt!",concept:"Idee zum Testen",or:"oder",
   stars:"Sterne",star:"Stern",recordStart:"Drücke, um frei zu antworten.",
   recording:"Wir hören zu. Drücke, wenn du fertig bist.",review:"Deine Antwort ist bereit.",
   listen:"Anhören",redo:"Neu aufnehmen",save:"Bestätigen",
-  fallback:["Der Bus wäre pünktlicher","Die Fahrpläne wären einfacher","Die Anschlüsse wären besser gesichert","Die Haltestellen wären komfortabler","Die Fahrt wäre angenehmer","Die Billette wären leichter verständlich","Etwas anderes","Nichts Bestimmtes"],
   calc:["Wir sammeln das Wesentliche…","Wir erkennen, was wirklich zählt…","Wir erstellen dein Reiseprofil…"],
   reportKicker:"DEIN REISEPROFIL"
  }
 };
-const DEMO={campagne:{nom:"Démo",consent_fr:"Tes réponses servent à améliorer le bus. Une ou deux réponses peuvent être enregistrées, transcrites et analysées automatiquement. La participation est volontaire.",consent_de:"Deine Antworten helfen, das Bus-Erlebnis zu verbessern. Ein bis zwei Antworten können aufgenommen, transkribiert und automatisch ausgewertet werden. Die Teilnahme ist freiwillig.",musique:null,musique_active:0,musique_volume:.3,ton:"complice"},lieu:{nom:"Démo"},tts:{vitesse:.97,tonalite:1.05,voix_fr:"auto",voix_de:"auto"},sons:{klaxon_actif:0},questions:[
+const DEMO={campagne:{nom:"Démo",consent_fr:"En participant, une ou deux de tes réponses seront enregistrées au micro, transcrites et analysées automatiquement afin de mieux comprendre ton expérience et d’améliorer les services de bus.\n\nNe donne pas de nom ni d’information personnelle dans tes réponses.\n\nLa participation est volontaire. Tu peux arrêter à tout moment.",consent_de:"Wenn du teilnimmst, werden ein bis zwei deiner Antworten mit dem Mikrofon aufgenommen, transkribiert und automatisch ausgewertet. So können wir dein Erlebnis besser verstehen und das Busangebot verbessern.\n\nBitte nenne keine Namen oder persönlichen Angaben.\n\nDie Teilnahme ist freiwillig. Du kannst jederzeit abbrechen.",musique:null,musique_active:0,musique_volume:.3,ton:"complice"},lieu:{nom:"Démo"},privacy:{version:"1.0",url_fr:"https://www.post.ch/fr/pages/footer/protection-des-donnees-et-informations-legales",url_de:"https://www.post.ch/de/pages/footer/datenschutz-und-rechtliches"},tts:{vitesse:.97,tonalite:1.05,voix_fr:"auto",voix_de:"auto"},sons:{klaxon_actif:0},questions:[
  {id:1,ordre:10,etape:"experience",type:"choix",fr:"À quelle fréquence prends-tu le bus ?",de:"Wie oft fährst du mit dem Bus?",options_fr:["Tous les jours ou presque","Plusieurs fois par semaine","Quelques fois par mois","Rarement","Jamais"],options_de:["Täglich oder fast täglich","Mehrmals pro Woche","Ein paar Mal pro Monat","Selten","Nie"],params:{segment:true}},
  {id:2,ordre:20,etape:"experience",type:"etoiles",fr:"Combien d’étoiles mérite ton dernier trajet ?",de:"Wie viele Sterne verdient deine letzte Busfahrt?",options_fr:[],options_de:[],params:{max:5}},
  {id:3,ordre:30,etape:"friction",type:"echelle",fr:"Tu fais confiance au bus pour arriver à l’heure ?",de:"Vertraust du dem Bus, pünktlich anzukommen?",options_fr:[],options_de:[],params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Totalement",min_libelle_de:"Gar nicht",max_libelle_de:"Voll und ganz"}},
  {id:4,ordre:40,etape:"priorite",type:"voix",fr:"Je prendrais le bus plus souvent si…",de:"Ich würde öfter den Bus nehmen, wenn…",options_fr:[],options_de:[],params:{duree_voix:45}}
  ],concepts:[]};
 
-let cfg=DEMO,demo=true,lang="fr",session=null,consentMicro=1;
+let cfg=DEMO,demo=true,lang="fr",session=null,participantCode=null;
 let state="waiting",sequence=[],stepIndex=0,localAnswers={};
 let selection=0,currentItems=[],currentQuestion=null,currentScale=5,currentStars=1,currentCompare=0;
 let timers=[],idleTimer=null;
@@ -347,11 +384,17 @@ function confirmSelection(selector=".choice"){const nodes=[...document.querySele
 
 /* Démarrage */
 function start(){clearTimers();stopSpeech();state="language";selection=0;hideChrome();renderChoices($("#language-choices"),["Français","Deutsch"],0);show("e-language");setHelp("Appui court / kurz drücken · Maintenir / gedrückt halten")}
-function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const c=cfg.campagne||{};$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?c.consent_de:c.consent_fr)||"";$("#consent-micro").textContent=text().consentMicro;$("#consent-no-micro").textContent=text().consentNoMicro;$("#consent-no").textContent=text().consentNo;resetAnimated("#intro-title","#consent-title");state="intro";show("e-intro");setHelp(text().press)}
-function showConsent(){state="consent";renderChoices($("#consent-choices"),[text().consentMicro,text().consentNoMicro,text().consentNo],0);show("e-consent");setHelp(text().choose)}
-async function consentChoice(){if(selection===2)return refuse();consentMicro=selection===0?1:0;musicStart();await launchSession()}
+function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const c=cfg.campagne||{},priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?c.consent_de:c.consent_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-link").textContent=text().privacyLink;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyLink;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");state="intro";show("e-intro");setHelp(text().press)}
+function showConsent(){state="consent";renderChoices($("#consent-choices"),[text().consentOui,text().consentNon],0);show("e-consent");setHelp(text().choose)}
+async function consentChoice(){if(selection===1)return refuse();await tryMicThenLaunch()}
 function refuse(){state="refused";hideChrome();$("#report-loading").textContent=text().noThanks;$("#report-card").hidden=true;show("e-report");later(3500,returnWaiting)}
-async function launchSession(){if(!demo){const fd=new FormData();fd.set("lang",lang);fd.set("participants","1");fd.set("consent_micro",String(consentMicro));try{const r=await fetch("/api/sessions",{method:"POST",body:fd});session=(await r.json()).session_id}catch{demo=true}}buildSequence();stepIndex=0;showStep(0)}
+/* Le microphone n'est jamais ouvert avant validation explicite du "Oui".
+   Les pistes obtenues pour le test sont arrêtées immédiatement; aucune
+   session n'est créée si l'autorisation est refusée ou indisponible. */
+async function tryMicThenLaunch(){state="sending";setHelp("");let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{return showMicUnavailable()}stream.getTracks().forEach(t=>t.stop());musicStart();await launchSession()}
+async function launchSession(){if(demo){participantCode="BX-DEMO-0000";buildSequence();stepIndex=0;showStep(0);return}const fd=new FormData();fd.set("lang",lang);fd.set("participants","1");fd.set("mic_ok","1");fd.set("consent_version",(cfg.privacy&&cfg.privacy.version)||"");try{const r=await fetch("/api/sessions",{method:"POST",body:fd});if(!r.ok)throw new Error("refuse");const d=await r.json();session=d.session_id;participantCode=d.participant_code}catch{return showMicUnavailable()}buildSequence();stepIndex=0;showStep(0)}
+function showMicUnavailable(){clearTimers();stopSpeech();musicStop();state="mic-unavailable";session=null;hideChrome();show("e-mic-unavailable");later(3500,returnWaiting)}
+async function abandonnerSession(){if(!demo&&session){try{await fetch(`/api/sessions/${session}/abandonner`,{method:"POST"})}catch{}}}
 
 /* Enregistrement API */
 async function send(data){if(demo)return;const fd=new FormData();Object.entries(data).forEach(([k,v])=>{if(v!=null)fd.set(k,v)});try{await fetch(`/api/sessions/${session}/reponses`,{method:"POST",body:fd})}catch(e){console.error(e)}}
@@ -381,10 +424,12 @@ async function validateCompare(){state="sending";soundOk();const value=currentIt
 
 function showConcept(c){state="concept";$("#concept-kicker").textContent=text().concept;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),card=$("#concept-card");if(c.image){img.src="/medias/"+c.image;img.hidden=false;card.classList.remove("no-image")}else{img.hidden=true;card.classList.add("no-image")}show("e-concept");setHelp(text().press)}
 
-/* Question vocale. Sans micro: équivalent structuré immédiat. */
+/* Question vocale: le microphone a déjà été autorisé au consentement.
+   Il n'existe aucun autre chemin possible: si l'accès échoue ici, la
+   session est supprimée et le message "microphone indisponible" s'affiche. */
 let recorder=null,chunks=[],lastBlob=null,voiceStream=null,voiceContext=null,voiceDeadline=0,voiceQuestion=null;
-function showVoice(q){voiceQuestion=q;if(!consentMicro){const fallback={...q,displayText:q.displayText||q[lang]||q.fr};return showChoice(fallback,text().fallback)}state="voice-intro";fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
-async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{consentMicro=0;return showChoice({...voiceQuestion,displayText:voiceQuestion.displayText},text().fallback)}voiceStream=stream;chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
+function showVoice(q){voiceQuestion=q;state="voice-intro";fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
+async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{await abandonnerSession();return showMicUnavailable()}voiceStream=stream;chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
 function updateTimer(){if(state!=="voice-recording")return;const seconds=Math.max(0,Math.ceil((voiceDeadline-Date.now())/1000));$("#voice-timer").textContent=`0:${String(seconds).padStart(2,"0")}`;if(seconds<=0)return stopRecording();later(250,updateTimer)}
 function startMeter(stream){try{voiceContext=new (window.AudioContext||window.webkitAudioContext)();const analyser=voiceContext.createAnalyser();voiceContext.createMediaStreamSource(stream).connect(analyser);analyser.fftSize=128;const data=new Uint8Array(analyser.frequencyBinCount),bars=[...document.querySelectorAll("#voice-meter i")];(function loop(){if(state!=="voice-recording"){voiceContext&&voiceContext.close();return}analyser.getByteFrequencyData(data);bars.forEach((b,i)=>b.style.height=Math.max(14,(data[i*3]||0)/255*100)+"%");requestAnimationFrame(loop)})()}catch{}}
 async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelp(text().choose)}
@@ -392,17 +437,24 @@ function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObject
 async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
 /* Rapport */
-async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
-function returnWaiting(){clearTimers();stopSpeech();musicStop();state="waiting";session=null;hideChrome();show("e-waiting")}
+async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
+function returnWaiting(){clearTimers();stopSpeech();musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
 
-/* Appui court / long */
-const LONG_PRESS=700;let pressStarted=0;
+/* Appui court / long / très long (arrêt de session) */
+const LONG_PRESS=700,STOP_PRESS=4000;let pressStarted=0;
+const ABORTABLE=new Set(["choice","stars","scale","compare","concept","voice-intro","voice-recording","voice-review"]);
+let preAbortState=null,preAbortScreen=null;
 function pressVisual(on){$("#main-buzzer").classList.toggle("pressed",on)}
 function pressDown(){if(pressStarted)return;pressStarted=Date.now();pressVisual(true);resetIdle()}
-function pressUp(){if(!pressStarted)return;const duration=Date.now()-pressStarted;pressStarted=0;pressVisual(false);duration>=LONG_PRESS?longPress():shortPress()}
-function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused")return returnWaiting();if(state==="language"||state==="consent"||state==="choice")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
-function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
-function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction()}
+function pressUp(){if(!pressStarted)return;const duration=Date.now()-pressStarted;pressStarted=0;pressVisual(false);if(duration>=STOP_PRESS&&ABORTABLE.has(state))return openStopConfirm();duration>=LONG_PRESS?longPress():shortPress()}
+function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
+function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","mic-unavailable","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
+function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
+
+/* "Tu peux arrêter à tout moment": appui de 4 s pendant le parcours. */
+function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recorder&&recorder.state!=="inactive"&&recorder.stop()}catch{}voiceStream&&voiceStream.getTracks().forEach(t=>t.stop())}preAbortState=state;const active=document.querySelector(".screen.active");preAbortScreen=active?active.id:"e-waiting";state="stop-confirm";renderChoices($("#stop-confirm-choices"),[text().stopContinue,text().stopDelete],0);show("e-stop-confirm");setHelp(text().choose)}
+function stopConfirmChoice(){if(selection===1)return confirmStopDelete();state=preAbortState;show(preAbortScreen);if(preAbortState==="voice-recording"||preAbortState==="voice-review"){state="voice-intro";$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice")}setHelp(state==="voice-intro"||state==="concept"?text().press:text().choose)}
+async function confirmStopDelete(){state="sending";clearTimers();stopSpeech();musicStop();await abandonnerSession();returnWaiting()}
 
 /* Entrées: le clavier Espace/Entrée représente le buzzer physique. Le tactile reste un secours. */
 document.addEventListener("keydown",e=>{if((e.code==="Space"||e.code==="Enter")&&!e.repeat){e.preventDefault();pressDown()}});

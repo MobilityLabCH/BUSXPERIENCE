@@ -11,7 +11,7 @@ import json
 
 import db
 
-SEED_VERSION = "3"
+SEED_VERSION = "4"
 
 # (ordre, etape, type, fr, de, options_fr, options_de, params, condition, parle_fr, parle_de)
 QUESTIONS = [
@@ -140,17 +140,17 @@ CONCEPTS = [
      "Bei der Ankunft siehst du, wie du ans Ziel kommst: zu Fuss, Leihvelo, Anschluss."),
 ]
 
-CONSENT_FR = """Tes réponses nous aident à comprendre ce qui fonctionne, ce qui agace et ce qui devrait changer dans l’expérience du bus.
+CONSENT_FR = """En participant, une ou deux de tes réponses seront enregistrées au micro, transcrites et analysées automatiquement afin de mieux comprendre ton expérience et d’améliorer les services de bus.
 
-Elles servent à l’innovation, à la recherche utilisateur et à l’amélioration des services — pas à savoir ce que tu as mangé à midi.
+Ne donne pas de nom ni d’information personnelle dans tes réponses.
 
-Avec le micro, une ou deux réponses peuvent être enregistrées, transcrites et analysées automatiquement. Tu peux aussi participer sans micro. La participation est volontaire et tu peux arrêter à tout moment."""
+La participation est volontaire. Tu peux arrêter à tout moment."""
 
-CONSENT_DE = """Deine Antworten helfen uns zu verstehen, was gut funktioniert, was stört und was sich am Bus-Erlebnis ändern sollte.
+CONSENT_DE = """Wenn du teilnimmst, werden ein bis zwei deiner Antworten mit dem Mikrofon aufgenommen, transkribiert und automatisch ausgewertet. So können wir dein Erlebnis besser verstehen und das Busangebot verbessern.
 
-Sie dienen Innovation, Nutzerforschung und der Verbesserung unserer Angebote — nicht dazu, herauszufinden, was du zu Mittag gegessen hast.
+Bitte nenne keine Namen oder persönlichen Angaben.
 
-Mit Mikrofon können ein bis zwei Antworten aufgenommen, transkribiert und automatisch ausgewertet werden. Du kannst auch ohne Mikrofon teilnehmen. Die Teilnahme ist freiwillig und du kannst jederzeit aufhören."""
+Die Teilnahme ist freiwillig. Du kannst jederzeit abbrechen."""
 
 
 def semer() -> str:
@@ -225,6 +225,26 @@ def semer() -> str:
             "jederzeit aufhören."
         )
         c.execute("UPDATE campagnes SET consent_de=? WHERE consent_de=?", (CONSENT_DE, anciens_de))
+        # v4 (seed): le consentement devient micro-obligatoire, deux choix
+        # seulement. L'ancien texte v3.x (encore éditable, jamais personnalisé)
+        # est remplacé par le nouveau texte légal, jamais un texte déjà modifié
+        # dans l'admin.
+        v3_fr = ("Tes réponses nous aident à comprendre ce qui fonctionne, ce qui agace et ce "
+                 "qui devrait changer dans l’expérience du bus.\n\nElles servent à l’innovation, "
+                 "à la recherche utilisateur et à l’amélioration des services — pas à savoir ce "
+                 "que tu as mangé à midi.\n\nAvec le micro, une ou deux réponses peuvent être "
+                 "enregistrées, transcrites et analysées automatiquement. Tu peux aussi "
+                 "participer sans micro. La participation est volontaire et tu peux arrêter à "
+                 "tout moment.")
+        c.execute("UPDATE campagnes SET consent_fr=? WHERE consent_fr=?", (CONSENT_FR, v3_fr))
+        v3_de = ("Deine Antworten helfen uns zu verstehen, was gut funktioniert, was stört und "
+                 "was sich am Bus-Erlebnis ändern sollte.\n\nSie dienen Innovation, "
+                 "Nutzerforschung und der Verbesserung unserer Angebote — nicht dazu, "
+                 "herauszufinden, was du zu Mittag gegessen hast.\n\nMit Mikrofon können ein "
+                 "bis zwei Antworten aufgenommen, transkribiert und automatisch ausgewertet "
+                 "werden. Du kannst auch ohne Mikrofon teilnehmen. Die Teilnahme ist freiwillig "
+                 "und du kannst jederzeit aufhören.")
+        c.execute("UPDATE campagnes SET consent_de=? WHERE consent_de=?", (CONSENT_DE, v3_de))
         db.poser_reglage(c, "seed_version", SEED_VERSION)
         db.journaliser(c, "seed", f"contenu par défaut v{SEED_VERSION}")
     return "contenu par défaut semé"

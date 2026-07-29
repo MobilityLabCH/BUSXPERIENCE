@@ -3,6 +3,7 @@ uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 jinja2>=3.1
 requests>=2.31
+qrcode>=7.4
 # Optionnel (transcription locale des reponses vocales):
 # faster-whisper>=1.0
 # Tests:
