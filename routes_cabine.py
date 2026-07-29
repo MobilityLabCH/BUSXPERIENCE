@@ -7,7 +7,7 @@ import random
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 
 import ai
 import config as vieprivee
@@ -18,8 +18,7 @@ router = APIRouter(prefix="/api", tags=["cabine"])
 
 
 @router.get("/config")
-def config(request: Request):
-    base = str(request.base_url)
+def config():
     with db.conn() as c:
         camp_id = int(db.reglage(c, "campagne_courante", "1") or 1)
         lieu_id = int(db.reglage(c, "lieu_courant", "1") or 1)
@@ -68,18 +67,27 @@ def config(request: Request):
         "concepts": concepts[:nb_concepts],
         "privacy": {
             "version": vieprivee.PRIVACY_NOTICE_VERSION,
-            "url_fr": vieprivee.lien_consentement("fr", base),
-            "url_de": vieprivee.lien_consentement("de", base),
+            "text_fr": vieprivee.CONSENT_TEXT_FR,
+            "text_de": vieprivee.CONSENT_TEXT_DE,
+            # Lien cliquable affiché à l'écran: toujours relatif, ne dépend
+            # jamais du domaine (jamais localhost) sur lequel tourne le serveur.
+            "url_fr": vieprivee.lien_page_protection("fr"),
+            "url_de": vieprivee.lien_page_protection("de"),
+            # URL absolue réellement encodée dans le QR (jamais localhost/
+            # 127.0.0.1/relative): PUBLIC_PRIVACY_URL_FR/DE > PUBLIC_BASE_URL
+            # + chemin > page officielle de La Poste.
+            "qr_url_fr": vieprivee.qr_url("fr"),
+            "qr_url_de": vieprivee.qr_url("de"),
         },
     }
 
 
 @router.get("/qr/{lang}.svg")
-def qr_consentement(lang: str, request: Request):
+def qr_consentement(lang: str):
     """QR code généré localement (aucun service externe) vers la notice
-    de protection des données, dans la langue de l'écran de consentement."""
-    base = str(request.base_url)
-    url = vieprivee.lien_consentement("de" if lang == "de" else "fr", base)
+    de protection des données, dans la langue de l'écran de consentement.
+    N'encode jamais localhost/127.0.0.1/0.0.0.0 ni une URL relative."""
+    url = vieprivee.qr_url("de" if lang == "de" else "fr")
     return Response(qr.qr_svg(url), media_type="image/svg+xml")
 
 

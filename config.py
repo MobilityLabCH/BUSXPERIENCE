@@ -12,10 +12,31 @@ juridique. Voir README.md.
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit
 
 # ------------------------------------------------------------- notice
 
 PRIVACY_NOTICE_VERSION = os.environ.get("PRIVACY_NOTICE_VERSION", "1.0")
+
+# Texte légal affiché sur l'écran de consentement, versionné avec
+# PRIVACY_NOTICE_VERSION. Source de vérité unique: ni les anciens champs
+# campagne.consent_fr/consent_de (conservés en base pour compatibilité mais
+# plus lus par la Cabine), ni un texte codé en dur ailleurs.
+CONSENT_TEXT_FR = (
+    "En participant, une ou deux de tes réponses seront enregistrées au "
+    "micro, transcrites et analysées automatiquement afin de mieux "
+    "comprendre ton expérience et d’améliorer les services de bus.\n\n"
+    "Ne donne pas de nom ni d’information personnelle dans tes réponses.\n\n"
+    "La participation est volontaire. Tu peux arrêter à tout moment."
+)
+CONSENT_TEXT_DE = (
+    "Wenn du teilnimmst, werden ein bis zwei deiner Antworten mit dem "
+    "Mikrofon aufgenommen, transkribiert und automatisch ausgewertet. So "
+    "können wir dein Erlebnis besser verstehen und das Busangebot "
+    "verbessern.\n\n"
+    "Bitte nenne keine Namen oder persönlichen Angaben.\n\n"
+    "Die Teilnahme ist freiwillig. Du kannst jederzeit abbrechen."
+)
 
 # Responsable précis du projet BUS XPERIENCE: reste à confirmer par le
 # service Legal / Datenschutz. Ne jamais remplacer par une valeur inventée.
@@ -67,25 +88,61 @@ PRIVACY_URL_DE = os.environ.get(
 )
 
 # Page détaillée propre à BUS XPERIENCE, si publiée à une URL publique
-# distincte de ce serveur (ex. site vitrine). Si absente, le QR code et les
-# liens de la Cabine pointent vers la page /protection-des-donnees servie
-# par cette application, ou à défaut vers PRIVACY_URL_FR/DE.
+# distincte de ce serveur (ex. site vitrine).
 PUBLIC_PRIVACY_URL_FR = os.environ.get("PUBLIC_PRIVACY_URL_FR", "").strip()
 PUBLIC_PRIVACY_URL_DE = os.environ.get("PUBLIC_PRIVACY_URL_DE", "").strip()
 
+# URL publique (avec https) sous laquelle CETTE application est réellement
+# joignable depuis un téléphone (ex. https://busxperience.mobilitylab.ch).
+# Ne JAMAIS déduire cette valeur de la requête entrante (Host/base_url): en
+# développement ou derrière un tunnel, ce serait localhost/127.0.0.1, illisible
+# et inutile une fois imprimé dans un QR code physique.
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip()
 
-def lien_consentement(lang: str, base_url: str = "") -> str:
-    """URL à afficher/encoder en QR sur l'écran de consentement.
+CHEMIN_PROTECTION_FR = "/protection-des-donnees"
+CHEMIN_PROTECTION_DE = "/datenschutz"
 
-    Priorité: URL publique propre à BUS XPERIENCE > page détaillée servie par
-    cette application > page générale de La Poste.
+_HOTES_INTERDITS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+
+def _url_publique_utilisable(url: str) -> bool:
+    """Rejette toute URL absente, relative, ou pointant vers une adresse
+    locale/interne: une telle URL est inutilisable dans un QR imprimé."""
+    if not url:
+        return False
+    parties = urlsplit(url)
+    if parties.scheme not in ("http", "https") or not parties.netloc:
+        return False
+    hote = (parties.hostname or "").lower()
+    if not hote or hote in _HOTES_INTERDITS:
+        return False
+    if hote.endswith(".local"):
+        return False
+    return True
+
+
+def lien_page_protection(lang: str) -> str:
+    """Chemin relatif de la page de protection des données servie par cette
+    application. Toujours relatif: fonctionne quel que soit le domaine."""
+    return CHEMIN_PROTECTION_DE if lang == "de" else CHEMIN_PROTECTION_FR
+
+
+def qr_url(lang: str) -> str:
+    """URL absolue à encoder dans le QR code. Ne renvoie jamais localhost,
+    127.0.0.1, 0.0.0.0 ni une URL relative: si aucune configuration publique
+    valable n'est disponible, la page officielle de La Poste sert de repli.
+
+    Priorité: 1) PUBLIC_PRIVACY_URL_FR/DE  2) PUBLIC_BASE_URL + chemin
+    correspondant  3) page officielle La Poste (PRIVACY_URL_FR/DE).
     """
     de = lang == "de"
     propre = PUBLIC_PRIVACY_URL_DE if de else PUBLIC_PRIVACY_URL_FR
-    if propre:
+    if _url_publique_utilisable(propre):
         return propre
-    if base_url:
-        return base_url.rstrip("/") + ("/datenschutz" if de else "/protection-des-donnees")
+    if PUBLIC_BASE_URL:
+        candidate = PUBLIC_BASE_URL.rstrip("/") + lien_page_protection(lang)
+        if _url_publique_utilisable(candidate):
+            return candidate
     return PRIVACY_URL_DE if de else PRIVACY_URL_FR
 
 

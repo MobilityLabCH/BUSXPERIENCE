@@ -1,10 +1,14 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BUS XPERIENCE · Connexion</title><link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
+<title>BUS XPERIENCE · Connexion</title>
+<link rel="icon" type="image/png" href="/medias/favicon-mobilitylab.png">
+<link rel="apple-touch-icon" href="/medias/favicon-mobilitylab-180.png">
+<link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
 <style>
 body{background:#111;color:#fff;font:400 16px/1.5 "Swiss Post Sans",Arial,system-ui,sans-serif;display:flex;
  min-height:100vh;align-items:center;justify-content:center}
 form{background:#1B1B1E;border-radius:12px;padding:32px;width:min(90vw,360px)}
+.logo{height:30px;width:auto;display:block;margin-bottom:18px}
 h1{font-size:20px;letter-spacing:.06em;font-weight:900}h1 span{color:#FFCC00}
 input{width:100%;margin:16px 0 12px;padding:11px;border-radius:8px;border:0;font-size:16px}
 button{width:100%;padding:12px;border:0;border-radius:8px;background:#FFCC00;
@@ -12,6 +16,7 @@ button{width:100%;padding:12px;border:0;border-radius:8px;background:#FFCC00;
 p{color:#8C8C8C;font-size:12px;margin-top:14px;text-align:center}
 </style></head><body>
 <form method="post" action="/admin/login">
+ <img class="logo" src="/medias/Logo_Lockup_01_MobilityLab_White_Red.png" alt="MobilityLab">
  <h1>BUS <span>XPERIENCE</span></h1>
  {% if erreur %}<p style="color:#FF6B5E">{{ erreur }}</p>{% endif %}
  <input type="password" name="mot_de_passe" placeholder="Mot de passe" autofocus required>

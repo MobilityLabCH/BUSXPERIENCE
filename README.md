@@ -16,14 +16,33 @@ fichier de police n'est inclus dans le projet.
 ## Un seul buzzer rouge
 
 Le parcours participant est strictement individuel et se pilote avec un seul
-buzzer physique. Un appui court parcourt les choix; un appui long (>= 0,7 s)
-valide; un appui tres long (4 s) pendant le parcours ouvre une confirmation
-d'arret et de suppression immediate de la session (« Tu peux arreter a tout
-moment » est une vraie fonction, pas une formule). La meme logique s'applique
-aux langues, au consentement, aux questions a choix, aux etoiles, aux
-comparaisons et a l'echelle 0-10. Il n'y a plus de fleches gauche/droite, de
-curseur, de bouton « corriger » ni de navigation de site web. Espace/Entree
-simulent le buzzer pendant les tests; le tactile reste un secours discret.
+buzzer physique. Un appui court (< 650 ms) parcourt les choix; un appui long
+(>= 650 ms) valide au relachement; un appui tres long (>= 4 s) pendant le
+parcours ouvre une confirmation d'arret et de suppression immediate de la
+session (« Tu peux arreter a tout moment » est une vraie fonction, pas une
+formule). La meme logique s'applique aux langues, au consentement, aux
+questions a choix, aux etoiles, aux comparaisons et a l'echelle 0-10. Il n'y a
+plus de fleches gauche/droite, de curseur, de bouton « corriger » ni de
+navigation de site web.
+
+Gestionnaire de pression central et unique (buzzer physique, Space, Enter,
+buzzer a l'ecran, tactile de secours): `keydown` appelle systematiquement
+`preventDefault()`, ignore `event.repeat`, ne valide jamais directement;
+`keyup` calcule la duree reelle et declenche une seule action. Correction du
+bug historique de double activation Space: tous les boutons generes sont hors
+tabulation (`tabindex="-1"`) et ne peuvent donc plus etre actives nativement
+par le clavier en plus de notre propre gestionnaire. Un verrou
+(`transitioning`) empeche toute double validation pendant les 230 ms de
+transition entre deux ecrans. L'appui est reinitialise sans action sur
+`blur`, `visibilitychange`, `pointercancel` et changement d'ecran.
+
+Retour visuel de l'appui: anneau/barre qui se remplit, carte selectionnee
+teintee progressivement, signal sonore au franchissement du seuil de 650 ms,
+et message qui evolue « Appuie pour changer » -> « Continue de maintenir… »
+-> « Relache pour valider ». La toute premiere question du parcours affiche
+en plus une phrase d'aide unique expliquant les deux gestes. Admin -> Systeme
+-> « Tester le buzzer »: ecran de diagnostic isole (touche, duree, type
+d'appui, doubles evenements) qui ne cree jamais de session.
 
 La synthese vocale lit uniquement la question, jamais les reponses.
 BUS XPERIENCE fonctionne desormais uniquement avec le microphone: il n'y a
@@ -159,7 +178,7 @@ donnees existantes) mais n'est plus utilisee comme mecanisme de decision.
 
 ## Tests
 
-    python -m pytest tests/ -q        # 40 tests
+    python -m pytest tests/ -q        # 46 tests
 
 Voir CHANGELOG.md pour le detail de ce qui est teste, simule et non teste.
 
@@ -181,15 +200,33 @@ variables d'environnement, jamais codees en dur ailleurs):
 | `PRIVACY_CONTACT_EMAIL` | Contact pour les droits des personnes (defaut: `betroffenenrechte@post.ch`) |
 | `AUDIO_RETENTION_DAYS` | Duree de conservation des audios; **non definie par defaut**, avertissement tant qu'elle ne l'est pas |
 | `DATA_RETENTION_DAYS` | Duree de conservation des autres donnees personnelles; idem |
-| `PRIVACY_URL_FR` / `PRIVACY_URL_DE` | Notice generale de La Poste (valeurs officielles par defaut) |
-| `PUBLIC_PRIVACY_URL_FR` / `PUBLIC_PRIVACY_URL_DE` | URL publique propre a BUS XPERIENCE, si elle existe; sinon la page `/protection-des-donnees` ou `/datenschutz` de cette application est utilisee, sinon le lien general La Poste |
+| `PRIVACY_URL_FR` / `PRIVACY_URL_DE` | Notice generale de La Poste (valeurs officielles par defaut, repli final) |
+| `PUBLIC_PRIVACY_URL_FR` / `PUBLIC_PRIVACY_URL_DE` | URL publique propre a BUS XPERIENCE a encoder dans le QR, si elle existe |
+| `PUBLIC_BASE_URL` | URL publique (https) sous laquelle cette application est reellement joignable (ex. `https://busxperience.exemple.ch`), **jamais deduite de la requete entrante** |
+
+Deux liens distincts et volontairement decouples: le lien cliquable affiche a
+l'ecran de consentement (« Protection des donnees / Datenschutz ») pointe
+toujours vers un chemin **relatif** de cette application (`/protection-des-donnees`
+ou `/datenschutz`), quel que soit le domaine. Le QR code, lui, doit encoder
+une URL absolue exploitable par un telephone: priorite a
+`PUBLIC_PRIVACY_URL_FR/DE`, puis `PUBLIC_BASE_URL` + le chemin correspondant,
+puis la page officielle de La Poste. `config.qr_url()` rejette explicitement
+toute URL localhost/127.0.0.1/0.0.0.0/relative avant de l'utiliser: en
+developpement (aucune des deux variables definies), le QR encode donc
+toujours la page La Poste plutot qu'une adresse locale inutilisable une fois
+imprimee. Generation **locale** uniquement (bibliotheque `qrcode`, aucun
+service externe), taille ~96-112 px, dans une carte « Protection des donnees »
+entierement cliquable a cote des deux choix.
 
 Pages bilingues completes: `/protection-des-donnees` et `/datenschutz`
 (responsable, donnees collectees, finalites, destinataires/sous-traitants,
 fournisseur IA affiche dynamiquement, pays de traitement, duree de
-conservation, droits, lien vers la notice generale de La Poste). QR code vers
-cette page **genere localement** (bibliotheque `qrcode`, aucun service
-externe) sur l'ecran de consentement.
+conservation, droits, lien vers la notice generale de La Poste). Le texte
+legal affiche sur l'ecran de consentement lui-meme (surtitre, titre, corps,
+deux choix) est centralise et versionne dans `config.py`
+(`CONSENT_TEXT_FR`/`CONSENT_TEXT_DE`, `PRIVACY_NOTICE_VERSION`) — les anciens
+champs `campagne.consent_fr`/`consent_de` sont conserves en base mais ne sont
+plus lus par la Cabine.
 
 Code de participation: a la creation d'une session consentie, un code court
 et aleatoire (`BX-XXXX-XXXX`) est genere et affiche discretement en fin de

@@ -1,0 +1,71 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Tester le buzzer</h2>
+<p class="gris petit">Diagnostic clavier/buzzer isolé: aucune session n'est créée, aucune donnée
+n'est enregistrée. Utilise Espace, Entrée ou clique le bouton ci-dessous pour tester un
+appui court, un appui long (≥ 650&nbsp;ms) ou un appui très long (≥ 4000&nbsp;ms). Un même
+appui ne doit produire qu'une seule ligne « relâché ».</p>
+
+<div class="carte" style="text-align:center">
+ <button id="bt-buzzer" style="width:120px;height:120px;border-radius:50%;background:#B3261E;color:#fff;font-weight:900;font-size:14px" tabindex="-1">BUZZER</button>
+ <p class="petit" style="margin-top:10px" id="bt-state">état: repos</p>
+</div>
+
+<div class="carte" id="bt-alertes" hidden style="border-color:#B3261E"></div>
+
+<div class="carte">
+ <table>
+  <thead><tr><th>#</th><th>Source</th><th>Touche/entrée</th><th>Événement</th><th>Durée</th><th>Type</th></tr></thead>
+  <tbody id="bt-log"></tbody>
+ </table>
+</div>
+
+<script>
+"use strict";
+const log=document.getElementById("bt-log"),alertes=document.getElementById("bt-alertes"),
+      stateEl=document.getElementById("bt-state"),buzzer=document.getElementById("bt-buzzer");
+let n=0,down=false,downAt=0,downKey=null,doubleCount=0;
+const LONG=650,STOP=4000;
+
+function warn(msg){alertes.hidden=false;const p=document.createElement("p");p.className="petit";p.textContent=msg;alertes.prepend(p)}
+function row(source,touche,evenement,duree,type){n++;const tr=document.createElement("tr");
+ tr.innerHTML=`<td>${n}</td><td>${source}</td><td>${touche}</td><td>${evenement}</td><td>${duree}</td><td>${type}</td>`;
+ log.prepend(tr)}
+
+function pressType(d){return d>=STOP?"très long (abandon)":d>=LONG?"long (validation)":"court (suivant)"}
+
+function onDown(source,key){
+ if(down){doubleCount++;warn(`Double événement détecté: "down" reçu alors qu'un appui (${downKey}) était déjà en cours. (${doubleCount})`);return}
+ down=true;downAt=Date.now();downKey=key;
+ stateEl.textContent=`état: maintenu (${key})`;
+ row(source,key,"appuyé","—","—");
+}
+function onUp(source,key){
+ if(!down){warn(`Relâchement "${key}" reçu sans appui correspondant (source: ${source}).`);return}
+ const duree=Date.now()-downAt;down=false;
+ stateEl.textContent="état: repos";
+ row(source,key,"relâché",duree+" ms",pressType(duree));
+}
+function onCancel(source,key){
+ if(!down)return;
+ down=false;stateEl.textContent="état: repos (annulé)";
+ row(source,key,"annulé (reset)","—","—");
+}
+
+document.addEventListener("keydown",e=>{
+ if(e.code!=="Space"&&e.code!=="Enter")return;
+ e.preventDefault();
+ if(e.repeat){row("clavier",e.code,"repeat ignoré","—","—");return}
+ onDown("clavier",e.code);
+});
+document.addEventListener("keyup",e=>{
+ if(e.code!=="Space"&&e.code!=="Enter")return;
+ e.preventDefault();
+ onUp("clavier",e.code);
+});
+buzzer.addEventListener("pointerdown",e=>{e.preventDefault();onDown("buzzer écran","pointer")});
+buzzer.addEventListener("pointerup",e=>{e.preventDefault();onUp("buzzer écran","pointer")});
+buzzer.addEventListener("pointercancel",()=>onCancel("buzzer écran","pointer"));
+window.addEventListener("blur",()=>onCancel("fenêtre","blur"));
+document.addEventListener("visibilitychange",()=>{if(document.hidden)onCancel("onglet","visibilitychange")});
+</script>
+{% endblock %}

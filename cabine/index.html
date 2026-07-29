@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BUS XPERIENCE</title>
+<link rel="icon" type="image/png" href="/medias/favicon-mobilitylab.png">
+<link rel="apple-touch-icon" href="/medias/favicon-mobilitylab-180.png">
 <link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
 <style>
 :root{
@@ -24,8 +26,14 @@ button{font:inherit}
 #progress-track{height:8px;margin-top:10px;border-radius:99px;background:#27282d;overflow:hidden}
 #progress-fill{display:block;height:100%;width:0;background:var(--yellow);transition:width .35s ease}
 #signature{position:fixed;right:clamp(24px,5vw,78px);bottom:15px;z-index:15;color:#5b5c61;font-size:clamp(11px,1.1vw,16px);font-weight:600}
-#interaction{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:18;display:none;align-items:center;gap:12px;color:var(--paper);font-size:clamp(13px,1.25vw,18px);font-weight:800;white-space:nowrap}
-#interaction-dot{width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 5px 0 #75050a}
+#interaction{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:18;display:none;flex-direction:column;align-items:center;gap:8px}
+#interaction-row{display:flex;align-items:center;gap:12px;color:var(--paper);font-size:clamp(13px,1.25vw,18px);font-weight:800;white-space:nowrap}
+#interaction-dot{width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 5px 0 #75050a;transition:transform .1s,box-shadow .1s}
+#interaction-dot.arming{transform:scale(1.18);box-shadow:0 5px 0 #75050a,0 0 0 6px rgba(227,6,19,.25)}
+#press-meter{width:min(260px,42vw);height:6px;border-radius:99px;background:#27282d;overflow:hidden;opacity:0;transition:opacity .15s}
+#press-meter.on{opacity:1}
+#press-meter i{display:block;height:100%;width:0%;background:var(--yellow);border-radius:99px}
+#press-meter.ready i{background:var(--red)}
 
 .screen{position:absolute;inset:0;display:none;overflow:hidden;padding:clamp(86px,11vh,120px) clamp(28px,7vw,112px) clamp(54px,8vh,78px)}
 .screen.active{display:flex}
@@ -51,26 +59,45 @@ button{font:inherit}
 /* Sélections pilotées par un seul buzzer */
 .choices{display:grid;grid-template-columns:1fr;width:min(1080px,88vw);gap:clamp(8px,1.25vh,14px);min-height:0;align-content:center}
 .choices.two{grid-template-columns:repeat(2,minmax(0,1fr))}
-.choice{min-height:clamp(56px,8vh,82px);padding:clamp(11px,1.7vh,18px) clamp(16px,2vw,28px);display:flex;align-items:center;gap:18px;border:2px solid var(--line);border-radius:16px;background:#17181c;color:var(--paper);font-size:clamp(18px,2.15vw,31px);line-height:1.08;font-weight:800;text-align:left;transition:transform .14s,border-color .14s,background .14s,color .14s;cursor:pointer}
+.choice{min-height:clamp(56px,8vh,82px);padding:clamp(11px,1.7vh,18px) clamp(16px,2vw,28px);display:flex;align-items:center;gap:18px;border:2px solid var(--line);border-radius:16px;background:#17181c;color:var(--paper);font-size:clamp(18px,2.15vw,31px);line-height:1.08;font-weight:800;text-align:left;transition:transform .14s,border-color .14s,background .14s,color .14s;cursor:pointer;position:relative;overflow:hidden;isolation:isolate}
+.choice .number,.choice>span:last-child{position:relative;z-index:1}
+.choice .hold-fill{position:absolute;inset:0;width:0%;background:rgba(255,255,255,.3);z-index:0;transition:width .06s linear}
+.choice.selected .hold-fill{background:rgba(0,0,0,.16)}
 .choice .number{display:grid;place-items:center;flex:0 0 auto;width:clamp(34px,3.3vw,48px);height:clamp(34px,3.3vw,48px);border-radius:9px;background:#2a2b31;color:var(--paper);font-size:.8em;font-variant-numeric:tabular-nums}
 .choice.selected{background:var(--yellow);color:var(--ink);border-color:var(--yellow);transform:translateX(9px)}
 .choice.selected .number{background:var(--ink);color:var(--yellow)}
 .choice.confirmed{background:var(--orange);border-color:var(--orange);color:#fff}
 .choice.confirmed .number{background:#fff;color:var(--orange)}
 .choices.many .choice{min-height:clamp(50px,6.7vh,66px);font-size:clamp(16px,1.75vw,25px);padding:10px 16px}
+/* 6 à 8 réponses: grille équilibrée à deux colonnes; jamais une dernière
+   réponse isolée seule dans sa ligne (elle s'étire alors sur toute la largeur). */
+.choices.two.many .choice:last-child:nth-child(odd){grid-column:1 / -1}
 
 /* Langue / consentement */
 .hero-stack{display:flex;flex-direction:column;align-items:center;gap:clamp(18px,3vh,34px);width:min(1200px,90vw)}
 .language-title{font-size:clamp(54px,8vw,120px);font-weight:900;letter-spacing:-.05em;line-height:.88}
 #intro-title{max-width:20ch;font-size:clamp(40px,5.2vw,76px);line-height:.92}
 #e-intro .hero-stack{gap:clamp(12px,2vh,22px)}
-#consent-copy{white-space:pre-line;max-width:70ch;color:var(--paper);font-size:clamp(17px,1.8vw,26px);line-height:1.32;font-weight:600}
-#e-consent .choices{margin-top:4px}
-#consent-privacy{display:flex;align-items:center;gap:12px;margin-top:clamp(10px,2vh,20px)}
-#consent-qr{width:clamp(46px,5.5vh,64px);height:clamp(46px,5.5vh,64px);background:#fff;border-radius:6px;padding:4px}
-#consent-privacy-link{color:var(--muted);font-size:clamp(12px,1.15vw,16px);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 #participant-code-line{color:#77756d;font-size:clamp(12px,1.15vw,16px);font-weight:650;margin-top:8px;line-height:1.35}
 #participant-code-line b{color:var(--ink)}
+
+/* Consentement: composition éditoriale sur deux zones, toute la largeur */
+#e-consent{align-items:center}
+.consent-grid{display:grid;grid-template-columns:1.05fr .95fr;column-gap:clamp(36px,5vw,84px);row-gap:22px;width:min(1500px,94vw);align-items:center}
+.consent-left{display:flex;flex-direction:column;gap:clamp(14px,2.2vh,24px)}
+.consent-right{display:flex;flex-direction:column;gap:clamp(16px,2.4vh,26px)}
+#consent-copy{white-space:pre-line;max-width:56ch;color:var(--paper);font-size:clamp(17px,1.75vw,25px);line-height:1.34;font-weight:600}
+#consent-choices{width:100%;margin:0}
+.privacy-card{display:flex;align-items:center;gap:16px;padding:14px 18px;border:2px solid var(--line);border-radius:16px;background:#141519;text-decoration:none;transition:border-color .14s,background .14s,transform .14s}
+.privacy-card:hover,.privacy-card:focus-visible{border-color:var(--yellow);background:#1b1c21;transform:translateY(-2px)}
+#consent-qr{flex:0 0 auto;width:clamp(96px,9vh,112px);height:clamp(96px,9vh,112px);background:#fff;border-radius:10px;padding:6px}
+.privacy-card-text{display:flex;flex-direction:column;gap:4px;min-width:0}
+.privacy-card-text b{color:var(--paper);font-size:clamp(15px,1.5vw,20px);font-weight:900;letter-spacing:-.01em}
+.privacy-card-text span{color:var(--muted);font-size:clamp(12.5px,1.15vw,16px);font-weight:600;line-height:1.3}
+@media (max-width:980px){
+ .consent-grid{grid-template-columns:1fr;width:min(760px,92vw)}
+ #consent-copy{max-width:none}
+}
 
 /* Étoiles */
 .stars{display:flex;align-items:center;gap:clamp(10px,2vw,28px);min-height:140px}
@@ -150,7 +177,10 @@ button{font:inherit}
  <div id="progress-line"><span id="progress-step"></span><span id="progress-count"></span></div>
  <div id="progress-track"><i id="progress-fill"></i></div>
 </div>
-<div id="interaction"><span id="interaction-dot"></span><span id="interaction-text"></span></div>
+<div id="interaction">
+ <div id="interaction-row"><span id="interaction-dot"></span><span id="interaction-text"></span></div>
+ <div id="press-meter"><i></i></div>
+</div>
 <div id="signature">Powered by MobilityLab Sion</div>
 
 <section class="screen center active" id="e-waiting">
@@ -158,7 +188,7 @@ button{font:inherit}
   <p class="eyebrow">BUS XPERIENCE</p>
   <h1 class="headline" data-animated="1">TON EXPÉRIENCE.<br>DEIN ERLEBNIS.</h1>
   <p class="lead">Appuie pour commencer · Zum Starten drücken</p>
-  <button class="buzzer" id="main-buzzer" aria-label="Commencer"></button>
+  <button class="buzzer" id="main-buzzer" aria-label="Commencer" tabindex="-1"></button>
  </div>
 </section>
 
@@ -181,17 +211,23 @@ button{font:inherit}
  </div>
 </section>
 
-<section class="screen question-layout" id="e-consent">
- <p class="eyebrow" id="consent-kicker"></p>
- <h2 class="question compact" id="consent-title"></h2>
- <p id="consent-copy"></p>
- <div class="choices two" id="consent-choices">
-  <button class="choice selected" data-consent="oui"><span class="number">1</span><span id="consent-oui"></span></button>
-  <button class="choice" data-consent="non"><span class="number">2</span><span id="consent-non"></span></button>
- </div>
- <div id="consent-privacy">
-  <img id="consent-qr" alt="">
-  <a id="consent-privacy-link" href="#" target="_blank" rel="noopener"></a>
+<section class="screen" id="e-consent">
+ <div class="consent-grid">
+  <div class="consent-left">
+   <p class="eyebrow" id="consent-kicker"></p>
+   <h2 class="question compact" id="consent-title"></h2>
+   <p id="consent-copy"></p>
+  </div>
+  <div class="consent-right">
+   <div class="choices" id="consent-choices">
+    <button class="choice selected" data-consent="oui"><span class="number">1</span><span id="consent-oui"></span></button>
+    <button class="choice" data-consent="non"><span class="number">2</span><span id="consent-non"></span></button>
+   </div>
+   <a class="privacy-card" id="consent-privacy-link" href="/protection-des-donnees" target="_blank" rel="noopener">
+    <img id="consent-qr" alt="">
+    <span class="privacy-card-text"><b id="consent-privacy-title"></b><span id="consent-privacy-desc"></span></span>
+   </a>
+  </div>
  </div>
 </section>
 
@@ -233,9 +269,9 @@ button{font:inherit}
 <section class="screen question-layout" id="e-compare">
  <h2 class="question" id="compare-question"></h2>
  <div class="duel">
-  <button class="duel-card selected" id="compare-a"></button>
+  <button class="duel-card selected" id="compare-a" tabindex="-1"></button>
   <span class="duel-or" id="compare-or"></span>
-  <button class="duel-card" id="compare-b"></button>
+  <button class="duel-card" id="compare-b" tabindex="-1"></button>
  </div>
 </section>
 
@@ -254,9 +290,9 @@ button{font:inherit}
   <span class="timer" id="voice-timer" hidden>0:45</span>
   <p class="voice-status" id="voice-status"></p>
   <div class="choices" id="voice-review" hidden>
-   <button class="choice" data-action="listen"><span class="number">1</span><span id="voice-listen"></span></button>
-   <button class="choice" data-action="redo"><span class="number">2</span><span id="voice-redo"></span></button>
-   <button class="choice selected" data-action="save"><span class="number">3</span><span id="voice-save"></span></button>
+   <button class="choice" data-action="listen" tabindex="-1"><span class="number">1</span><span id="voice-listen"></span></button>
+   <button class="choice" data-action="redo" tabindex="-1"><span class="number">2</span><span id="voice-redo"></span></button>
+   <button class="choice selected" data-action="save" tabindex="-1"><span class="number">3</span><span id="voice-save"></span></button>
   </div>
  </div>
 </section>
@@ -285,12 +321,17 @@ const STEPS={
 };
 const TXT={
  fr:{
-  press:"Appuie pour continuer",choose:"Appuie pour parcourir · maintiens pour valider",
+  press:"Appuie pour continuer",
+  pressIdle:"Appuie pour changer",pressHolding:"Continue de maintenir…",
+  pressReady:"Relâche pour valider",
+  firstQuestionHint:"Une pression pour changer. Maintiens jusqu’au signal pour valider.",
   introTitle:"TU MONTES À BORD. À PARTIR DE MAINTENANT, C’EST TON EXPÉRIENCE QUI COMPTE.",
   introSub:"5 minutes pour améliorer le bus.",consentKicker:"Avant de commencer",
   consentTitle:"À toi de décider.",
   consentOui:"Oui, je participe",consentNon:"Non merci",
   privacyLink:"Protection des données",
+  privacyCardTitle:"Protection des données",
+  privacyCardDesc:"Découvre comment tes réponses sont utilisées, protégées et supprimées.",
   micUnavailableTitle:"Le microphone n’est pas disponible.",
   micUnavailableSub:"Aucune donnée n’a été enregistrée.",
   stopTitle:"Arrêter et supprimer cette session ?",
@@ -305,12 +346,17 @@ const TXT={
   reportKicker:"TON PROFIL DE VOYAGE"
  },
  de:{
-  press:"Drücken zum Weitergehen",choose:"Kurz drücken zum Auswählen · gedrückt halten zum Bestätigen",
+  press:"Drücken zum Weitergehen",
+  pressIdle:"Drücken zum Wechseln",pressHolding:"Weiter gedrückt halten…",
+  pressReady:"Loslassen zum Bestätigen",
+  firstQuestionHint:"Kurz drücken zum Wechseln. Bis zum Signal halten, um zu bestätigen.",
   introTitle:"DU STEIGST EIN. AB JETZT GEHT ES UM DEIN ERLEBNIS.",
   introSub:"5 Minuten für ein besseres Bus-Erlebnis.",consentKicker:"Bevor es losgeht",
   consentTitle:"Du entscheidest.",
   consentOui:"Ja, ich mache mit",consentNon:"Nein, danke",
   privacyLink:"Datenschutz",
+  privacyCardTitle:"Datenschutz",
+  privacyCardDesc:"Erfahre, wie deine Antworten verwendet, geschützt und gelöscht werden.",
   micUnavailableTitle:"Das Mikrofon ist nicht verfügbar.",
   micUnavailableSub:"Es wurden keine Daten gespeichert.",
   stopTitle:"Sitzung abbrechen und löschen?",
@@ -325,7 +371,14 @@ const TXT={
   reportKicker:"DEIN REISEPROFIL"
  }
 };
-const DEMO={campagne:{nom:"Démo",consent_fr:"En participant, une ou deux de tes réponses seront enregistrées au micro, transcrites et analysées automatiquement afin de mieux comprendre ton expérience et d’améliorer les services de bus.\n\nNe donne pas de nom ni d’information personnelle dans tes réponses.\n\nLa participation est volontaire. Tu peux arrêter à tout moment.",consent_de:"Wenn du teilnimmst, werden ein bis zwei deiner Antworten mit dem Mikrofon aufgenommen, transkribiert und automatisch ausgewertet. So können wir dein Erlebnis besser verstehen und das Busangebot verbessern.\n\nBitte nenne keine Namen oder persönlichen Angaben.\n\nDie Teilnahme ist freiwillig. Du kannst jederzeit abbrechen.",musique:null,musique_active:0,musique_volume:.3,ton:"complice"},lieu:{nom:"Démo"},privacy:{version:"1.0",url_fr:"https://www.post.ch/fr/pages/footer/protection-des-donnees-et-informations-legales",url_de:"https://www.post.ch/de/pages/footer/datenschutz-und-rechtliches"},tts:{vitesse:.97,tonalite:1.05,voix_fr:"auto",voix_de:"auto"},sons:{klaxon_actif:0},questions:[
+const DEMO={campagne:{nom:"Démo",musique:null,musique_active:0,musique_volume:.3,ton:"complice"},lieu:{nom:"Démo"},privacy:{
+ version:"1.0",
+ text_fr:"En participant, une ou deux de tes réponses seront enregistrées au micro, transcrites et analysées automatiquement afin de mieux comprendre ton expérience et d’améliorer les services de bus.\n\nNe donne pas de nom ni d’information personnelle dans tes réponses.\n\nLa participation est volontaire. Tu peux arrêter à tout moment.",
+ text_de:"Wenn du teilnimmst, werden ein bis zwei deiner Antworten mit dem Mikrofon aufgenommen, transkribiert und automatisch ausgewertet. So können wir dein Erlebnis besser verstehen und das Busangebot verbessern.\n\nBitte nenne keine Namen oder persönlichen Angaben.\n\nDie Teilnahme ist freiwillig. Du kannst jederzeit abbrechen.",
+ url_fr:"/protection-des-donnees",url_de:"/datenschutz",
+ qr_url_fr:"https://www.post.ch/fr/pages/footer/protection-des-donnees-et-informations-legales",
+ qr_url_de:"https://www.post.ch/de/pages/footer/datenschutz-und-rechtliches"
+},tts:{vitesse:.97,tonalite:1.05,voix_fr:"auto",voix_de:"auto"},sons:{klaxon_actif:0},questions:[
  {id:1,ordre:10,etape:"experience",type:"choix",fr:"À quelle fréquence prends-tu le bus ?",de:"Wie oft fährst du mit dem Bus?",options_fr:["Tous les jours ou presque","Plusieurs fois par semaine","Quelques fois par mois","Rarement","Jamais"],options_de:["Täglich oder fast täglich","Mehrmals pro Woche","Ein paar Mal pro Monat","Selten","Nie"],params:{segment:true}},
  {id:2,ordre:20,etape:"experience",type:"etoiles",fr:"Combien d’étoiles mérite ton dernier trajet ?",de:"Wie viele Sterne verdient deine letzte Busfahrt?",options_fr:[],options_de:[],params:{max:5}},
  {id:3,ordre:30,etape:"friction",type:"echelle",fr:"Tu fais confiance au bus pour arriver à l’heure ?",de:"Vertraust du dem Bus, pünktlich anzukommen?",options_fr:[],options_de:[],params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Totalement",min_libelle_de:"Gar nicht",max_libelle_de:"Voll und ganz"}},
@@ -363,8 +416,10 @@ function speakQuestion(q,done){stopSpeech();const spoken=(q["parle_"+lang]||"").
 
 /* Écrans */
 function animateWords(screen){screen.classList.remove("play");screen.querySelectorAll(".headline,.question,.language-title,.report-title").forEach(el=>{if(el.dataset.animated==="1")return;const words=el.textContent.trim().split(/\s+/);el.innerHTML=words.map((w,i)=>`<span class="word" style="animation-delay:${i*28}ms">${w}</span>`).join(" ");el.dataset.animated="1"});void screen.offsetWidth;screen.classList.add("play")}
-function show(id){const wipe=$("#wipe");wipe.classList.remove("go");void wipe.offsetWidth;wipe.classList.add("go");soundTransition();setTimeout(()=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));const screen=$("#"+id);screen.classList.add("active");animateWords(screen)},230)}
-function setHelp(value){$("#interaction-text").textContent=value;$("#interaction").style.display=value?"flex":"none"}
+function show(id){resetPress();transitioning=true;const wipe=$("#wipe");wipe.classList.remove("go");void wipe.offsetWidth;wipe.classList.add("go");soundTransition();setTimeout(()=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));const screen=$("#"+id);screen.classList.add("active");animateWords(screen);transitioning=false},230)}
+function helpText(value){$("#interaction-text").textContent=value;$("#interaction").style.display=value?"flex":"none"}
+function setHelp(value){helpChooseMode=false;helpText(value)}
+function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(text().firstQuestionHint);pendingFirstHint=false}else{helpText(text().pressIdle)}}
 function hideChrome(){$("#progress").style.display="none";setHelp("")}
 function resetAnimated(...ids){ids.forEach(id=>{const el=$(id);if(el)el.dataset.animated="0"})}
 
@@ -377,15 +432,15 @@ function buildSequence(){const qs=(cfg.questions||[]).slice().sort((a,b)=>a.ordr
 function updateProgress(step){const visible=visibleSteps(),index=visible.indexOf(step),stage=step.kind==="question"?step.q.etape:"idees";$("#progress-step").textContent=STEPS[lang][stage]||"";$("#progress-count").textContent=`${index+1} / ${visible.length}`;$("#progress-fill").style.width=`${100*(index+1)/Math.max(1,visible.length)}%`;$("#progress").style.display="block"}
 
 /* Choix génériques */
-function renderChoices(container,items,selected=0){currentItems=items;selection=Math.max(0,Math.min(selected,items.length-1));container.replaceChildren();container.classList.toggle("two",items.length>5);container.classList.toggle("many",items.length>5);items.forEach((item,i)=>{const b=document.createElement("button");b.className="choice"+(i===selection?" selected":"");b.innerHTML=`<span class="number">${i+1}</span><span></span>`;b.lastElementChild.textContent=item;b.onclick=()=>{if(selection===i)validateCurrent();else{selection=i;refreshSelection();soundMove()}};container.appendChild(b)})}
+function renderChoices(container,items,selected=0){currentItems=items;selection=Math.max(0,Math.min(selected,items.length-1));container.replaceChildren();container.classList.toggle("two",items.length>5);container.classList.toggle("many",items.length>5);items.forEach((item,i)=>{const b=document.createElement("button");b.className="choice"+(i===selection?" selected":"");b.tabIndex=-1;b.innerHTML=`<i class="hold-fill"></i><span class="number">${i+1}</span><span></span>`;b.lastElementChild.textContent=item;b.onclick=()=>{if(selection===i)validateCurrent();else{selection=i;refreshSelection();soundMove()}};container.appendChild(b)})}
 function refreshSelection(selector=".choice"){document.querySelectorAll(selector).forEach((el,i)=>el.classList.toggle("selected",i===selection))}
 function nextSelection(selector=".choice"){const nodes=[...document.querySelectorAll(selector)];if(!nodes.length)return;selection=(selection+1)%nodes.length;nodes.forEach((el,i)=>el.classList.toggle("selected",i===selection));soundMove()}
 function confirmSelection(selector=".choice"){const nodes=[...document.querySelectorAll(selector)],node=nodes[selection];if(node)node.classList.add("confirmed")}
 
 /* Démarrage */
-function start(){clearTimers();stopSpeech();state="language";selection=0;hideChrome();renderChoices($("#language-choices"),["Français","Deutsch"],0);show("e-language");setHelp("Appui court / kurz drücken · Maintenir / gedrückt halten")}
-function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const c=cfg.campagne||{},priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?c.consent_de:c.consent_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-link").textContent=text().privacyLink;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyLink;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");state="intro";show("e-intro");setHelp(text().press)}
-function showConsent(){state="consent";renderChoices($("#consent-choices"),[text().consentOui,text().consentNon],0);show("e-consent");setHelp(text().choose)}
+function start(){clearTimers();stopSpeech();state="language";selection=0;hideChrome();renderChoices($("#language-choices"),["Français","Deutsch"],0);show("e-language");setHelpChoose()}
+function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?priv.text_de:priv.text_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-title").textContent=text().privacyCardTitle;$("#consent-privacy-desc").textContent=text().privacyCardDesc;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyCardTitle;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");state="intro";show("e-intro");setHelp(text().press)}
+function showConsent(){state="consent";renderChoices($("#consent-choices"),[text().consentOui,text().consentNon],0);show("e-consent");setHelpChoose()}
 async function consentChoice(){if(selection===1)return refuse();await tryMicThenLaunch()}
 function refuse(){state="refused";hideChrome();$("#report-loading").textContent=text().noThanks;$("#report-card").hidden=true;show("e-report");later(3500,returnWaiting)}
 /* Le microphone n'est jamais ouvert avant validation explicite du "Oui".
@@ -400,24 +455,24 @@ async function abandonnerSession(){if(!demo&&session){try{await fetch(`/api/sess
 async function send(data){if(demo)return;const fd=new FormData();Object.entries(data).forEach(([k,v])=>{if(v!=null)fd.set(k,v)});try{await fetch(`/api/sessions/${session}/reponses`,{method:"POST",body:fd})}catch(e){console.error(e)}}
 
 /* Parcours */
-function showStep(delta=1){clearTimers();stopSpeech();let next=stepIndex+delta;while(next<sequence.length&&conditionsHide(sequence[next]))next+=delta>=0?1:-1;stepIndex=Math.max(0,next);if(stepIndex>=sequence.length)return finish();const step=sequence[stepIndex];updateProgress(step);if(step.kind==="question")showQuestion(step.q);else if(step.kind==="concept")showConcept(step.c);else if(step.kind==="concept-impact")showStars({id:0,concept:step.c,[lang]:lang==="de"?"Wie stark würde diese Idee dein Bus-Erlebnis verbessern?":"À quel point cette idée améliorerait-elle ton expérience du bus ?",params:{max:5},key:"impact"});else showScale({id:0,concept:step.c,[lang]:lang==="de"?"Würdest du damit öfter den Bus nehmen?":"Avec cette idée, prendrais-tu le bus plus souvent ?",params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Certainement",min_libelle_de:"Gar nicht",max_libelle_de:"Ganz sicher"},key:"adoption"})}
+function showStep(delta=1){clearTimers();stopSpeech();let next=stepIndex+delta;while(next<sequence.length&&conditionsHide(sequence[next]))next+=delta>=0?1:-1;stepIndex=Math.max(0,next);if(stepIndex>=sequence.length)return finish();if(stepIndex===0&&!firstQuestionExplained){pendingFirstHint=true;firstQuestionExplained=true}const step=sequence[stepIndex];updateProgress(step);if(step.kind==="question")showQuestion(step.q);else if(step.kind==="concept")showConcept(step.c);else if(step.kind==="concept-impact")showStars({id:0,concept:step.c,[lang]:lang==="de"?"Wie stark würde diese Idee dein Bus-Erlebnis verbessern?":"À quel point cette idée améliorerait-elle ton expérience du bus ?",params:{max:5},key:"impact"});else showScale({id:0,concept:step.c,[lang]:lang==="de"?"Würdest du damit öfter den Bus nehmen?":"Avec cette idée, prendrais-tu le bus plus souvent ?",params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Certainement",min_libelle_de:"Gar nicht",max_libelle_de:"Ganz sicher"},key:"adoption"})}
 function showQuestion(q){currentQuestion=q;q.displayText=(q[lang]||q.fr||"").replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");if(q.type==="choix")showChoice(q);else if(q.type==="etoiles")showStars(q);else if(q.type==="echelle")showScale(q);else if(q.type==="compare")showCompare(q);else showVoice(q)}
 
 function fitQuestion(el,textValue){el.textContent=textValue;el.classList.toggle("compact",textValue.length>75);el.dataset.animated="0"}
-function showChoice(q,overrideItems=null){state="choice";currentQuestion=q;fitQuestion($("#choice-question"),q.displayText||q[lang]||q.fr);const items=overrideItems||((q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr)||[];renderChoices($("#choice-options"),items,0);show("e-choice");setHelp(text().choose);speakQuestion(q)}
+function showChoice(q,overrideItems=null){state="choice";currentQuestion=q;fitQuestion($("#choice-question"),q.displayText||q[lang]||q.fr);const items=overrideItems||((q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr)||[];renderChoices($("#choice-options"),items,0);show("e-choice");setHelpChoose();speakQuestion(q)}
 async function validateChoice(){if(!currentItems.length){soundError();return}state="sending";confirmSelection("#choice-options .choice");soundOk();const value=currentItems[selection];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-function showStars(q){state="stars";currentQuestion=q;currentStars=1;fitQuestion($("#stars-question"),q.displayText||q[lang]||q.fr);const max=(q.params&&q.params.max)||5,zone=$("#stars-zone");zone.replaceChildren();for(let i=1;i<=max;i++){const s=document.createElement("span");s.className="star";s.textContent="★";s.onclick=()=>{currentStars=i;refreshStars()};zone.appendChild(s)}refreshStars();show("e-stars");setHelp(text().choose);speakQuestion(q)}
+function showStars(q){state="stars";currentQuestion=q;currentStars=1;fitQuestion($("#stars-question"),q.displayText||q[lang]||q.fr);const max=(q.params&&q.params.max)||5,zone=$("#stars-zone");zone.replaceChildren();for(let i=1;i<=max;i++){const s=document.createElement("span");s.className="star";s.textContent="★";s.onclick=()=>{currentStars=i;refreshStars()};zone.appendChild(s)}refreshStars();show("e-stars");setHelpChoose();speakQuestion(q)}
 function refreshStars(){document.querySelectorAll("#stars-zone .star").forEach((s,i)=>s.classList.toggle("on",i<currentStars));$("#stars-value").textContent=`${currentStars} ${currentStars===1?text().star:text().stars}`}
 function nextStars(){const max=document.querySelectorAll("#stars-zone .star").length;currentStars=currentStars%max+1;refreshStars();soundMove()}
 async function validateStars(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"impact",valeur:String(currentStars)});else{localAnswers["q"+currentQuestion.id]=String(currentStars);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentStars)})}later(260,()=>showStep())}
 
-function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;currentScale=Math.min(5,max);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();for(let i=0;i<=max;i++){const b=document.createElement("button");b.className="scale-value";b.textContent=String(i);b.onclick=()=>{currentScale=i;refreshScale()};zone.appendChild(b)}const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelp(text().choose);speakQuestion(q)}
+function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;currentScale=Math.min(5,max);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();for(let i=0;i<=max;i++){const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.textContent=String(i);b.onclick=()=>{currentScale=i;refreshScale()};zone.appendChild(b)}const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
 function refreshScale(){document.querySelectorAll("#scale-values .scale-value").forEach((b,i)=>b.classList.toggle("selected",i===currentScale))}
 function nextScale(){const max=document.querySelectorAll("#scale-values .scale-value").length-1;currentScale=currentScale>=max?0:currentScale+1;refreshScale();soundMove()}
 async function validateScale(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur:String(currentScale)});else{localAnswers["q"+currentQuestion.id]=String(currentScale);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentScale)})}later(260,()=>showStep())}
 
-function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();$("#compare-a").onclick=()=>{currentCompare=0;refreshCompare()};$("#compare-b").onclick=()=>{currentCompare=1;refreshCompare()};show("e-compare");setHelp(text().choose);speakQuestion(q)}
+function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();$("#compare-a").onclick=()=>{currentCompare=0;refreshCompare()};$("#compare-b").onclick=()=>{currentCompare=1;refreshCompare()};show("e-compare");setHelpChoose();speakQuestion(q)}
 function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCompare===0);$("#compare-b").classList.toggle("selected",currentCompare===1)}
 function nextCompare(){currentCompare=currentCompare?0:1;refreshCompare();soundMove()}
 async function validateCompare(){state="sending";soundOk();const value=currentItems[currentCompare];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
@@ -432,7 +487,7 @@ function showVoice(q){voiceQuestion=q;state="voice-intro";fitQuestion($("#voice-
 async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{await abandonnerSession();return showMicUnavailable()}voiceStream=stream;chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
 function updateTimer(){if(state!=="voice-recording")return;const seconds=Math.max(0,Math.ceil((voiceDeadline-Date.now())/1000));$("#voice-timer").textContent=`0:${String(seconds).padStart(2,"0")}`;if(seconds<=0)return stopRecording();later(250,updateTimer)}
 function startMeter(stream){try{voiceContext=new (window.AudioContext||window.webkitAudioContext)();const analyser=voiceContext.createAnalyser();voiceContext.createMediaStreamSource(stream).connect(analyser);analyser.fftSize=128;const data=new Uint8Array(analyser.frequencyBinCount),bars=[...document.querySelectorAll("#voice-meter i")];(function loop(){if(state!=="voice-recording"){voiceContext&&voiceContext.close();return}analyser.getByteFrequencyData(data);bars.forEach((b,i)=>b.style.height=Math.max(14,(data[i*3]||0)/255*100)+"%");requestAnimationFrame(loop)})()}catch{}}
-async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelp(text().choose)}
+async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelpChoose()}
 function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObjectURL(lastBlob)).play();return}if(selection===1){state="voice-intro";$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;setHelp(text().press);return}saveVoice()}
 async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
@@ -440,20 +495,80 @@ async function saveVoice(){if(!lastBlob)return soundError();state="sending";soun
 async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
 function returnWaiting(){clearTimers();stopSpeech();musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
 
-/* Appui court / long / très long (arrêt de session) */
-const LONG_PRESS=700,STOP_PRESS=4000;let pressStarted=0;
+/* ================================================================
+   Gestionnaire central de pression — buzzer physique, Space, Enter,
+   buzzer à l'écran et tactile de secours partagent EXACTEMENT la même
+   logique. Corrige le bug historique de double déclenchement Space/
+   appui long: les boutons natifs (<button>) activaient AUSSI un clic
+   natif au clavier (focus + Space/Enter), en plus de nos propres
+   gestionnaires — deux actions au lieu d'une. Fix: tous les boutons
+   générés restent hors du parcours de tabulation (tabindex="-1"), donc
+   ne peuvent plus être "activés" nativement; Space/Enter ne sont
+   interprétés qu'ICI, une seule fois, sur relâchement.
+
+   Règles: appui court (<650 ms) = suivant. Appui long (>=650 ms) =
+   valider au relâchement. Appui très long (>=4000 ms) = confirmation
+   d'abandon. keydown: preventDefault + repeat ignoré + aucune validation
+   directe. keyup: une seule action calculée sur la durée réelle. Reset
+   sur blur, visibilitychange, pointercancel et changement d'écran. */
+const LONG_PRESS=650,STOP_PRESS=4000;
+let pressStarted=0,pressHeld=false,thresholdReached=false,holdRAF=0,transitioning=false;
+let helpChooseMode=false,pendingFirstHint=false,firstQuestionExplained=false;
 const ABORTABLE=new Set(["choice","stars","scale","compare","concept","voice-intro","voice-recording","voice-review"]);
 let preAbortState=null,preAbortScreen=null;
+const soundReady=()=>tone([950],.09,.1);
+
 function pressVisual(on){$("#main-buzzer").classList.toggle("pressed",on)}
-function pressDown(){if(pressStarted)return;pressStarted=Date.now();pressVisual(true);resetIdle()}
-function pressUp(){if(!pressStarted)return;const duration=Date.now()-pressStarted;pressStarted=0;pressVisual(false);if(duration>=STOP_PRESS&&ABORTABLE.has(state))return openStopConfirm();duration>=LONG_PRESS?longPress():shortPress()}
+function armVisuals(){$("#interaction-dot").classList.add("arming");$("#press-meter").classList.add("on")}
+function disarmVisuals(){$("#interaction-dot").classList.remove("arming");$("#press-meter").classList.remove("on","ready");$("#press-meter i").style.width="0%";document.querySelectorAll(".hold-fill").forEach(el=>el.style.width="0%");cancelAnimationFrame(holdRAF)}
+function setMeter(pct){$("#press-meter i").style.width=Math.max(0,Math.min(100,pct))+"%"}
+
+function holdLoop(){
+ if(!pressHeld)return;
+ const elapsed=Date.now()-pressStarted;
+ const pct=Math.max(0,Math.min(100,elapsed/LONG_PRESS*100));
+ setMeter(pct);
+ const selectedFill=document.querySelector(".screen.active .choice.selected .hold-fill");
+ if(selectedFill)selectedFill.style.width=pct+"%";
+ if(elapsed>=LONG_PRESS&&!thresholdReached){
+  thresholdReached=true;$("#press-meter").classList.add("ready");soundReady();
+  if(helpChooseMode)helpText(text().pressReady);
+ }
+ holdRAF=requestAnimationFrame(holdLoop);
+}
+
+/* Point d'entrée unique pour TOUTE source d'appui (buzzer, Space, Enter, tactile). */
+function pressDown(){
+ if(pressHeld)return; // ignore un second "down" tant que le premier n'est pas relâché
+ pressHeld=true;pressStarted=Date.now();thresholdReached=false;
+ pressVisual(true);armVisuals();resetIdle();
+ if(helpChooseMode)helpText(text().pressHolding);
+ holdRAF=requestAnimationFrame(holdLoop);
+}
+function pressUp(){
+ if(!pressHeld)return;
+ const duration=Date.now()-pressStarted;
+ pressHeld=false;pressStarted=0;pressVisual(false);disarmVisuals();
+ if(helpChooseMode)helpText(pendingFirstHint?text().firstQuestionHint:text().pressIdle);
+ if(transitioning)return; // une transition d'écran est en cours: ignorer, jamais de double validation
+ if(duration>=STOP_PRESS&&ABORTABLE.has(state))return openStopConfirm();
+ duration>=LONG_PRESS?longPress():shortPress();
+}
+/* Remise à zéro sans exécuter d'action: perte de focus, onglet caché,
+   pointeur annulé, ou changement d'écran en cours. */
+function resetPress(){
+ if(!pressHeld){cancelAnimationFrame(holdRAF);return}
+ pressHeld=false;pressStarted=0;pressVisual(false);disarmVisuals();
+ if(helpChooseMode)helpText(text().pressIdle);
+}
+
 function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
 function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","mic-unavailable","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
 function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
 
 /* "Tu peux arrêter à tout moment": appui de 4 s pendant le parcours. */
-function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recorder&&recorder.state!=="inactive"&&recorder.stop()}catch{}voiceStream&&voiceStream.getTracks().forEach(t=>t.stop())}preAbortState=state;const active=document.querySelector(".screen.active");preAbortScreen=active?active.id:"e-waiting";state="stop-confirm";renderChoices($("#stop-confirm-choices"),[text().stopContinue,text().stopDelete],0);show("e-stop-confirm");setHelp(text().choose)}
-function stopConfirmChoice(){if(selection===1)return confirmStopDelete();state=preAbortState;show(preAbortScreen);if(preAbortState==="voice-recording"||preAbortState==="voice-review"){state="voice-intro";$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice")}setHelp(state==="voice-intro"||state==="concept"?text().press:text().choose)}
+function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recorder&&recorder.state!=="inactive"&&recorder.stop()}catch{}voiceStream&&voiceStream.getTracks().forEach(t=>t.stop())}preAbortState=state;const active=document.querySelector(".screen.active");preAbortScreen=active?active.id:"e-waiting";state="stop-confirm";renderChoices($("#stop-confirm-choices"),[text().stopContinue,text().stopDelete],0);show("e-stop-confirm");setHelpChoose()}
+function stopConfirmChoice(){if(selection===1)return confirmStopDelete();state=preAbortState;show(preAbortScreen);if(preAbortState==="voice-recording"||preAbortState==="voice-review"){state="voice-intro";$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice")}if(state==="voice-intro"||state==="concept")setHelp(text().press);else setHelpChoose()}
 async function confirmStopDelete(){state="sending";clearTimers();stopSpeech();musicStop();await abandonnerSession();returnWaiting()}
 
 /* Entrées: le clavier Espace/Entrée représente le buzzer physique. Le tactile reste un secours. */
@@ -461,7 +576,10 @@ document.addEventListener("keydown",e=>{if((e.code==="Space"||e.code==="Enter")&
 document.addEventListener("keyup",e=>{if(e.code==="Space"||e.code==="Enter"){e.preventDefault();pressUp()}});
 $("#main-buzzer").addEventListener("pointerdown",e=>{e.preventDefault();pressDown()});
 $("#main-buzzer").addEventListener("pointerup",e=>{e.preventDefault();pressUp()});
-$("#main-buzzer").addEventListener("pointercancel",()=>{pressStarted=0;pressVisual(false)});
+$("#main-buzzer").addEventListener("pointercancel",resetPress);
+$("#main-buzzer").addEventListener("pointerleave",()=>{if(pressHeld)resetPress()});
+window.addEventListener("blur",resetPress);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)resetPress()});
 $("#voice-review").addEventListener("click",e=>{const b=e.target.closest(".choice");if(!b)return;selection=[...$("#voice-review").children].indexOf(b);refreshSelection("#voice-review .choice")});
 
 function resetIdle(){clearTimeout(idleTimer);idleTimer=setTimeout(()=>{if(!["waiting","voice-recording","report"].includes(state))returnWaiting()},120000)}

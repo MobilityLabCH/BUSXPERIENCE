@@ -10,8 +10,8 @@
     {% for t in ['complice','drole','sobre','institutionnel'] %}
     <option value="{{ t }}" {{ 'selected' if ca.ton==t }}>{{ t }}</option>{% endfor %}
    </select></div>
-   <div><label>Texte de consentement FR</label><textarea name="consent_fr" rows="6">{{ ca.consent_fr }}</textarea></div>
-   <div><label>Texte de consentement DE</label><textarea name="consent_de" rows="6">{{ ca.consent_de }}</textarea></div>
+   <div><label>Note interne FR (non affichée sur l'écran de consentement)</label><textarea name="consent_fr" rows="4">{{ ca.consent_fr }}</textarea></div>
+   <div><label>Note interne DE (non affichée sur l'écran de consentement)</label><textarea name="consent_de" rows="4">{{ ca.consent_de }}</textarea></div>
    <div><label>Musique de fond (mp3){{ ' · '+ca.musique if ca.musique }}</label>
     <input type="file" name="musique" accept="audio/*"></div>
    <div><label>Volume musique (0 à 1)</label>
@@ -37,10 +37,13 @@
   <p style="margin-top:10px"><button class="jaune">Créer</button></p>
  </form>
 </div>
-<p class="gris petit">Ce texte est le corps de l'écran de consentement (sous le titre fixe
-« À toi de décider / Du entscheidest »). BUS XPERIENCE fonctionne uniquement avec le
-microphone: il n'y a plus que deux choix, « Oui, je participe » et « Non merci », et
-aucune session n'est créée sans autorisation du navigateur. Détails complets:
+<p class="gris petit">Le texte de consentement réellement affiché à l'écran (surtitre « Avant de
+commencer / Bevor es losgeht », titre « À toi de décider / Du entscheidest », corps légal
+et les deux choix « Oui, je participe » / « Non merci ») est centralisé et versionné dans
+<code>config.py</code> (<code>CONSENT_TEXT_FR</code>/<code>CONSENT_TEXT_DE</code>,
+<code>PRIVACY_NOTICE_VERSION</code>), pas dans les campagnes: il ne peut plus diverger d'une
+campagne à l'autre ni être modifié par erreur. BUS XPERIENCE fonctionne uniquement avec le
+microphone; aucune session n'est créée sans autorisation du navigateur. Détails complets:
 Admin → Système, bloc « Protection des données », et les pages publiques
 /protection-des-donnees et /datenschutz. Implémentation technique, pas une
 validation juridique — à faire confirmer par Legal/Datenschutz.</p>

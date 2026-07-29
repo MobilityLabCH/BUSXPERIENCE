@@ -609,3 +609,14 @@ def tester_ia(request: Request):
     with db.conn() as c:
         db.journaliser(c, "ia_test", json.dumps(resultat, ensure_ascii=False))
     return RedirectResponse("/admin/systeme", status_code=303)
+
+
+@router.get("/admin/buzzer-test", response_class=HTMLResponse)
+def buzzer_test(request: Request):
+    """Diagnostic du buzzer/Space/Enter: touche, durée, type d'appui et
+    doubles événements éventuels. Ne crée jamais de session ni de donnée."""
+    if not connecte(request):
+        return page_login(request)
+    with db.conn() as c:
+        ctx = ctx_commun(c, "systeme")
+    return templates.TemplateResponse(request, "buzzer_test.html", ctx)
