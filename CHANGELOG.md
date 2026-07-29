@@ -1,5 +1,87 @@
 # CHANGELOG
 
+## v4.1 — Buzzer corrigé, texte légal centralisé, QR jamais localhost, refonte visuelle du consentement (2026-07-29)
+
+Implémentation technique renforcée. Validation juridique interne (Legal /
+Datenschutz de la Poste) encore nécessaire — ceci n'est PAS une certification
+juridique.
+
+### Buzzer, Space, Enter — bug corrigé
+- Gestionnaire de pression central et unique partagé par le buzzer physique,
+  Space, Enter, le buzzer à l'écran et le tactile de secours.
+- Cause du bug historique de double activation identifiée et corrigée: les
+  boutons générés (choix, échelle, duel, revue vocale) recevaient le focus
+  clavier et pouvaient être activés nativement par Space/Enter *en plus* de
+  nos propres gestionnaires. Correctif: tous ces boutons sont désormais hors
+  tabulation (`tabindex="-1"`), Space/Enter ne sont plus interprétés qu'à un
+  seul endroit.
+- Seuils clarifiés: appui court < 650 ms (suivant), appui long ≥ 650 ms
+  (validation au relâchement), appui très long ≥ 4000 ms (confirmation
+  d'abandon). `keydown` fait systématiquement `preventDefault()` et ignore
+  `event.repeat`; `keyup` calcule la durée réelle et déclenche une seule
+  action.
+- Nouveau verrou anti-double-validation pendant les 230 ms de transition
+  entre deux écrans (`transitioning`).
+- Réinitialisation explicite de l'appui sur `blur`, `visibilitychange`,
+  `pointercancel` et à chaque changement d'écran.
+- Retour visuel: anneau/barre qui se remplit, carte sélectionnée teintée
+  progressivement, signal sonore au franchissement du seuil, message qui
+  évolue « Appuie pour changer » → « Continue de maintenir… » → « Relâche
+  pour valider » (FR/DE). Aide dédiée affichée une seule fois, à la toute
+  première question du parcours.
+- Nouvel écran Admin → Système → « Tester le buzzer »: touche, durée, type
+  d'appui, doubles événements détectés — sans jamais créer de session.
+
+### Texte légal et QR code
+- Le texte réellement affiché sur l'écran de consentement (surtitre, titre,
+  corps légal, deux choix) est désormais centralisé et versionné dans
+  `config.py` (`CONSENT_TEXT_FR`/`CONSENT_TEXT_DE`,
+  `PRIVACY_NOTICE_VERSION`), exposé par `/api/config` (`privacy.text_fr`/
+  `text_de`). Les anciens champs `campagne.consent_fr`/`consent_de` sont
+  conservés en base (jamais supprimés) mais ne sont plus lus par la Cabine.
+- Séparation stricte entre le lien cliquable affiché (toujours relatif:
+  `/protection-des-donnees` ou `/datenschutz`, ne pointe jamais vers
+  localhost) et l'URL absolue encodée dans le QR code
+  (`PUBLIC_PRIVACY_URL_FR/DE` > `PUBLIC_BASE_URL` + chemin > page officielle
+  La Poste). Nouveau validateur qui rejette explicitement localhost,
+  127.0.0.1, 0.0.0.0 et toute URL relative avant de les utiliser dans un QR —
+  corrige un risque réel: en développement, le QR encodait auparavant l'hôte
+  de la requête entrante (potentiellement localhost).
+- QR généré localement (bibliothèque `qrcode`, aucun service externe), taille
+  ~96-112 px, dans une carte « Protection des données / Datenschutz »
+  entièrement cliquable.
+
+### Graphisme du consentement
+- Refonte en deux zones sur toute la largeur: à gauche surtitre/titre/texte,
+  à droite les deux choix et la carte Datenschutz — fini le grand vide
+  central, composition éditoriale proche d'une campagne Poste.
+- Grille à deux colonnes pour 6 à 8 réponses; la dernière réponse isolée
+  s'étire désormais sur toute la largeur au lieu de rester seule dans sa
+  colonne (`nth-child(odd)` + `grid-column:1/-1`).
+
+### Tests et vérification
+- 46 tests pytest (7 nouveaux): exactement deux choix FR/DE, texte légal réel
+  exposé par `/api/config`, QR/liens jamais localhost (unitaire + API +
+  `PUBLIC_BASE_URL`), analyse statique de `refuse()` (aucun `fetch`, aucun
+  `getUserMedia`), gestionnaire de pression corrigé (seuils, `event.repeat`,
+  verrou de transition, resets), écran « Tester le buzzer » sans création de
+  session.
+- Vérification réelle en navigateur headless (Chromium, Playwright), en
+  français et en allemand: appui court change la sélection, appui long
+  affiche « Relâche pour valider » puis valide, `event.repeat` n'avance pas
+  deux fois, `blur` en cours de maintien n'entraîne aucune validation
+  fantôme au relâchement suivant, appui de 4 s ouvre bien la confirmation
+  d'abandon et la confirmation supprime réellement la session, question à 7
+  réponses sans réponse isolée, rapport final sans Acte/JSON/note, aucun
+  débordement à 1366×768 sur les écrans clés. Captures d'écran conservées
+  pour cette livraison.
+
+### Reste à faire valider par Legal/Datenschutz
+- Responsable précis de BUS XPERIENCE (`DATA_CONTROLLER_FR`/`DE`).
+- `AUDIO_RETENTION_DAYS`/`DATA_RETENTION_DAYS` (aucune valeur par défaut).
+- `PUBLIC_BASE_URL`/`PUBLIC_PRIVACY_URL_FR`/`DE` à renseigner avant impression
+  physique d'un QR code sur la borne définitive.
+
 ## v4.0 — Micro obligatoire, consentement réellement explicite, protection des données (2026-07-29)
 
 Implémentation technique renforcée selon les principes de transparence,

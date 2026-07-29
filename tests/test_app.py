@@ -105,6 +105,45 @@ def test_cabine_servie(client):
     assert 'consentNon:"Nein, danke"' in h
     # QR code local + lien discret protection des données
     assert "/api/qr/" in h and "consent-privacy" in h
+    # QR suffisamment grand (~96-112px), jamais un service externe
+    assert "clamp(96px,9vh,112px)" in h
+    assert "api.qrserver.com" not in h and "chart.googleapis.com" not in h
+    # carte protection des données entièrement cliquable (toute la carte est un <a>)
+    assert '<a class="privacy-card"' in h
+    assert 'id="consent-privacy-desc"' in h and 'id="consent-privacy-title"' in h
+    # ancien texte d'intro jamais affiché comme consentement
+    assert "TU MONTES À BORD" not in h.split('id="e-consent"')[1].split("</section>")[0]
+
+
+def test_refus_ne_demande_jamais_le_micro_ni_ne_cree_de_session(client):
+    """Analyse statique de refuse(): aucun appel réseau, aucun getUserMedia."""
+    h = client.get("/cabine/").text
+    m = re.search(r"function refuse\(\)\{[^}]*\}", h)
+    assert m, "fonction refuse() introuvable"
+    corps = m.group(0)
+    assert "fetch" not in corps
+    assert "getUserMedia" not in corps
+    assert "/api/sessions" not in corps
+    assert "text().noThanks" in corps
+
+
+def test_bug_space_appui_long_corrige(client):
+    """Le bug historique (double activation Space/appui long) est corrigé:
+    gestionnaire central unique, boutons hors tabulation, event.repeat ignoré,
+    verrou anti-double-validation pendant les transitions d'écran."""
+    h = client.get("/cabine/").text
+    assert "LONG_PRESS=650" in h and "STOP_PRESS=4000" in h
+    assert "e.repeat" in h and "!e.repeat" in h
+    assert 'e.preventDefault()' in h
+    assert "tabindex=\"-1\"" in h or "tabIndex=-1" in h
+    assert "transitioning=false" in h
+    assert "if(transitioning)return" in h
+    assert 'addEventListener("blur",resetPress)' in h
+    assert 'visibilitychange' in h and "resetPress" in h
+    assert 'addEventListener("pointercancel",resetPress)' in h
+    # une seule fonction traite le relâchement, quelle que soit la source
+    assert h.count("function pressUp()") == 1
+    assert h.count("function pressDown()") == 1
 
 
 def test_admin_protege(client):
@@ -145,6 +184,61 @@ def test_config_cabine(client):
     assert cond, "au moins une question conditionnelle"
     assert d["privacy"]["url_fr"] and d["privacy"]["url_de"]
     assert d["privacy"]["version"]
+
+
+def test_json_privacy_texte_legal_reel(client):
+    """Le vrai texte légal (centralisé dans config.py) est bien celui exposé
+    par /api/config — plus les anciens champs campagne.consent_fr/de."""
+    import config
+    d = client.get("/api/config").json()
+    priv = d["privacy"]
+    assert priv["text_fr"] == config.CONSENT_TEXT_FR
+    assert priv["text_de"] == config.CONSENT_TEXT_DE
+    assert "Ne donne pas de nom ni d’information personnelle" in priv["text_fr"]
+    assert "La participation est volontaire" in priv["text_fr"]
+    assert "Bitte nenne keine Namen" in priv["text_de"]
+    assert "Die Teilnahme ist freiwillig" in priv["text_de"]
+    # liens cliquables toujours relatifs
+    assert priv["url_fr"] == "/protection-des-donnees"
+    assert priv["url_de"] == "/datenschutz"
+
+
+def test_qr_et_liens_jamais_localhost(client):
+    """Interdiction stricte: aucun lien ni QR ne doit pointer vers localhost,
+    127.0.0.1, 0.0.0.0 ou une URL relative/interne."""
+    import config
+    interdits = ("localhost", "127.0.0.1", "0.0.0.0", "testserver")
+    d = client.get("/api/config").json()
+    for cle in ("qr_url_fr", "qr_url_de"):
+        url = d["privacy"][cle]
+        assert url.startswith("http"), (cle, url)
+        assert not any(m in url for m in interdits), (cle, url)
+    # cohérent avec la fonction de résolution elle-même
+    for lang in ("fr", "de"):
+        url = config.qr_url(lang)
+        assert not any(m in url for m in interdits), url
+        assert config._url_publique_utilisable(url)
+    # une URL locale explicitement interdite est rejetée par le validateur
+    for mauvaise in ("http://localhost:8000/x", "http://127.0.0.1/x",
+                     "http://0.0.0.0/x", "/protection-des-donnees", ""):
+        assert not config._url_publique_utilisable(mauvaise), mauvaise
+    r = client.get("/api/qr/fr.svg")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg")
+    assert len(r.content) > 100
+
+
+def test_public_base_url_priorite_qr(monkeypatch):
+    """PUBLIC_BASE_URL (configuré, jamais déduit de la requête) prend le
+    relais si aucune PUBLIC_PRIVACY_URL_FR/DE n'est fournie."""
+    import config
+    monkeypatch.setattr(config, "PUBLIC_PRIVACY_URL_FR", "")
+    monkeypatch.setattr(config, "PUBLIC_PRIVACY_URL_DE", "")
+    monkeypatch.setattr(config, "PUBLIC_BASE_URL", "https://busxperience.example.ch")
+    assert config.qr_url("fr") == "https://busxperience.example.ch/protection-des-donnees"
+    assert config.qr_url("de") == "https://busxperience.example.ch/datenschutz"
+    # un PUBLIC_BASE_URL local est ignoré, on retombe sur La Poste
+    monkeypatch.setattr(config, "PUBLIC_BASE_URL", "http://localhost:8000")
+    assert config.qr_url("fr") == config.PRIVACY_URL_FR
 
 
 def test_session_strictement_individuelle(client):
@@ -318,6 +412,21 @@ def test_admin_sections(client):
                           ("/admin/medias", "Klaxon"),
                           ("/admin/systeme", "fournisseur IA")):
         assert marqueur in client.get(url).text, url
+
+
+def test_admin_buzzer_test_ne_cree_pas_de_session(client):
+    _login(client)
+    import db
+    with db.conn() as c:
+        avant = c.execute("SELECT COUNT(*) n FROM sessions").fetchone()["n"]
+    h = client.get("/admin/buzzer-test").text
+    assert "Tester le buzzer" in h
+    assert "aucune session n'est créée" in h.lower()
+    assert "/api/sessions" not in h
+    with db.conn() as c:
+        apres = c.execute("SELECT COUNT(*) n FROM sessions").fetchone()["n"]
+    assert apres == avant
+    assert "Tester le buzzer" in client.get("/admin/systeme").text
 
 
 def test_systeme_bloc_protection_donnees(client):
