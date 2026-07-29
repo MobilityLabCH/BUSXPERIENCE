@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Concepts à tester</h2>
+<div class="carte">
+ <form method="post" action="/admin/concepts" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
+  <div><label>Concepts tirés au sort par session</label>
+   <input type="number" name="nb_concepts" value="{{ nb_concepts }}" min="0" max="5" style="width:90px"></div>
+  <button>Enregistrer</button>
+  <span class="gris petit">Chaque concept mesure l'impact sur l'expérience (1-5 étoiles)
+   et la probabilité de prendre le bus plus souvent (0-10).</span>
+ </form>
+</div>
+{% for co in concepts %}
+<div class="carte">
+ <form method="post" action="/admin/concepts" enctype="multipart/form-data">
+  <input type="hidden" name="concept_id" value="{{ co.id }}">
+  <div class="deux">
+   <div><label>Nom FR</label><input name="nom_fr" value="{{ co.nom_fr }}"></div>
+   <div><label>Nom DE</label><input name="nom_de" value="{{ co.nom_de }}"></div>
+   <div><label>Description FR</label><textarea name="desc_fr">{{ co.desc_fr }}</textarea></div>
+   <div><label>Description DE</label><textarea name="desc_de">{{ co.desc_de }}</textarea></div>
+   <div><label>Campagne (vide = toutes)</label><select name="campagne_id">
+    <option value="0">Toutes</option>
+    {% for ca in campagnes %}<option value="{{ ca.id }}" {{ 'selected' if co.campagne_id==ca.id }}>{{ ca.nom }}</option>{% endfor %}
+   </select></div>
+   <div><label>Image (optionnelle){{ ' · '+co.image if co.image }}</label>
+    <input type="file" name="image" accept="image/*"></div>
+  </div>
+  <p style="margin-top:10px;display:flex;gap:10px">
+   <label style="margin:0;display:flex;gap:6px;font-weight:400">
+    <input type="checkbox" name="actif" value="1" {{ 'checked' if co.actif }}> actif</label>
+   <button>Enregistrer</button>
+   <button class="danger" name="supprimer" value="1"
+    onclick="return confirm('Supprimer ce concept ?')">Supprimer</button></p>
+ </form>
+</div>
+{% endfor %}
+<div class="carte">
+ <form method="post" action="/admin/concepts" enctype="multipart/form-data">
+  <b>Nouveau concept</b>
+  <div class="deux">
+   <div><label>Nom FR</label><input name="nom_fr" required></div>
+   <div><label>Nom DE</label><input name="nom_de" required></div>
+   <div><label>Description FR</label><textarea name="desc_fr"></textarea></div>
+   <div><label>Description DE</label><textarea name="desc_de"></textarea></div>
+  </div>
+  <p style="margin-top:10px"><button class="jaune">Ajouter</button></p>
+ </form>
+</div>
+{% endblock %}

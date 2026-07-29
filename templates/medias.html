@@ -1,0 +1,111 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Voix du navigateur (TTS_PROVIDER=browser, gratuit, sans clé)</h2>
+<div class="carte">
+ <p class="gris petit">La meilleure voix naturelle disponible est choisie automatiquement
+ (« auto »). Dans Edge, les voix « Natural / Online » sont privilégiées. Le choix se fait
+ dans le navigateur qui affiche cette page: régler et tester ici depuis la machine de la
+ borne pour un résultat identique dans le parcours.</p>
+ <div id="tts-alerte" class="petit" style="color:#B3261E"></div>
+ <form method="post" action="/admin/tts" class="deux" style="align-items:end">
+  <div><label>Voix française</label><select name="voix_fr" id="sel-fr">
+   <option value="auto" {{ 'selected' if tts.voix_fr=='auto' }}>auto (meilleure disponible)</option>
+  </select></div>
+  <div><label>Voix allemande</label><select name="voix_de" id="sel-de">
+   <option value="auto" {{ 'selected' if tts.voix_de=='auto' }}>auto (meilleure disponible)</option>
+  </select></div>
+  <div><label>Vitesse ({{ tts.vitesse }})</label>
+   <input type="range" name="vitesse" min="0.6" max="1.3" step="0.01" value="{{ tts.vitesse }}"></div>
+  <div style="display:flex;gap:8px">
+   <button>Enregistrer</button>
+   <button type="button" class="mini" onclick="testerVoix('fr')">Tester FR</button>
+   <button type="button" class="mini" onclick="testerVoix('de')">Tester DE</button>
+  </div>
+ </form>
+</div>
+<script>
+const CHOIX={fr:{{ "'"+tts.voix_fr+"'" }},de:{{ "'"+tts.voix_de+"'" }}};
+function scoreVoix(v){let s=0;const n=v.name.toLowerCase();
+ if(n.includes("natural"))s+=6;if(n.includes("online"))s+=4;if(n.includes("neural"))s+=4;
+ if(n.includes("google"))s+=3;if(n.includes("premium")||n.includes("enhanced"))s+=3;
+ if(!v.localService)s+=2;return s;}
+function meilleure(lang){const vs=speechSynthesis.getVoices()
+ .filter(v=>v.lang.toLowerCase().startsWith(lang));
+ return vs.sort((a,b)=>scoreVoix(b)-scoreVoix(a))[0];}
+function remplir(){
+ const vs=speechSynthesis.getVoices();
+ [["fr","sel-fr"],["de","sel-de"]].forEach(([lang,id])=>{
+  const sel=document.getElementById(id);
+  vs.filter(v=>v.lang.toLowerCase().startsWith(lang)).forEach(v=>{
+   const o=document.createElement("option");
+   o.value=v.name;o.textContent=v.name+(scoreVoix(v)>=4?"  ★ naturelle":"");
+   if(v.name===CHOIX[lang])o.selected=true;sel.appendChild(o);});});
+ const bfr=meilleure("fr"),bde=meilleure("de");
+ const basique=(!bfr||scoreVoix(bfr)<4)||(!bde||scoreVoix(bde)<4);
+ document.getElementById("tts-alerte").textContent=basique
+  ?"Attention: seule une voix basique est disponible dans CE navigateur. Sur la borne, utiliser Edge ou Chrome pour des voix naturelles.":"";
+}
+speechSynthesis.onvoiceschanged=remplir;remplir();
+function testerVoix(lang){
+ const sel=document.getElementById("sel-"+lang).value;
+ const v=sel==="auto"?meilleure(lang):speechSynthesis.getVoices().find(x=>x.name===sel);
+ const u=new SpeechSynthesisUtterance(lang==="de"
+  ?"Willkommen bei BUS XPERIENCE! Schön, bist du da.":"Bienvenue dans BUS XPERIENCE ! Ravi de t'entendre.");
+ u.lang=lang==="de"?"de-CH":"fr-CH";if(v)u.voice=v;
+ u.rate=parseFloat(document.querySelector("[name=vitesse]").value);u.pitch=1.05;
+ speechSynthesis.cancel();speechSynthesis.speak(u);}
+</script>
+<h2>Sons</h2>
+<div class="carte">
+ <form method="post" action="/admin/sons" style="display:flex;gap:14px;align-items:end;flex-wrap:wrap">
+  <label style="margin:0;display:flex;gap:6px;font-weight:400">
+   <input type="checkbox" name="klaxon_actif" value="1" {{ 'checked' if sons.klaxon_actif }}>
+   klaxon actif (révélation du rapport)</label>
+  <div><label>Volume klaxon ({{ sons.klaxon_volume }})</label>
+   <input type="range" name="klaxon_volume" min="0" max="1" step="0.05" value="{{ sons.klaxon_volume }}"></div>
+  <button>Enregistrer</button>
+  {% if klaxon_present %}
+  <button type="button" class="mini" onclick="new Audio('/medias/klaxon.mp3').play()">Tester le klaxon</button>
+  {% endif %}
+ </form>
+ <p class="gris petit" style="margin-top:8px">La musique de fond se règle par campagne
+ (Campagnes: fichier, volume, activation, test). Remplacer un fichier: déposer un
+ nouveau fichier avec le même nom ci-dessous.</p>
+</div>
+<h2>Médias</h2>
+<div class="carte">
+ <p><b>Klaxon CarPostal:</b> {{ 'présent ✓' if klaxon_present else 'absent — déposer klaxon.mp3 ci-dessous (fichier officiel interne). Sans lui, un son neutre de secours est joué.' }}</p>
+ <form method="post" action="/admin/medias" enctype="multipart/form-data"
+  style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:8px">
+  <div><label>Déposer un fichier (musique, klaxon.mp3, image…)</label>
+   <input type="file" name="fichier" required></div>
+  <div><label>Nom de destination (optionnel, ex. klaxon.mp3)</label><input name="nom"></div>
+  <button class="jaune">Déposer</button>
+ </form>
+</div>
+<div class="carte"><table><thead><tr><th>Fichier</th><th>Écouter / voir</th><th></th></tr></thead><tbody>
+{% for f in fichiers %}
+<tr><td>{{ f }}</td>
+ <td>{% if f.endswith('.mp3') or f.endswith('.wav') or f.endswith('.ogg') %}
+  <audio controls preload="metadata" src="/medias/{{ f }}" style="height:30px"></audio>
+  {% else %}<a href="/medias/{{ f }}" target="_blank">ouvrir</a>{% endif %}</td>
+ <td><form method="post" action="/admin/medias/supprimer">
+  <input type="hidden" name="nom" value="{{ f }}">
+  <button class="danger mini" onclick="return confirm('Supprimer {{ f }} ?')">Supprimer</button></form></td></tr>
+{% else %}<tr><td colspan="3" class="gris">Aucun fichier.</td></tr>{% endfor %}
+</tbody></table></div>
+<h2>Voix des questions</h2>
+<div class="carte"><table><thead><tr><th>Question</th><th>FR</th><th>DE</th></tr></thead><tbody>
+{% for q in questions_voix %}
+<tr><td>{{ q.ordre }} · {{ q.fr[:55] }}</td>
+ <td>{% if q.audio_fr %}<audio controls preload="metadata" src="/voix/{{ q.audio_fr }}" style="height:30px"></audio>
+  <form method="post" action="/admin/questions/{{ q.id }}/voix/supprimer" style="display:inline">
+  <input type="hidden" name="langue" value="fr"><button class="mini danger">×</button></form>
+  {% else %}<span class="gris petit">synthèse de secours</span>{% endif %}</td>
+ <td>{% if q.audio_de %}<audio controls preload="metadata" src="/voix/{{ q.audio_de }}" style="height:30px"></audio>
+  <form method="post" action="/admin/questions/{{ q.id }}/voix/supprimer" style="display:inline">
+  <input type="hidden" name="langue" value="de"><button class="mini danger">×</button></form>
+  {% else %}<span class="gris petit">synthèse de secours</span>{% endif %}</td></tr>
+{% endfor %}</tbody></table>
+<p class="gris petit">Le chargement des voix se fait dans l'édition de chaque question
+(Questionnaires → Éditer). La musique de campagne se règle dans Campagnes.</p></div>
+{% endblock %}

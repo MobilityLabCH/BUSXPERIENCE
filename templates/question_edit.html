@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block corps %}
+<h2>{{ 'Question '+q.id|string if q.id else 'Nouvelle question' }}
+ <a href="/admin/questions" class="gris petit" style="float:right">← retour à la liste</a></h2>
+<div class="carte">
+<form method="post" action="/admin/questions/{{ q.id }}" enctype="multipart/form-data">
+ <div class="deux">
+  <div><label>Question FR</label><textarea name="fr" required>{{ q.fr }}</textarea></div>
+  <div><label>Question DE</label><textarea name="de" required>{{ q.de }}</textarea></div>
+  <div><label>Texte parlé FR <span class="gris">(plus court et naturel; vide = texte affiché)</span></label>
+   <input name="texte_parle_fr" value="{{ q.texte_parle_fr or '' }}"></div>
+  <div><label>Texte parlé DE</label>
+   <input name="texte_parle_de" value="{{ q.texte_parle_de or '' }}"></div>
+  <div><label>Options FR (une par ligne; « compare »: exactement 2)</label>
+   <textarea name="options_fr">{{ q.options_fr }}</textarea></div>
+  <div><label>Options DE</label><textarea name="options_de">{{ q.options_de }}</textarea></div>
+  <div><label>Type</label><select name="type">
+   {% for t in ['choix','etoiles','echelle','compare','voix'] %}
+   <option value="{{ t }}" {{ 'selected' if q.type==t }}>{{ t }}</option>{% endfor %}</select></div>
+  <div><label>Étape</label><select name="etape">
+   {% for e in ['experience','friction','idees','priorite'] %}
+   <option value="{{ e }}" {{ 'selected' if q.etape==e }}>{{ e }}</option>{% endfor %}</select></div>
+  <div><label>Ordre</label><input type="number" name="ordre" value="{{ q.ordre }}"></div>
+  <div><label>Params JSON <span class="gris">(max, duree_voix, segment, libellés…)</span></label>
+   <input name="params" value='{{ q.params }}'></div>
+  <div><label>Condition JSON <span class="gris">ex. {"question_ordre":10,"valeurs":["Jamais ou presque"],"regle":"masquer_si"}</span></label>
+   <input name="condition" value='{{ q.condition }}'></div>
+  <div><label>Voix FR (mp3){{ ' · présente' if q.audio_fr }}</label>
+   <input type="file" name="voix_fr" accept="audio/*"></div>
+  <div><label>Voix DE (mp3){{ ' · présente' if q.audio_de }}</label>
+   <input type="file" name="voix_de" accept="audio/*"></div>
+ </div>
+ <p style="margin-top:12px;display:flex;gap:10px;align-items:center">
+  <label style="margin:0;display:flex;gap:6px;font-weight:400">
+   <input type="checkbox" name="actif" value="1" {{ 'checked' if q.actif }}> active</label>
+  <button class="jaune" name="action" value="sauver">Enregistrer</button>
+  {% if q.id %}<button class="danger" name="action" value="supprimer"
+   onclick="return confirm('Supprimer cette question ?')">Supprimer</button>{% endif %}
+  <a href="/cabine/" target="_blank"><button type="button" class="mini">Prévisualiser la Cabine ↗</button></a>
+ </p>
+</form>
+</div>
+<p class="gris petit">Ordres existants: {% for t in toutes %}{{ t.ordre }} · {% endfor %}</p>
+{% endblock %}

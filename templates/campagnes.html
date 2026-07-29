@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Campagnes</h2>
+{% for ca in campagnes %}
+<div class="carte">
+ <form method="post" action="/admin/campagnes" enctype="multipart/form-data">
+  <input type="hidden" name="campagne_id" value="{{ ca.id }}">
+  <div class="deux">
+   <div><label>Nom</label><input name="nom" value="{{ ca.nom }}" required></div>
+   <div><label>Ton du rapport participant</label><select name="ton">
+    {% for t in ['complice','drole','sobre','institutionnel'] %}
+    <option value="{{ t }}" {{ 'selected' if ca.ton==t }}>{{ t }}</option>{% endfor %}
+   </select></div>
+   <div><label>Texte de consentement FR</label><textarea name="consent_fr" rows="6">{{ ca.consent_fr }}</textarea></div>
+   <div><label>Texte de consentement DE</label><textarea name="consent_de" rows="6">{{ ca.consent_de }}</textarea></div>
+   <div><label>Musique de fond (mp3){{ ' · '+ca.musique if ca.musique }}</label>
+    <input type="file" name="musique" accept="audio/*"></div>
+   <div><label>Volume musique (0 à 1)</label>
+    <input type="number" step="0.05" min="0" max="1" name="musique_volume" value="{{ ca.musique_volume }}"></div>
+  </div>
+  <p style="margin-top:10px;display:flex;gap:10px;align-items:center">
+   <label style="margin:0;display:flex;gap:6px;font-weight:400">
+    <input type="checkbox" name="musique_active" value="1" {{ 'checked' if ca.musique_active }}> musique active</label>
+   <button>Enregistrer</button>
+   {% if ca.musique %}<audio controls preload="none" src="/medias/{{ ca.musique }}" style="height:32px"></audio>{% endif %}
+  </p>
+ </form>
+</div>
+{% endfor %}
+<div class="carte">
+ <form method="post" action="/admin/campagnes" enctype="multipart/form-data">
+  <b>Nouvelle campagne</b>
+  <div class="deux">
+   <div><label>Nom</label><input name="nom" required placeholder="Automne 2026"></div>
+   <div><label>Ton</label><select name="ton"><option>complice</option><option>drole</option>
+    <option>sobre</option><option>institutionnel</option></select></div>
+  </div>
+  <p style="margin-top:10px"><button class="jaune">Créer</button></p>
+ </form>
+</div>
+<p class="gris petit">Le texte de consentement est affiché avant toute question et avant
+toute activation du micro. Note: cet écran applique les principes de la LPD (information,
+volontariat, finalité) mais ne remplace pas une validation par les responsables
+protection des données et juridiques — points à vérifier: durée de conservation,
+droit d'effacement, registre de traitement, mention du fournisseur IA actif.</p>
+{% endblock %}

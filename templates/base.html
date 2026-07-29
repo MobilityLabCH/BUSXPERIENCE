@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titre %}BUS XPERIENCE{% endblock %} · Admin</title>
+<style>
+/* Hors ligne par principe: aucune police externe, pile système. */
+:root{--jaune:#FFCC00;--noir:#111;--fond:#FAF8F2;--trait:#E4E0D4;--gris:#77736A;
+ --vert:#1F8A4C;--rouge:#B3261E}
+*{box-sizing:border-box;margin:0}
+body{background:var(--fond);color:var(--noir);
+ font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--noir);color:#fff;padding:14px 20px;display:flex;gap:10px;
+ align-items:center;flex-wrap:wrap}
+header .puce{width:24px;height:8px;background:var(--jaune);border-radius:4px}
+header b{letter-spacing:.06em}
+nav{display:flex;gap:2px;flex-wrap:wrap;background:var(--noir);padding:0 14px 10px}
+nav a{color:#ccc;text-decoration:none;font-weight:600;font-size:13px;
+ padding:6px 12px;border-radius:8px}
+nav a.actif,nav a:hover{background:var(--jaune);color:var(--noir)}
+main{max-width:1020px;margin:0 auto;padding:22px 18px 80px}
+h2{font-size:19px;margin:24px 0 10px}
+.carte{background:#fff;border:1px solid var(--trait);border-radius:10px;
+ padding:14px 16px;margin:10px 0}
+.gris{color:var(--gris)}.petit{font-size:13px}
+label{font-weight:600;font-size:13px;display:block;margin:8px 0 3px}
+input,textarea,select{width:100%;border:1.5px solid var(--trait);border-radius:7px;
+ padding:8px 10px;font:14px system-ui,sans-serif;background:#fff}
+textarea{min-height:60px}
+input[type=checkbox]{width:auto}
+button{border:0;border-radius:7px;padding:8px 14px;font:600 14px system-ui,sans-serif;
+ cursor:pointer;background:var(--noir);color:#fff}
+button.jaune{background:var(--jaune);color:var(--noir)}
+button.mini{padding:4px 9px;font-size:12px}
+button.danger{background:transparent;color:var(--rouge);border:1.5px solid var(--rouge)}
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.deux{grid-template-columns:1fr}}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;
+ padding:2px 8px;background:var(--trait)}
+.badge.on{background:var(--jaune)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--trait);
+ font-size:13.5px;vertical-align:top}
+th{color:var(--gris);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.barre{background:var(--trait);border-radius:6px;height:14px;overflow:hidden}
+.barre i{display:block;height:100%;background:var(--jaune)}
+.kpis{display:flex;gap:26px;flex-wrap:wrap}
+.kpis b{font-size:24px;display:block}
+footer{color:var(--gris);font-size:11.5px;text-align:center;padding:20px}
+@media print{header,nav,.no-print,footer{display:none!important}
+ body{background:#fff}main{max-width:none}}
+</style></head><body>
+<header><span class="puce"></span><b>BUS XPERIENCE</b>
+ <span class="gris petit" style="margin-left:auto">Admin</span></header>
+<nav>
+{% for cle, nom in [('dashboard','Tableau de bord'),('campagnes','Campagnes'),
+ ('questions','Questionnaires'),('concepts','Concepts'),('resultats','Résultats'),
+ ('rapport','Rapports'),('medias','Médias'),('systeme','Système')] %}
+ <a href="/admin{{ '' if cle=='dashboard' else '/'+cle }}"
+    class="{{ 'actif' if section==cle }}">{{ nom }}</a>
+{% endfor %}
+</nav>
+<main>{% block corps %}{% endblock %}</main>
+<footer>Powered by MobilityLab Sion</footer>
+</body></html>

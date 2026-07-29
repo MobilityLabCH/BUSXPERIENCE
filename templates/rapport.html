@@ -1,0 +1,100 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Rapport d'analyse</h2>
+<div class="carte no-print">
+ <form method="get" action="/admin/rapport" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end">
+  <div><label>Campagne</label><select name="campagne"><option value="">Toutes</option>
+   {% for ca in campagnes %}<option value="{{ ca.id }}" {{ 'selected' if f.campagne|string==ca.id|string }}>{{ ca.nom }}</option>{% endfor %}</select></div>
+  <div><label>Lieu</label><select name="lieu"><option value="">Tous</option>
+   {% for l in lieux %}<option value="{{ l.id }}" {{ 'selected' if f.lieu|string==l.id|string }}>{{ l.nom }}</option>{% endfor %}</select></div>
+  <div><label>Langue</label><select name="lang"><option value="">Toutes</option>
+   <option value="fr" {{ 'selected' if f.lang=='fr' }}>FR</option>
+   <option value="de" {{ 'selected' if f.lang=='de' }}>DE</option></select></div>
+  <div><label>Participation</label><select name="participants"><option value="">Toutes</option>
+   <option value="1" {{ 'selected' if f.participants=='1' }}>Seul·e</option>
+   <option value="2" {{ 'selected' if f.participants=='2' }}>À deux</option></select></div>
+  <div><label>Parcours</label><select name="termine"><option value="">Tous</option>
+   <option value="oui" {{ 'selected' if f.termine=='oui' }}>Terminés</option>
+   <option value="non" {{ 'selected' if f.termine=='non' }}>Abandonnés</option></select></div>
+  <div><label>Du</label><input type="date" name="depuis" value="{{ f.depuis or '' }}"></div>
+  <div><label>Au</label><input type="date" name="jusqua" value="{{ f.jusqua or '' }}"></div>
+  <div><label>Fréquence bus</label><input name="frequence" value="{{ f.frequence or '' }}"
+   placeholder="ex. Rarement"></div>
+  <button>Appliquer</button>
+  <button type="button" class="mini" onclick="print()">Imprimer / PDF</button>
+  <a href="/admin/export.json?{{ request.url.query }}"><button type="button" class="mini">JSON filtré</button></a>
+ </form>
+</div>
+
+{% if r.vide %}<div class="carte">Aucune session avec ces filtres.</div>
+{% else %}
+<div class="carte kpis">
+ <div><b>{{ r.n_sessions }}</b><span class="gris">sessions</span></div>
+ <div><b>{{ r.n_terminees }}</b><span class="gris">terminées</span></div>
+ <div><b>{{ r.taux_completion }}%</b><span class="gris">complétion</span></div>
+ <div><b>{{ r.n_duos }}</b><span class="gris">à deux</span></div>
+ {% if r.duree_moyenne_s %}<div><b>{{ (r.duree_moyenne_s//60) }} min {{ r.duree_moyenne_s%60 }}</b>
+  <span class="gris">durée moyenne (médiane {{ (r.duree_mediane_s//60) }} min)</span></div>{% endif %}
+</div>
+
+{% if r.frictions %}
+<h2>Principaux moments de friction</h2>
+<div class="carte">
+ {% set total = r.frictions|map(attribute=1)|sum %}
+ {% for nom, n in r.frictions %}
+ <p class="petit" style="margin:6px 0 2px">{{ nom }} — <b>{{ n }}</b> ({{ (100*n/total)|round }}%)</p>
+ <div class="barre"><i style="width:{{ 100*n/total }}%"></i></div>
+ {% endfor %}
+</div>
+{% endif %}
+
+{% if r.concepts %}
+<h2>Concepts les mieux évalués</h2>
+<div class="carte"><table><thead><tr><th>Concept</th><th>n</th>
+ <th>Impact moyen /5</th><th>Adoption moyenne /10</th><th>% notes ≥ 8</th></tr></thead><tbody>
+ {% for co in r.concepts %}
+ <tr><td>{{ co.nom }}</td><td>{{ co.n }}</td><td>{{ co.impact_moyen or '—' }}</td>
+  <td><b>{{ co.adoption_moyenne or '—' }}</b></td><td>{{ co.adoption_8plus }}{{ '%' if co.adoption_8plus is not none }}</td></tr>
+ {% endfor %}</tbody></table>
+ <p class="gris petit">« Adoption »: réponse à « Avec ça, tu prendrais le bus plus souvent ? » (0-10).</p>
+</div>
+{% endif %}
+
+<h2>Réponses par question</h2>
+{% for q in r.questions %}
+<div class="carte">
+ <p><b>{{ q.ordre }} · {{ q.fr }}</b>
+  <span class="gris petit">{{ q.type }} · {{ q.n }} réponses · {{ q.manquants }} manquantes</span></p>
+ {% if q.distribution %}
+  {% set total = q.distribution|map(attribute=1)|sum %}
+  {% for nom, n in q.distribution %}
+  <p class="petit" style="margin:5px 0 2px">{{ nom }} — {{ n }} ({{ (100*n/total)|round }}%)</p>
+  <div class="barre"><i style="width:{{ 100*n/total }}%"></i></div>
+  {% endfor %}
+ {% endif %}
+ {% if q.moyenne is defined and q.moyenne is not none %}
+  <p class="petit">Moyenne <b>{{ q.moyenne }}</b> · médiane {{ q.mediane }}</p>{% endif %}
+ {% if q.verbatims %}
+  <p class="petit gris">{{ q.verbatims|length }} verbatims transcrits
+   {% if q.en_attente %}· {{ q.en_attente }} audios en attente de transcription{% endif %}</p>
+  {% for v in q.verbatims[:8] %}<p class="petit">« {{ v }} »</p>{% endfor %}
+ {% endif %}
+</div>
+{% endfor %}
+
+{% if qualitatif and qualitatif.themes %}
+<h2>Thèmes des réponses vocales
+ <span class="gris petit">({{ 'analyse IA · '+qualitatif.fournisseur if qualitatif.fournisseur!='none' else 'regroupement automatique par mots-clés, sans IA' }})</span></h2>
+{% for t in qualitatif.themes %}
+<div class="carte"><p><b>{{ t.nom }}</b> · {{ t.type }} · {{ t.mentions }} mention(s)</p>
+ {% for v in t.verbatims %}<p class="petit">« {{ v }} »</p>{% endfor %}</div>
+{% endfor %}
+{% endif %}
+
+<h2>Limites méthodologiques</h2>
+<div class="carte">{% for l in limites %}<p class="petit">• {{ l }}</p>{% endfor %}</div>
+
+<h2>Annexe · questions posées</h2>
+<div class="carte">{% for q in r.questions %}<p class="petit">{{ q.ordre }}. {{ q.fr }} ({{ q.type }})</p>{% endfor %}</div>
+{% endif %}
+<p class="gris petit">Powered by MobilityLab Sion</p>
+{% endblock %}

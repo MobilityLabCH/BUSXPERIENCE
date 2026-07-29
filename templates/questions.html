@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Questionnaire <a href="/admin/questions/0" style="float:right"><button class="jaune no-print">Nouvelle question</button></a></h2>
+<div class="carte no-print">
+ <input id="filtre" placeholder="Rechercher dans les questions…" oninput="
+  document.querySelectorAll('tbody tr').forEach(t=>t.style.display=
+  t.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none')">
+</div>
+<div class="carte" style="overflow-x:auto">
+<table><thead><tr><th>Ordre</th><th>Question</th><th>Type</th><th>Étape</th>
+<th>Cond.</th><th>Statut</th><th>Actions</th></tr></thead><tbody>
+{% for q in questions %}
+<tr>
+ <td>{{ q.ordre }}
+  <form method="post" action="/admin/questions/{{ q.id }}/deplacer" style="display:inline">
+   <button class="mini" name="sens" value="haut">↑</button>
+   <button class="mini" name="sens" value="bas">↓</button></form></td>
+ <td>{{ q.fr[:70] }}{{ '…' if q.fr|length>70 }}<br><span class="gris petit">{{ q.de[:60] }}</span></td>
+ <td>{{ q.type }}</td><td>{{ q.etape }}</td>
+ <td>{{ '✓' if q.condition else '' }}</td>
+ <td><span class="badge {{ 'on' if q.actif }}">{{ 'active' if q.actif else 'off' }}</span>
+  <span class="gris petit">v{{ q.version }}</span></td>
+ <td style="white-space:nowrap">
+  <a href="/admin/questions/{{ q.id }}"><button class="mini">Éditer</button></a>
+  <form method="post" action="/admin/questions/{{ q.id }}" style="display:inline">
+   <button class="mini" name="action" value="dupliquer">Dupliquer</button></form></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+<p class="gris petit">Les concepts (section Concepts) s'insèrent automatiquement dans
+l'étape « Les idées à tester », tirés au sort à chaque session.</p>
+{% endblock %}

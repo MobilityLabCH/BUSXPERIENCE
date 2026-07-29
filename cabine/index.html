@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BUS XPERIENCE</title>
+<style>
+/* BUS XPERIENCE. Jaune CarPostal sur noir, aucune ressource externe:
+   pile de polices système, sons synthétisés, tout fonctionne hors ligne. */
+:root{--jaune:#FFCC00;--noir:#0A0A0C;--blanc:#F5F2EA;--orange:#FF6A13;--gris:#6E6B62}
+*{box-sizing:border-box;margin:0;user-select:none}
+html,body{height:100%}
+body{background:var(--noir);color:var(--jaune);overflow:hidden;
+ font:22px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.titre{font-weight:800;letter-spacing:-.02em;line-height:1.06;text-align:left}
+.ecran{position:absolute;inset:0;display:none;flex-direction:column;
+ justify-content:center;padding:11vh 8vw 8vh;gap:3.4vh}
+.ecran.actif{display:flex}
+.centre{align-items:center;text-align:center}
+h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
+.sous{color:var(--blanc);font-weight:600;font-size:2.6vh}
+.gris{color:var(--gris)}.blanc{color:var(--blanc)}
+.mini{font-size:1.9vh}
+
+/* progression */
+#tete{position:fixed;top:0;left:0;right:0;padding:2vh 8vw 0;z-index:5;display:none}
+#tete .ligne1{display:flex;justify-content:space-between;align-items:baseline;
+ color:var(--blanc);font-weight:700;font-size:2.3vh}
+#tete .etape{color:var(--jaune)}
+#barre{height:.9vh;background:#2A2A2E;border-radius:1vh;margin-top:1vh;overflow:hidden}
+#barre i{display:block;height:100%;background:var(--jaune);width:0;transition:width .5s}
+#retour{position:fixed;bottom:2.4vh;left:8vw;z-index:6;display:none;background:none;
+ border:2px solid var(--gris);color:var(--gris);border-radius:99px;
+ padding:.9vh 2vh;font:600 2vh system-ui,sans-serif;cursor:pointer}
+#retour:hover{border-color:var(--jaune);color:var(--jaune)}
+#signature{position:fixed;bottom:2.6vh;right:8vw;color:#3d3d42;font-size:1.7vh;z-index:4}
+
+/* pastille buzzer */
+.pastille{width:6.4vh;height:6.4vh;border-radius:50%;background:var(--orange);
+ box-shadow:0 0 0 0 rgba(255,106,19,.7);animation:bat 1.6s infinite}
+@keyframes bat{70%{box-shadow:0 0 0 3.2vh rgba(255,106,19,0)}100%{box-shadow:0 0 0 0 rgba(255,106,19,0)}}
+
+/* cartes et options */
+.options{display:flex;flex-direction:column;gap:1.8vh;max-width:74vw;width:100%}
+.opt{background:var(--jaune);color:var(--noir);border-radius:2vh;padding:2.1vh 3vh;
+ font-weight:800;font-size:3.4vh;display:flex;gap:2.2vh;align-items:center;
+ border:.55vh solid transparent;transition:transform .12s,border-color .12s}
+.opt.vise{border-color:var(--blanc);transform:translateX(1.2vh)}
+.opt.choisi{background:var(--orange);color:#fff}
+.opt .n{background:var(--noir);color:var(--jaune);border-radius:1.1vh;min-width:4.8vh;
+ height:4.8vh;display:grid;place-items:center;font-size:3vh;flex:none}
+
+/* étoiles */
+.etoiles{display:flex;gap:2.4vh}
+.etoile{font-size:11vh;color:#2E2E33;transition:transform .15s}
+.etoile.on{color:var(--jaune);animation:pop .3s}
+@keyframes pop{50%{transform:scale(1.5) rotate(-8deg)}}
+.anneau{width:9vh;height:9vh;border-radius:50%;position:relative}
+.anneau svg{transform:rotate(-90deg)}
+.anneau span{position:absolute;inset:0;display:grid;place-items:center;
+ font-weight:800;font-size:3vh;color:var(--blanc)}
+
+/* échelle 0-10 */
+.echelle{width:min(76vw,120vh)}
+.rail{position:relative;height:2.2vh;background:#2A2A2E;border-radius:2vh}
+.rail i{position:absolute;left:0;top:0;bottom:0;background:var(--jaune);border-radius:2vh}
+.curseur{position:absolute;top:50%;transform:translate(-50%,-50%);width:7vh;height:7vh;
+ border-radius:50%;background:var(--jaune);color:var(--noir);display:grid;
+ place-items:center;font-weight:800;font-size:3.4vh;box-shadow:0 .6vh 2vh rgba(0,0,0,.5)}
+.bornes{display:flex;justify-content:space-between;color:var(--gris);
+ font-size:2.2vh;margin-top:1.6vh;font-weight:600}
+
+/* compare */
+.duel{display:flex;gap:3vw;width:100%;max-width:88vw}
+.carte-duel{flex:1;background:var(--jaune);color:var(--noir);border-radius:2.4vh;
+ padding:4vh 3vh;font-weight:800;font-size:4vh;text-align:center;
+ border:.7vh solid transparent;transition:transform .12s,border-color .12s}
+.carte-duel.vise{border-color:var(--blanc);transform:scale(1.04)}
+.ou{align-self:center;color:var(--gris);font-weight:800;font-size:3vh}
+
+/* voix */
+.vu{display:flex;gap:1vh;height:10vh;align-items:flex-end}
+.vu i{width:2.4vh;background:var(--jaune);border-radius:.8vh;height:12%}
+.pilule{background:var(--blanc);color:var(--noir);font-weight:800;font-size:3vh;
+ border-radius:99px;padding:.9vh 2.4vh;font-variant-numeric:tabular-nums}
+.rangee{display:flex;gap:2vh;flex-wrap:wrap;justify-content:center}
+.bouton{background:var(--jaune);color:var(--noir);border:0;border-radius:1.6vh;
+ padding:1.8vh 3vh;font:800 2.8vh system-ui,sans-serif;cursor:pointer;
+ border:.5vh solid transparent}
+.bouton.second{background:transparent;color:var(--jaune);border-color:var(--jaune)}
+.bouton.vise{border-color:var(--blanc)}
+
+/* concept */
+.fiche{background:var(--jaune);color:var(--noir);border-radius:2.4vh;
+ padding:3.4vh 3.8vh;max-width:78vw}
+.fiche h3{font-size:4.6vh;font-weight:800}
+.fiche p{font-size:2.9vh;font-weight:600;margin-top:1.2vh}
+.fiche img{max-height:22vh;border-radius:1.5vh;margin-top:1.5vh}
+
+/* rapport final */
+#e-rapport{background:var(--jaune);color:var(--noir)}
+.calc{font-size:3vh;font-weight:700;color:var(--noir)}
+.diplome{background:var(--blanc);border:.8vh solid var(--noir);border-radius:2vh;
+ padding:3.4vh 4vh;max-width:76vw;transform:scale(2.2) rotate(-8deg);opacity:0;
+ box-shadow:1.2vh 1.2vh 0 var(--noir)}
+.diplome.pose{animation:tampon .55s cubic-bezier(.2,1.35,.3,1) forwards}
+@keyframes tampon{to{transform:scale(1) rotate(-1.2deg);opacity:1}}
+.diplome .entete{font-size:2vh;letter-spacing:.3em;color:var(--gris);font-weight:700}
+.diplome .grand-titre{font-size:4.2vh;font-weight:800;margin:1vh 0 1.6vh}
+.diplome .corps{font-size:2.7vh;line-height:1.45;font-weight:500;white-space:pre-wrap}
+.diplome .label{font-size:1.8vh;color:var(--gris);margin-top:2vh}
+.voile{position:fixed;inset:0;background:var(--jaune);transform:translateX(-102%);z-index:50}
+.voile.passe{animation:balaye .65s cubic-bezier(.7,0,.2,1)}
+@keyframes balaye{0%{transform:translateX(-102%)}45%,55%{transform:translateX(0)}100%{transform:translateX(102%)}}
+.mot{display:inline-block;opacity:0;transform:translateY(.5em)}
+.joue .mot{animation:monte .4s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes monte{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="voile" id="voile"></div>
+
+<div id="tete">
+ <div class="ligne1"><span class="etape" id="tete-etape"></span>
+  <span id="tete-compte"></span></div>
+ <div id="barre"><i id="barre-fill"></i></div>
+</div>
+<button id="retour">← corriger</button>
+<div id="signature">Powered by MobilityLab Sion</div>
+
+<!-- ATTENTE -->
+<section class="ecran actif" id="e-attente">
+ <div class="pastille"></div>
+ <h1 class="titre" id="attente-titre">Appuie sur le buzzer.</h1>
+ <p class="sous" id="attente-sous">Quelques minutes pour améliorer l'expérience du bus.</p>
+ <p class="gris mini">Powered by MobilityLab Sion</p>
+</section>
+
+<!-- LANGUE -->
+<section class="ecran centre" id="e-langue">
+ <h2 class="titre">Bienvenue.<br>Willkommen.</h2>
+ <div class="rangee">
+  <button class="bouton" data-l="fr">Français</button>
+  <button class="bouton" data-l="de">Deutsch</button>
+ </div>
+ <p class="gris mini">← → pour choisir · buzzer pour valider</p>
+</section>
+
+<!-- CONSENTEMENT -->
+<section class="ecran" id="e-consent">
+ <h2 class="titre" id="consent-titre" style="font-size:5vh">Avant de commencer.</h2>
+ <p class="blanc" id="consent-texte" style="font-size:2.7vh;max-width:64ch;white-space:pre-line"></p>
+ <div class="rangee" style="justify-content:flex-start">
+  <button class="bouton" id="btn-oui">Oui, je participe</button>
+  <button class="bouton second" id="btn-sans-micro">Participer sans micro</button>
+  <button class="bouton second" id="btn-non">Non merci</button>
+ </div>
+</section>
+
+<!-- SOLO / DUO -->
+<section class="ecran" id="e-duo">
+ <h2 class="titre" id="duo-titre">Tu participes…</h2>
+ <div class="rangee" style="justify-content:flex-start">
+  <button class="bouton" id="btn-solo">Seul·e</button>
+  <button class="bouton second" id="btn-duo">À deux</button>
+ </div>
+ <div id="duo-accords" hidden>
+  <p class="sous" id="duo-info">À deux, chacun·e doit être d'accord.</p>
+  <div class="rangee" style="justify-content:flex-start;margin-top:1.6vh">
+   <button class="bouton second" id="acc1">Participant·e 1 : d'accord</button>
+   <button class="bouton second" id="acc2">Participant·e 2 : d'accord</button>
+   <button class="bouton" id="duo-go" disabled style="opacity:.4">C'est parti</button>
+  </div>
+ </div>
+</section>
+
+<!-- CHOIX -->
+<section class="ecran" id="e-choix">
+ <h2 class="titre" id="choix-texte"></h2>
+ <div class="options" id="choix-opts"></div>
+ <p class="gris mini" id="choix-aide"></p>
+</section>
+
+<!-- ÉTOILES -->
+<section class="ecran" id="e-etoiles">
+ <h2 class="titre" id="etoiles-texte"></h2>
+ <div class="etoiles" id="etoiles-zone"></div>
+ <div style="display:flex;gap:3vh;align-items:center">
+  <div class="anneau" id="etoiles-anneau" hidden>
+   <svg width="100%" height="100%" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="17" fill="none" stroke="#2A2A2E" stroke-width="4"/>
+    <circle id="anneau-arc" cx="20" cy="20" r="17" fill="none" stroke="#FFCC00"
+     stroke-width="4" stroke-dasharray="106.8" stroke-dashoffset="0"/></svg>
+   <span id="anneau-s"></span></div>
+  <p class="sous" id="etoiles-aide"></p>
+ </div>
+</section>
+
+<!-- ÉCHELLE -->
+<section class="ecran" id="e-echelle">
+ <h2 class="titre" id="echelle-texte"></h2>
+ <div class="echelle">
+  <div class="rail" id="rail"><i id="rail-fill"></i>
+   <div class="curseur" id="curseur">5</div></div>
+  <div class="bornes"><span id="borne-min"></span><span id="borne-max"></span></div>
+ </div>
+ <p class="gris mini" id="echelle-aide"></p>
+</section>
+
+<!-- COMPARE -->
+<section class="ecran centre" id="e-compare">
+ <h2 class="titre" id="compare-texte" style="text-align:center"></h2>
+ <div class="duel">
+  <div class="carte-duel" id="duel-a"></div>
+  <span class="ou" id="duel-ou">ou</span>
+  <div class="carte-duel" id="duel-b"></div>
+ </div>
+ <p class="gris mini" id="compare-aide"></p>
+</section>
+
+<!-- CONCEPT (fiche puis impact étoiles puis adoption échelle) -->
+<section class="ecran" id="e-concept">
+ <p class="sous" id="concept-sur"></p>
+ <div class="fiche"><h3 id="concept-nom"></h3><p id="concept-desc"></p>
+  <img id="concept-img" hidden alt=""></div>
+ <div class="rangee" style="justify-content:flex-start">
+  <button class="bouton" id="concept-go"></button></div>
+</section>
+
+<!-- VOIX -->
+<section class="ecran" id="e-voix">
+ <h2 class="titre" id="voix-texte"></h2>
+ <div class="vu" id="vu" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+ <div class="rangee" id="voix-rec-ligne" hidden>
+  <span class="pilule" id="voix-chrono">0:45</span>
+  <span class="sous" id="voix-silence"></span></div>
+ <div class="rangee" id="voix-relecture" hidden>
+  <button class="bouton second" id="btn-reecouter">Réécouter</button>
+  <button class="bouton second" id="btn-refaire">Recommencer</button>
+  <button class="bouton" id="btn-valider-voix">Valider</button></div>
+ <p class="sous" id="voix-aide"></p>
+</section>
+
+<!-- RAPPORT -->
+<section class="ecran centre" id="e-rapport">
+ <p class="calc" id="calc-texte"></p>
+ <div class="diplome" id="diplome" hidden>
+  <p class="entete">BUS XPERIENCE · RAPPORT OFFICIEL</p>
+  <p class="grand-titre" id="rapport-titre"></p>
+  <p class="corps" id="rapport-corps"></p>
+  <p class="label"><span id="rapport-label"></span> · Powered by MobilityLab Sion</p>
+ </div>
+</section>
+
+<script>
+"use strict";
+/* ============================================================ BUS XPERIENCE
+   Machine à états: attente → langue → consent → duo → étapes (choix, étoiles,
+   échelle, compare, concepts, voix) → rapport → attente.
+   Entrées: tactile/souris, clavier, ← → pour viser, Espace/Entrée = buzzer.
+   Un appui buzzer ne saute JAMAIS une question sans réponse enregistrée. */
+
+const ETAPES = {
+ fr:{experience:"Ton expérience", friction:"Ce qui coince", idees:"Les idées à tester",
+     priorite:"Ta priorité", rapport:"Ton rapport"},
+ de:{experience:"Dein Erlebnis", friction:"Was hakt", idees:"Ideen zum Testen",
+     priorite:"Deine Priorität", rapport:"Dein Bericht"},
+};
+const TXT = {
+ fr:{q:"Question", reste:"encore ~", choixAide:"← → pour viser · buzzer pour valider · ou touche l'écran",
+     etoilesAide:"Un buzz = une étoile. Attends l'anneau ou re-buzze pour ajouter. ← pour enlever.",
+     echelleAide:"← → pour régler · buzzer pour valider · ou glisse le curseur",
+     compareAide:"← ou → pour choisir · buzzer pour valider",
+     parle:"Buzzer pour parler.", enCours:"On t'écoute… buzzer pour terminer.",
+     silence:"(je t'écoute…)", relecture:"C'est bien ? Tu peux réécouter ou recommencer.",
+     sansMicro:"Pas de micro pour cette session — on passe cette question, aucun souci.",
+     concept:"Idée à tester", conceptGo:"Voyons ça",
+     impact:"Ça changerait quoi pour toi, au quotidien ?",
+     adoption:"Avec ça, tu prendrais le bus plus souvent ?",
+     rien:"Rien du tout", enorme:"Énormément", pasdutout:"Sûrement pas", certain:"Certainement",
+     calc:["BUS XPERIENCE analyse ton précieux témoignage…",
+           "…et deux ou trois petites contradictions.",
+           "Vérification des correspondances émotionnelles…",
+           "Impression du rapport officiel…"],
+     merciNon:"Pas de souci, bonne route ! 👋", duoTitre:"Tu participes…", duoVous:"Vous participez…"},
+ de:{q:"Frage", reste:"noch ~", choixAide:"← → zum Zielen · Buzzer zum Bestätigen · oder Bildschirm berühren",
+     etoilesAide:"Ein Buzz = ein Stern. Warte auf den Ring oder buzze erneut. ← zum Entfernen.",
+     echelleAide:"← → zum Einstellen · Buzzer zum Bestätigen · oder Regler ziehen",
+     compareAide:"← oder → wählen · Buzzer bestätigt",
+     parle:"Buzzer drücken und sprechen.", enCours:"Wir hören zu… Buzzer zum Beenden.",
+     silence:"(wir hören zu…)", relecture:"Passt das? Du kannst nochmals hören oder neu aufnehmen.",
+     sansMicro:"Kein Mikrofon für diese Session — wir überspringen diese Frage, kein Problem.",
+     concept:"Idee zum Testen", conceptGo:"Schauen wir mal",
+     impact:"Was würde das für dich im Alltag ändern?",
+     adoption:"Würdest du damit öfter den Bus nehmen?",
+     rien:"Gar nichts", enorme:"Sehr viel", pasdutout:"Sicher nicht", certain:"Ganz sicher",
+     calc:["BUS XPERIENCE analysiert deine wertvolle Aussage…",
+           "…und zwei, drei kleine Widersprüche.",
+           "Prüfung der emotionalen Anschlüsse…",
+           "Druck des offiziellen Berichts…"],
+     merciNon:"Kein Problem, gute Fahrt! 👋", duoTitre:"Du nimmst teil…", duoVous:"Ihr nehmt teil…"},
+};
+const DEMO_CFG = {campagne:{nom:"Démo", consent_fr:"Mode démo hors ligne. Rien n'est enregistré.",
+ consent_de:"Demo-Modus offline. Nichts wird gespeichert.", musique:null, musique_volume:.3,
+ musique_active:0, ton:"complice"}, lieu:{nom:"Démo"},
+ questions:[
+  {id:1,ordre:10,etape:"experience",type:"choix",fr:"Le bus, tu le prends…",de:"Wie oft nimmst du den Bus?",
+   options_fr:["Presque tous les jours","Rarement","Jamais ou presque"],
+   options_de:["Fast täglich","Selten","Nie oder fast nie"],params:{segment:true},condition:null},
+  {id:2,ordre:20,etape:"experience",type:"etoiles",fr:"Ton dernier trajet mérite combien d'étoiles ?",
+   de:"Wie viele Sterne verdient deine letzte Fahrt?",options_fr:[],options_de:[],params:{max:5},
+   condition:{question_ordre:10,valeurs:["Jamais ou presque","Nie oder fast nie"],regle:"masquer_si"}},
+  {id:3,ordre:50,etape:"friction",type:"echelle",fr:"Tu fais confiance au bus pour être à l'heure ?",
+   de:"Vertraust du dem Bus, pünktlich zu sein?",options_fr:[],options_de:[],params:{max:10},condition:null},
+  {id:4,ordre:60,etape:"friction",type:"compare",fr:"On améliore quoi en premier ?",
+   de:"Was verbessern wir zuerst?",options_fr:["Des bus plus fréquents","Des bus plus ponctuels"],
+   options_de:["Häufigere Busse","Pünktlichere Busse"],params:{},condition:null},
+  {id:5,ordre:80,etape:"priorite",type:"voix",fr:"Tu changerais quoi en premier dans l'expérience du bus ?",
+   de:"Was würdest du am Buserlebnis zuerst ändern?",options_fr:[],options_de:[],
+   params:{duree_voix:30},condition:null}],
+ concepts:[{id:1,nom_fr:"Garantie de correspondance",nom_de:"Anschlussgarantie",
+  desc_fr:"Si ton bus est en retard, ta correspondance t'attend.",
+  desc_de:"Ist dein Bus verspätet, wartet dein Anschluss.",image:null}]};
+
+let cfg=DEMO_CFG, demo=true, lang="fr", session=null, participants=1, consentMicro=1;
+let etat="attente", seq=[], iEtape=0, reponsesLocales={};
+let timers=[], inactif=null;
+const $=s=>document.querySelector(s);
+const purge=()=>{timers.forEach(clearTimeout);timers=[];};
+const apres=(ms,fn)=>timers.push(setTimeout(fn,ms));
+const t=()=>TXT[lang];
+
+/* ------------------------------------------------ audio: sons synthétisés */
+let actx=null;
+const audio=()=>actx||(actx=new (window.AudioContext||window.webkitAudioContext)());
+function bip(freqs,duree=.12,type="sine",gain=.18){
+ try{const a=audio(),t0=a.currentTime;
+  freqs.forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();
+   o.type=type;o.frequency.value=f;o.connect(g);g.connect(a.destination);
+   g.gain.setValueAtTime(0,t0+i*duree);
+   g.gain.linearRampToValueAtTime(gain,t0+i*duree+.02);
+   g.gain.linearRampToValueAtTime(0,t0+(i+1)*duree);
+   o.start(t0+i*duree);o.stop(t0+(i+1)*duree+.02);});}catch{}}
+const sonValide=()=>bip([660,880]);
+const sonTransition=()=>bip([440],.08,"triangle",.1);
+const sonErreur=()=>bip([180],.15,"square",.08);
+const sonRevelation=()=>bip([523,659,784,1047],.14);
+let KLAXON=null;
+function klaxon(){ // utilisé pour la révélation du rapport final
+ const p=(cfg.sons)||{klaxon_actif:1,klaxon_volume:.9,klaxon_present:false};
+ if(!p.klaxon_actif)return;
+ if(!p.klaxon_present){sonRevelation();return;} // son neutre de secours
+ if(KLAXON===null){KLAXON=new Audio("/medias/klaxon.mp3");
+  KLAXON.onerror=()=>{KLAXON=false;};}
+ if(KLAXON){KLAXON.volume=p.klaxon_volume;KLAXON.currentTime=0;
+  KLAXON.play().catch(()=>sonRevelation());}
+ else sonRevelation();}
+
+/* ------------------------------------------------ musique de fond */
+let musique=null, musiqueCible=0;
+function musiqueInit(){
+ const ca=cfg.campagne||{};
+ if(!ca.musique_active||!ca.musique||musique) return;
+ musique=new Audio("/medias/"+ca.musique); musique.loop=true; musique.volume=0;
+ musiqueCible=Math.min(1,Math.max(0,ca.musique_volume||.35));
+ musique.play().catch(()=>{musique=null;});
+ fondu(musiqueCible,2500);}
+function fondu(cible,ms){
+ if(!musique)return;
+ const dep=musique.volume,t0=performance.now();
+ (function pas(){if(!musique)return;
+  const k=Math.min(1,(performance.now()-t0)/ms);
+  musique.volume=dep+(cible-dep)*k;
+  if(k<1)requestAnimationFrame(pas);})();}
+const musiqueDuck=()=>fondu(musiqueCible*.25,400);
+const musiqueNormale=()=>fondu(musiqueCible,900);
+const musiqueCoupe=()=>{if(musique){fondu(0,300);apres(350,()=>musique&&musique.pause());}};
+const musiqueReprend=()=>{if(musique){musique.play().catch(()=>{});fondu(musiqueCible,1500);}};
+function musiqueStopFinal(){if(musique){fondu(0,1800);apres(1900,()=>{musique&&musique.pause();musique=null;});}}
+
+/* ------------------------------------------------ voix des questions */
+let voixQ=null;
+function jouerVoix(q){
+ taireVoix(); musiqueDuck();
+ const f=q["audio_"+lang];
+ const fini=()=>musiqueNormale();
+ const parle=(q["parle_"+lang]||"").trim()
+  ||(q.texteAffiche||q[lang]||"").replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");
+ if(f){voixQ=new Audio("/voix/"+f);voixQ.onended=fini;
+  voixQ.play().catch(()=>{dire(parle,fini);});}
+ else dire(parle,fini);}
+/* TTS navigateur (TTS_PROVIDER=browser): meilleure voix naturelle disponible,
+   voix « Natural / Online » privilégiées (Edge), réglages depuis l'admin. */
+let voixCache={fr:null,de:null};
+function scoreVoix(v){let s=0;const n=v.name.toLowerCase();
+ if(n.includes("natural"))s+=6;if(n.includes("online"))s+=4;if(n.includes("neural"))s+=4;
+ if(n.includes("google"))s+=3;if(n.includes("premium")||n.includes("enhanced"))s+=3;
+ if(!v.localService)s+=2;return s;}
+function choisirVoixTTS(l){
+ if(voixCache[l])return voixCache[l];
+ const vs=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(l));
+ if(!vs.length)return null;
+ const pref=(cfg.tts&&cfg.tts["voix_"+l])||"auto";
+ let v=pref!=="auto"?vs.find(x=>x.name===pref):null;
+ if(!v)v=vs.sort((a,b)=>scoreVoix(b)-scoreVoix(a))[0];
+ voixCache[l]=v;return v;}
+if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>{voixCache={fr:null,de:null};};
+function dire(txt,fini){try{const u=new SpeechSynthesisUtterance(txt);
+ u.lang=lang==="de"?"de-CH":"fr-CH";
+ const v=choisirVoixTTS(lang);if(v)u.voice=v;
+ u.rate=(cfg.tts&&cfg.tts.vitesse)||0.97;u.pitch=1.05;u.onend=fini||null;
+ speechSynthesis.cancel();speechSynthesis.speak(u);}catch{if(fini)fini();}}
+function taireVoix(){speechSynthesis.cancel();
+ if(voixQ){voixQ.pause();voixQ=null;}}
+
+/* ------------------------------------------------ écrans et effets */
+function ecran(id){
+ const v=$("#voile");v.classList.remove("passe");void v.offsetWidth;v.classList.add("passe");
+ sonTransition();
+ setTimeout(()=>{document.querySelectorAll(".ecran").forEach(e=>e.classList.remove("actif"));
+  const e=$("#"+id);e.classList.add("actif");anime(e);},300);}
+function anime(e){
+ e.classList.remove("joue");
+ e.querySelectorAll("h1,h2").forEach(h=>{
+  if(h.dataset.fixe)return;
+  const mots=h.textContent.trim().split(/\s+/);
+  h.innerHTML=mots.map((m,i)=>`<span class="mot" style="animation-delay:${i*60}ms">${m}</span>`).join(" ");});
+ void e.offsetWidth;e.classList.add("joue");}
+
+/* ------------------------------------------------ config et séquence */
+async function charger(){
+ try{const r=await fetch("/api/config");if(r.ok){cfg=await r.json();demo=false;}}
+ catch{demo=true;}}
+charger();
+
+function construireSequence(){
+ // questions actives + concepts insérés à l'étape « idees », conditions résolues à la volée
+ const qs=(cfg.questions||[]).slice().sort((a,b)=>a.ordre-b.ordre);
+ const avant=qs.filter(q=>q.etape==="experience"||q.etape==="friction");
+ const apresQ=qs.filter(q=>q.etape==="priorite"||q.etape==="idees");
+ seq=[...avant.map(q=>({genre:"question",q}))];
+ (cfg.concepts||[]).forEach(co=>{
+  seq.push({genre:"concept-fiche",co});
+  seq.push({genre:"concept-impact",co});
+  seq.push({genre:"concept-adoption",co});});
+ seq=seq.concat(apresQ.map(q=>({genre:"question",q})));
+ iEtape=0;reponsesLocales={};}
+
+function conditionCachee(pas){
+ if(pas.genre!=="question"||!pas.q.condition)return false;
+ const c=pas.q.condition;
+ const ref=(cfg.questions||[]).find(q=>q.ordre===c.question_ordre||q.id===c.question_id);
+ if(!ref)return false;
+ const val=reponsesLocales["q"+ref.id];
+ const touche=val!=null&&(c.valeurs||[]).includes(val);
+ return c.regle==="seulement_si"?!touche:touche;}
+
+function pasVisibles(){return seq.filter(p=>!conditionCachee(p));}
+
+function majTete(pas){
+ const visibles=pasVisibles(), idx=visibles.indexOf(pas);
+ const etape=pas.genre==="question"?pas.q.etape:"idees";
+ $("#tete-etape").textContent=ETAPES[lang][etape]||"";
+ $("#tete-compte").textContent=`${t().q} ${idx+1} · ${t().reste}${Math.max(0,visibles.length-idx-1)}`;
+ $("#barre-fill").style.width=(100*(idx)/Math.max(1,visibles.length))+"%";
+ $("#tete").style.display="block";
+ $("#retour").style.display=idx>0?"block":"none";}
+
+/* ------------------------------------------------ enregistrement serveur */
+async function envoyer(donnees){
+ if(demo)return;
+ const fd=new FormData();
+ Object.entries(donnees).forEach(([k,v])=>{if(v!=null)fd.set(k,v);});
+ try{await fetch(`/api/sessions/${session}/reponses`,{method:"POST",body:fd});}
+ catch(e){console.error("envoi différé",e);}}
+
+/* ================================================ déroulé principal */
+function demarrer(){
+ purge();sonTransition();charger();
+ lang="fr";etat="langue";viser=0;ecran("e-langue");surligneRangee("#e-langue .bouton");}
+
+function choisirLangue(l){
+ lang=l;
+ const ca=cfg.campagne||{};
+ $("#consent-titre").textContent=lang==="de"?"Bevor wir starten.":"Avant de commencer.";
+ $("#consent-texte").textContent=(lang==="de"?ca.consent_de:ca.consent_fr)||"";
+ $("#btn-oui").textContent=lang==="de"?"Ja, ich mache mit":"Oui, je participe";
+ $("#btn-sans-micro").textContent=lang==="de"?"Ohne Mikrofon teilnehmen":"Participer sans micro";
+ $("#btn-non").textContent=lang==="de"?"Nein danke":"Non merci";
+ etat="consent";viser=0;ecran("e-consent");surligneRangee("#e-consent .bouton");}
+
+function consentir(micro){
+ consentMicro=micro;musiqueInit();
+ $("#duo-titre").textContent=t().duoTitre;
+ $("#btn-solo").textContent=lang==="de"?"Allein":"Seul·e";
+ $("#btn-duo").textContent=lang==="de"?"Zu zweit":"À deux";
+ $("#acc1").textContent=lang==="de"?"Person 1: einverstanden":"Participant·e 1 : d'accord";
+ $("#acc2").textContent=lang==="de"?"Person 2: einverstanden":"Participant·e 2 : d'accord";
+ $("#duo-go").textContent=lang==="de"?"Los geht's":"C'est parti";
+ $("#duo-info").textContent=lang==="de"?"Zu zweit müssen beide einverstanden sein."
+  :"À deux, chacun·e doit être d'accord.";
+ $("#duo-accords").hidden=true;acc={1:false,2:false};
+ etat="duo";viser=0;ecran("e-duo");surligneRangee("#e-duo .bouton");}
+
+function refuser(){
+ etat="fin-non";
+ $("#calc-texte").textContent=t().merciNon;
+ $("#diplome").hidden=true;$("#tete").style.display="none";$("#retour").style.display="none";
+ ecran("e-rapport");musiqueStopFinal();
+ apres(4000,retourAttente);}
+
+let acc={1:false,2:false};
+async function lancerParcours(nb){
+ participants=nb;
+ if(!demo){
+  const fd=new FormData();fd.set("lang",lang);fd.set("participants",nb);
+  fd.set("consent_micro",consentMicro);
+  try{const r=await fetch("/api/sessions",{method:"POST",body:fd});
+   session=(await r.json()).session_id;}catch{demo=true;}}
+ construireSequence();etat="parcours";prochaine(0);}
+
+function prochaine(delta=1){
+ purge();taireVoix();
+ let i=iEtape+delta;
+ while(i<seq.length&&conditionCachee(seq[i]))i+=delta>=0?1:-1;
+ if(i<0)i=0;
+ iEtape=i;
+ if(iEtape>=seq.length)return finParcours();
+ const pas=seq[iEtape];majTete(pas);
+ if(pas.genre==="question")montrerQuestion(pas.q);
+ else if(pas.genre==="concept-fiche")montrerConceptFiche(pas.co);
+ else if(pas.genre==="concept-impact")montrerEtoiles({
+  id:0,concept:pas.co,fr:t().impact,de:t().impact,params:{max:5},cle:"impact"});
+ else montrerEchelle({id:0,concept:pas.co,fr:t().adoption,de:t().adoption,
+  params:{max:10,min_libelle_fr:t().pasdutout,max_libelle_fr:t().certain,
+          min_libelle_de:t().pasdutout,max_libelle_de:t().certain},cle:"adoption"});}
+
+function retourArriere(){if(etat.startsWith("voix"))return;prochaine(-1);}
+
+function montrerQuestion(q){
+ q.texteAffiche=(q[lang]||q.fr).replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");
+ if(q.type==="choix")montrerChoix(q);
+ else if(q.type==="etoiles")montrerEtoiles(q);
+ else if(q.type==="echelle")montrerEchelle(q);
+ else if(q.type==="compare")montrerCompare(q);
+ else montrerVoixQ(q);}
+
+/* ---------------- choix ---------------- */
+let viser=0,optsCourantes=[];
+function surligne(){document.querySelectorAll("#choix-opts .opt")
+ .forEach((o,i)=>o.classList.toggle("vise",i===viser));}
+function montrerChoix(q){
+ etat="choix";viser=0;
+ $("#choix-texte").textContent=q.texteAffiche;
+ $("#choix-aide").textContent=t().choixAide;
+ optsCourantes=(q["options_"+lang]&&q["options_"+lang].length?q["options_"+lang]:q.options_fr)||[];
+ const zone=$("#choix-opts");zone.innerHTML="";
+ optsCourantes.forEach((o,i)=>{
+  const d=document.createElement("div");
+  d.className="opt";d.innerHTML=`<span class="n">${i+1}</span><span>${o}</span>`;
+  d.style.cssText=`opacity:0;transform:translateX(-2vh);transition:all .35s ${150+i*70}ms`;
+  d.onclick=()=>{viser=i;surligne();validerChoix(q);};
+  zone.appendChild(d);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{d.style.opacity=1;d.style.transform="none";}));});
+ surligne();ecran("e-choix");jouerVoix(q);}
+async function validerChoix(q){
+ if(etat!=="choix")return;etat="envoi";
+ const valeur=optsCourantes[viser];
+ document.querySelectorAll("#choix-opts .opt")[viser].classList.add("choisi");
+ sonValide();reponsesLocales["q"+q.id]=valeur;
+ await envoyer({question_id:q.id,cle:"reponse",valeur});
+ apres(420,()=>prochaine());}
+
+/* ---------------- étoiles (un buzz = une étoile) ---------------- */
+let nbEtoiles=0,etoilesQ=null,anneauT=null;
+function montrerEtoiles(q){
+ etat="etoiles";etoilesQ=q;nbEtoiles=0;
+ $("#etoiles-texte").textContent=q.texteAffiche||q[lang]||q.fr;
+ if(q.concept)$("#etoiles-texte").textContent=q[lang];
+ $("#etoiles-aide").textContent=t().etoilesAide;
+ const max=(q.params&&q.params.max)||5,zone=$("#etoiles-zone");zone.innerHTML="";
+ for(let i=0;i<max;i++){const s=document.createElement("span");
+  s.className="etoile";s.textContent="★";
+  s.onclick=()=>{nbEtoiles=i+1;majEtoiles();armerAnneau();};zone.appendChild(s);}
+ $("#etoiles-anneau").hidden=true;
+ ecran("e-etoiles");if(!q.concept)jouerVoix(q);else jouerVoix({[lang]:q[lang]});}
+function majEtoiles(){document.querySelectorAll(".etoile")
+ .forEach((s,i)=>s.classList.toggle("on",i<nbEtoiles));bip([520+120*nbEtoiles],.09);}
+function buzzEtoile(){
+ const max=document.querySelectorAll(".etoile").length;
+ if(nbEtoiles<max){nbEtoiles++;majEtoiles();}
+ armerAnneau();}
+function moinsEtoile(){if(nbEtoiles>0){nbEtoiles--;majEtoiles();}armerAnneau();}
+function armerAnneau(){
+ // fenêtre de 2,5 s pour ajouter/enlever, anneau visible, puis validation claire
+ clearInterval(anneauT);
+ const a=$("#etoiles-anneau");a.hidden=nbEtoiles===0;
+ const arc=$("#anneau-arc"),lab=$("#anneau-s");
+ let restant=2500;const total=2500;
+ anneauT=setInterval(()=>{restant-=50;
+  arc.style.strokeDashoffset=String(106.8*(1-restant/total));
+  lab.textContent=Math.ceil(restant/1000);
+  if(restant<=0){clearInterval(anneauT);validerEtoiles();}},50);}
+async function validerEtoiles(){
+ if(etat!=="etoiles"||nbEtoiles===0)return;etat="envoi";
+ sonValide();
+ const q=etoilesQ;
+ if(q.concept){await envoyer({concept_id:q.concept.id,cle:"impact",valeur:nbEtoiles});}
+ else{reponsesLocales["q"+q.id]=String(nbEtoiles);
+  await envoyer({question_id:q.id,cle:"reponse",valeur:nbEtoiles});}
+ apres(350,()=>prochaine());}
+
+/* ---------------- échelle 0-10 ---------------- */
+let valEchelle=5,echelleQ=null;
+function montrerEchelle(q){
+ etat="echelle";echelleQ=q;valEchelle=5;
+ $("#echelle-texte").textContent=q.texteAffiche||q[lang]||q.fr;
+ $("#echelle-aide").textContent=t().echelleAide;
+ const p=q.params||{};
+ $("#borne-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";
+ $("#borne-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||"10";
+ majEchelle();ecran("e-echelle");
+ if(q.concept)jouerVoix({[lang]:q[lang]});else jouerVoix(q);}
+function majEchelle(){
+ const max=(echelleQ.params&&echelleQ.params.max)||10;
+ const pc=100*valEchelle/max;
+ $("#curseur").style.left=pc+"%";$("#curseur").textContent=valEchelle;
+ $("#rail-fill").style.width=pc+"%";}
+function bougeEchelle(d){const max=(echelleQ.params&&echelleQ.params.max)||10;
+ valEchelle=Math.max(0,Math.min(max,valEchelle+d));majEchelle();bip([420+40*valEchelle],.05);}
+function echelleDepuisPointeur(ev){
+ const r=$("#rail").getBoundingClientRect();
+ const x=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left;
+ const max=(echelleQ.params&&echelleQ.params.max)||10;
+ valEchelle=Math.max(0,Math.min(max,Math.round(max*x/r.width)));majEchelle();}
+async function validerEchelle(){
+ if(etat!=="echelle")return;etat="envoi";sonValide();
+ const q=echelleQ;
+ if(q.concept){await envoyer({concept_id:q.concept.id,cle:"adoption",valeur:valEchelle});}
+ else{reponsesLocales["q"+q.id]=String(valEchelle);
+  await envoyer({question_id:q.id,cle:"reponse",valeur:valEchelle});}
+ apres(300,()=>prochaine());}
+
+/* ---------------- compare ---------------- */
+let compareQ=null,coteVise=0;
+function montrerCompare(q){
+ etat="compare";compareQ=q;coteVise=-1;
+ $("#compare-texte").textContent=q.texteAffiche;
+ $("#compare-aide").textContent=t().compareAide;
+ const opts=(q["options_"+lang]&&q["options_"+lang].length?q["options_"+lang]:q.options_fr);
+ $("#duel-a").textContent=opts[0]||"A";$("#duel-b").textContent=opts[1]||"B";
+ $("#duel-a").onclick=()=>{coteVise=0;majDuel();validerCompare();};
+ $("#duel-b").onclick=()=>{coteVise=1;majDuel();validerCompare();};
+ majDuel();ecran("e-compare");jouerVoix(q);}
+function majDuel(){$("#duel-a").classList.toggle("vise",coteVise===0);
+ $("#duel-b").classList.toggle("vise",coteVise===1);}
+async function validerCompare(){
+ if(etat!=="compare"||coteVise<0){sonErreur();return;}
+ etat="envoi";sonValide();
+ const opts=(compareQ["options_"+lang]&&compareQ["options_"+lang].length
+  ?compareQ["options_"+lang]:compareQ.options_fr);
+ reponsesLocales["q"+compareQ.id]=opts[coteVise];
+ await envoyer({question_id:compareQ.id,cle:"reponse",valeur:opts[coteVise]});
+ apres(350,()=>prochaine());}
+
+/* ---------------- concept: fiche ---------------- */
+function montrerConceptFiche(co){
+ etat="concept-fiche";
+ $("#concept-sur").textContent=t().concept;
+ $("#concept-nom").textContent=lang==="de"?co.nom_de:co.nom_fr;
+ $("#concept-desc").textContent=lang==="de"?co.desc_de:co.desc_fr;
+ const img=$("#concept-img");
+ if(co.image){img.src="/medias/"+co.image;img.hidden=false;}else img.hidden=true;
+ $("#concept-go").textContent=t().conceptGo;
+ $("#concept-go").onclick=()=>prochaine();
+ ecran("e-concept");
+ jouerVoix({[lang]:(lang==="de"?co.nom_de+". "+co.desc_de:co.nom_fr+". "+co.desc_fr)});}
+
+/* ---------------- voix ---------------- */
+let rec=null,chunks=[],dernierBlob=null,voixCtx=null,voixDeadline=0,silenceDepuis=0,voixQCourante=null;
+function montrerVoixQ(q){
+ voixQCourante=q;
+ if(!consentMicro){ // jamais de saut silencieux: on l'explique et on enregistre le refus
+  etat="voix-skip";
+  $("#voix-texte").textContent=q.texteAffiche;
+  $("#voix-aide").textContent=t().sansMicro;
+  $("#vu").hidden=true;$("#voix-rec-ligne").hidden=true;$("#voix-relecture").hidden=true;
+  ecran("e-voix");
+  envoyer({question_id:q.id,cle:"reponse",valeur:"[sans micro]"});
+  apres(3200,()=>prochaine());return;}
+ etat="voix-intro";
+ $("#voix-texte").textContent=q.texteAffiche;
+ $("#voix-aide").textContent=t().parle;
+ $("#vu").hidden=true;$("#voix-rec-ligne").hidden=true;$("#voix-relecture").hidden=true;
+ ecran("e-voix");jouerVoix(q);}
+async function voixDemarrer(){
+ taireVoix();musiqueCoupe(); // musique complètement coupée avant le micro
+ let flux;
+ try{flux=await navigator.mediaDevices.getUserMedia({audio:true});}
+ catch{sonErreur();$("#voix-aide").textContent=t().sansMicro;
+  await envoyer({question_id:voixQCourante.id,cle:"reponse",valeur:"[micro indisponible]"});
+  apres(2500,()=>prochaine());return;}
+ chunks=[];dernierBlob=null;
+ rec=new MediaRecorder(flux,{mimeType:"audio/webm"});
+ rec.ondataavailable=e=>chunks.push(e.data);
+ rec.onstop=()=>flux.getTracks().forEach(tr=>tr.stop());
+ rec.start();
+ etat="voix-rec";
+ const duree=(voixQCourante.params&&voixQCourante.params.duree_voix)||45;
+ voixDeadline=Date.now()+duree*1000;silenceDepuis=0;
+ $("#voix-aide").textContent=t().enCours;
+ $("#vu").hidden=false;$("#voix-rec-ligne").hidden=false;$("#voix-silence").textContent="";
+ vumetre(flux);chronoVoix();}
+function chronoVoix(){
+ if(etat!=="voix-rec")return;
+ const s=Math.max(0,Math.ceil((voixDeadline-Date.now())/1000));
+ $("#voix-chrono").textContent=`0:${String(s).padStart(2,"0")}`;
+ if(s<=0)return voixArreter();
+ apres(250,chronoVoix);}
+function vumetre(flux){
+ voixCtx=new (window.AudioContext||window.webkitAudioContext)();
+ const ana=voixCtx.createAnalyser();
+ voixCtx.createMediaStreamSource(flux).connect(ana);ana.fftSize=256;
+ const data=new Uint8Array(ana.frequencyBinCount);
+ const barres=document.querySelectorAll("#vu i");
+ (function boucle(){
+  if(etat!=="voix-rec"){voixCtx.close();return;}
+  ana.getByteFrequencyData(data);
+  const rms=Math.sqrt(data.reduce((a,v)=>a+v*v,0)/data.length)/255;
+  barres.forEach((b,i)=>b.style.height=Math.max(12,data[i*3]/255*100)+"%");
+  if(rms<0.045){ // détection de silence: 3 s sous le seuil → arrêt automatique
+   silenceDepuis+=16;
+   if(silenceDepuis>3000&&Date.now()<voixDeadline-1000){
+    $("#voix-silence").textContent="";return voixArreter();}
+   if(silenceDepuis>1200)$("#voix-silence").textContent=t().silence;
+  }else{silenceDepuis=0;$("#voix-silence").textContent="";}
+  requestAnimationFrame(boucle);})();}
+async function voixArreter(){
+ if(etat!=="voix-rec")return;etat="voix-relecture";purge();
+ if(rec&&rec.state!=="inactive")await new Promise(r=>{rec.onstop=r;rec.stop();});
+ dernierBlob=new Blob(chunks,{type:"audio/webm"});
+ $("#vu").hidden=true;$("#voix-rec-ligne").hidden=true;
+ $("#voix-relecture").hidden=false;
+ $("#btn-reecouter").textContent=lang==="de"?"Nochmals hören":"Réécouter";
+ $("#btn-refaire").textContent=lang==="de"?"Neu aufnehmen":"Recommencer";
+ $("#btn-valider-voix").textContent=lang==="de"?"Bestätigen":"Valider";
+ $("#voix-aide").textContent=t().relecture;
+ viser=2;surligneRangee("#voix-relecture .bouton");}
+function voixReecouter(){if(dernierBlob){const a=new Audio(URL.createObjectURL(dernierBlob));a.play();}}
+async function voixValider(){
+ if(etat!=="voix-relecture"||!dernierBlob)return;etat="envoi";sonValide();
+ await envoyer({question_id:voixQCourante.id,cle:"reponse",valeur:"[voix]",audio:dernierBlob});
+ musiqueReprend();apres(300,()=>prochaine());}
+function voixRefaire(){etat="voix-intro";
+ $("#voix-relecture").hidden=true;$("#voix-aide").textContent=t().parle;}
+
+/* ---------------- rangées de boutons pilotables au clavier ---------------- */
+let rangeeSel="";
+function surligneRangee(sel){rangeeSel=sel;
+ document.querySelectorAll(sel).forEach((b,i)=>b.classList.toggle("vise",i===viser));}
+function rangeeBouge(d){
+ const n=document.querySelectorAll(rangeeSel).length;if(!n)return;
+ viser=(viser+d+n)%n;surligneRangee(rangeeSel);}
+function rangeeValide(){const b=document.querySelectorAll(rangeeSel)[viser];if(b)b.click();}
+
+/* ---------------- fin: rapport wow ---------------- */
+async function finParcours(){
+ etat="rapport";purge();taireVoix();
+ $("#tete").style.display="none";$("#retour").style.display="none";
+ if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"});}catch{}}
+ fondu(musiqueCible*.3,800);
+ $("#diplome").hidden=true;$("#diplome").classList.remove("pose");
+ ecran("e-rapport");
+ // animation de calcul volontairement théâtrale
+ const msgs=t().calc;let i=0;
+ $("#calc-texte").textContent=msgs[0];
+ const rot=setInterval(()=>{i++;
+  if(i<msgs.length)$("#calc-texte").textContent=msgs[i];},1500);
+ let doc={titre:"", texte:"", label:""};
+ if(demo){doc={titre:lang==="de"?"Bemerkenswerte Stimme des Tages":"Voix remarquable du jour",
+  texte:lang==="de"?"Demo-Modus: nichts wurde gespeichert, aber dein Lächeln zählt trotzdem."
+   :"Mode démo: rien n'a été enregistré, mais ton sourire compte quand même.",
+  label:lang==="de"?"Automatisch personalisierter Bericht":"Rapport personnalisé automatiquement"};
+  await new Promise(r=>setTimeout(r,4500));}
+ else{
+  const fd=new FormData();fd.set("lang",lang);
+  const [rep]=await Promise.all([
+   fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd})
+    .then(r=>r.json()).catch(()=>null),
+   new Promise(r=>setTimeout(r,4500))]);
+  if(rep)doc=rep;}
+ clearInterval(rot);
+ $("#calc-texte").textContent="";
+ klaxon();
+ $("#rapport-titre").textContent=doc.titre||"";
+ $("#rapport-corps").textContent=doc.texte||"";
+ $("#rapport-label").textContent=doc.label||"";
+ $("#diplome").hidden=false;void $("#diplome").offsetWidth;
+ $("#diplome").classList.add("pose");
+ musiqueStopFinal();
+ apres(40000,retourAttente);}
+function retourAttente(){
+ purge();etat="attente";$("#tete").style.display="none";
+ $("#retour").style.display="none";ecran("e-attente");}
+
+/* ---------------- entrées globales ---------------- */
+function buzzer(){
+ relanceInactivite();
+ if(etat==="attente")return demarrer();
+ if(etat==="langue"||etat==="consent"||etat==="duo")return rangeeValide();
+ if(etat==="choix")return validerChoix(seqQuestionCourante());
+ if(etat==="etoiles")return buzzEtoile();
+ if(etat==="echelle")return validerEchelle();
+ if(etat==="compare")return validerCompare();
+ if(etat==="voix-intro")return voixDemarrer();
+ if(etat==="voix-rec")return voixArreter();
+ if(etat==="voix-relecture")return rangeeValide();
+ if(etat==="rapport")return retourAttente();}
+function seqQuestionCourante(){const p=seq[iEtape];return p&&p.q;}
+function gauche(){relanceInactivite();
+ if(["langue","consent","duo","voix-relecture"].includes(etat))return rangeeBouge(-1);
+ if(etat==="choix"){viser=Math.max(0,viser-1);surligne();}
+ if(etat==="etoiles")return moinsEtoile();
+ if(etat==="echelle")return bougeEchelle(-1);
+ if(etat==="compare"){coteVise=0;majDuel();}}
+function droite(){relanceInactivite();
+ if(["langue","consent","duo","voix-relecture"].includes(etat))return rangeeBouge(1);
+ if(etat==="choix"){viser=Math.min(optsCourantes.length-1,viser+1);surligne();}
+ if(etat==="etoiles")return buzzEtoile();
+ if(etat==="echelle")return bougeEchelle(1);
+ if(etat==="compare"){coteVise=1;majDuel();}}
+
+document.addEventListener("keydown",e=>{
+ if(e.code==="Space"||e.code==="Enter"){e.preventDefault();return buzzer();}
+ if(e.code==="ArrowLeft")return gauche();
+ if(e.code==="ArrowRight")return droite();
+ if(e.code==="ArrowUp"&&etat==="choix"){viser=Math.max(0,viser-1);surligne();return;}
+ if(e.code==="ArrowDown"&&etat==="choix"){viser=Math.min(optsCourantes.length-1,viser+1);surligne();return;}
+ if(e.code==="Backspace"&&etat!=="attente"){e.preventDefault();return retourArriere();}
+ const n=parseInt(e.key,10);
+ if(!isNaN(n)&&etat==="choix"&&n>=1&&n<=optsCourantes.length){
+  viser=n-1;surligne();validerChoix(seqQuestionCourante());}});
+
+document.addEventListener("click",e=>{
+ relanceInactivite();
+ if(etat==="attente")demarrer();});
+$("#retour").onclick=retourArriere;
+document.querySelectorAll("#e-langue .bouton").forEach(b=>
+ b.onclick=()=>choisirLangue(b.dataset.l));
+$("#btn-oui").onclick=()=>consentir(1);
+$("#btn-sans-micro").onclick=()=>consentir(0);
+$("#btn-non").onclick=refuser;
+$("#btn-solo").onclick=()=>lancerParcours(1);
+$("#btn-duo").onclick=()=>{ $("#duo-accords").hidden=false;
+ $("#duo-titre").textContent=t().duoVous;anime($("#e-duo"));};
+$("#acc1").onclick=()=>{acc[1]=true;$("#acc1").classList.add("choisi");majDuoGo();};
+$("#acc2").onclick=()=>{acc[2]=true;$("#acc2").classList.add("choisi");majDuoGo();};
+function majDuoGo(){const ok=acc[1]&&acc[2];
+ $("#duo-go").disabled=!ok;$("#duo-go").style.opacity=ok?1:.4;}
+$("#duo-go").onclick=()=>{if(acc[1]&&acc[2])lancerParcours(2);};
+$("#btn-reecouter").onclick=voixReecouter;
+$("#btn-refaire").onclick=voixRefaire;
+$("#btn-valider-voix").onclick=voixValider;
+["mousedown","touchstart","mousemove","touchmove"].forEach(ev=>
+ $("#rail").addEventListener(ev,e=>{
+  if(etat!=="echelle")return;
+  if(ev.includes("move")&&!(e.buttons||e.touches))return;
+  echelleDepuisPointeur(e);},{passive:true}));
+
+/* inactivité: retour à l'attente après 2 min, jamais pendant un enregistrement */
+function relanceInactivite(){
+ clearTimeout(inactif);
+ inactif=setTimeout(()=>{
+  if(etat!=="attente"&&etat!=="voix-rec"&&etat!=="rapport")retourAttente();},120000);}
+relanceInactivite();
+anime($("#e-attente"));
+</script>
+</body>
+</html>

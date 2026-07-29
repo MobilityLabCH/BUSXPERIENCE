@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block corps %}
+<h2>Système</h2>
+<div class="carte kpis">
+ <div><b>{{ provider }}</b><span class="gris">fournisseur IA (AI_PROVIDER)</span></div>
+ <div><b>{{ modele or '—' }}</b><span class="gris">modèle</span></div>
+ <div><b>v{{ version_schema }}</b><span class="gris">schéma de base</span></div>
+ <div><b>{{ n_attente }}</b><span class="gris">audios à transcrire (python transcribe.py)</span></div>
+</div>
+<div class="carte">
+ <form method="post" action="/admin/systeme/tester-ia">
+  <button>Tester la connexion IA</button>
+  <span class="gris petit">Le résultat s'inscrit dans le journal ci-dessous.
+  Les clés ne sont jamais affichées.</span></form>
+</div>
+<h2>Sauvegardes</h2>
+<div class="carte">{% for s in sauvegardes %}<p class="petit">{{ s }}</p>
+{% else %}<p class="gris petit">Aucune sauvegarde encore (créées automatiquement avant chaque migration).</p>{% endfor %}</div>
+<h2>Journal</h2>
+<div class="carte">{% for j in journal %}
+<p class="petit"><span class="gris">{{ j.cree_le[:16].replace('T',' ') }}</span>
+ · <b>{{ j.type }}</b> · {{ j.detail[:140] }}</p>
+{% else %}<p class="gris">Journal vide.</p>{% endfor %}</div>
+{% endblock %}

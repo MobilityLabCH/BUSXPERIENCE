@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block corps %}
+<div class="carte kpis">
+ <div><b>{{ stats.n or 0 }}</b><span class="gris">sessions</span></div>
+ <div><b>{{ stats.fini or 0 }}</b><span class="gris">terminées</span></div>
+ <div><b>{{ n_reponses }}</b><span class="gris">réponses</span></div>
+ <div><b>{{ n_attente_transcription }}</b><span class="gris">audios à transcrire</span></div>
+ <div><b>{{ provider }}</b><span class="gris">fournisseur IA</span></div>
+</div>
+<h2>Campagne et lieu actifs</h2>
+<div class="carte">
+ <form method="post" action="/admin/courant" class="deux">
+  <div><label>Campagne courante</label><select name="campagne_id">
+   {% for ca in campagnes %}<option value="{{ ca.id }}" {{ 'selected' if ca.id==campagne_courante }}>{{ ca.nom }}</option>{% endfor %}
+  </select></div>
+  <div><label>Lieu courant</label><select name="lieu_id">
+   {% for l in lieux %}<option value="{{ l.id }}" {{ 'selected' if l.id==lieu_courant }}>{{ l.nom }}</option>{% endfor %}
+  </select></div>
+  <div><button class="jaune">Activer</button></div>
+ </form>
+</div>
+<div class="carte">
+ <form method="post" action="/admin/lieux" class="deux">
+  <div><label>Nouveau lieu</label><input name="nom" placeholder="Foire du Valais, stand CarPostal" required></div>
+  <div><label>Remarque</label><input name="remarque" placeholder="Halle 2, octobre"></div>
+  <div><button>Créer et activer</button></div>
+ </form>
+</div>
+<p class="gris petit">Ouvrir le parcours participant: <a href="/cabine/" target="_blank">/cabine/</a></p>
+{% endblock %}
