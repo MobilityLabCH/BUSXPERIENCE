@@ -20,6 +20,35 @@ import requests
 
 PROVIDERS = ("none", "ollama", "gemini", "anthropic")
 
+# ---------------------------------------------------------------- PII
+
+# Nettoyage best-effort avant tout envoi externe. Cette détection n'est PAS
+# parfaite (ce serait prétendre à une garantie qui n'existe pas): elle réduit
+# le risque évident (adresse e-mail, téléphone, URL, suite de chiffres
+# ressemblant à un identifiant, "je m'appelle …") sans se substituer à la
+# consigne donnée au participant de ne pas se nommer.
+_RE_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_RE_URL = re.compile(r"\b(?:https?://|www\.)\S+", re.IGNORECASE)
+_RE_TEL = re.compile(r"(?:\+?\d[\d .\-/]{6,}\d)")
+_RE_ID_NUM = re.compile(r"\b\d{5,}\b")
+_RE_NOM = re.compile(
+    r"\b(?:je\s+m['’]appelle|mon\s+nom\s+est|ich\s+hei(?:ss|ß)e|"
+    r"mein\s+name\s+ist)\b[^.!?\n]*", re.IGNORECASE)
+
+
+def masquer_donnees_personnelles(texte: str) -> str:
+    """Masque au mieux les informations personnelles évidentes d'un texte
+    avant tout envoi à un fournisseur IA externe. Ne garantit pas
+    l'exhaustivité."""
+    if not isinstance(texte, str) or not texte:
+        return texte
+    t = _RE_NOM.sub("[information personnelle retirée]", texte)
+    t = _RE_EMAIL.sub("[e-mail retiré]", t)
+    t = _RE_URL.sub("[lien retiré]", t)
+    t = _RE_TEL.sub("[numéro retiré]", t)
+    t = _RE_ID_NUM.sub("[nombre retiré]", t)
+    return t
+
 
 def provider_actuel() -> str:
     p = os.environ.get("AI_PROVIDER", "none").strip().lower()
@@ -118,6 +147,10 @@ Le résultat doit contenir exactement:
 4. une conclusion courte et mémorable.
 
 Contraintes absolues:
+- ne reproduis jamais un nom de personne, numéro de téléphone, adresse
+  postale, e-mail ou autre information personnelle qui aurait pu être
+  prononcée par erreur dans une transcription; si une telle information
+  apparaît dans les données, ignore-la simplement;
 - 60 à 90 mots au total pour les trois textes, titre non compris;
 - tutoiement en français, «du» en allemand;
 - aucun genre supposé;
@@ -691,8 +724,14 @@ def rapport_participant(lang: str, donnees: dict, ton: str = "complice") -> dict
     provider = provider_actuel()
     erreur = None
     if provider != "none":
+        # Seules des valeurs textuelles utiles au rapport sont transmises:
+        # jamais de fichier audio, de contenu binaire, de chemin local, de
+        # numéro de session/identifiant technique ni d'adresse IP. Un
+        # nettoyage best-effort retire en plus les informations personnelles
+        # évidentes qui auraient pu être prononcées par erreur.
         corpus = json.dumps(
-            {k: v for k, v in donnees.items() if v not in (None, "")},
+            {k: masquer_donnees_personnelles(str(v)) if isinstance(v, str) else v
+             for k, v in donnees.items() if v not in (None, "")},
             ensure_ascii=False,
         )
         texte, erreur = generer(
@@ -738,7 +777,8 @@ def analyse_qualitative(verbatims: list[str]) -> dict:
     """Thèmes des réponses vocales. Sans IA: comptage de mots-clés honnête."""
     provider = provider_actuel()
     if provider != "none" and verbatims:
-        texte, erreur = generer(PROMPT_ADMIN, "\n---\n".join(verbatims), max_tokens=1200)
+        corpus = "\n---\n".join(masquer_donnees_personnelles(v) for v in verbatims)
+        texte, erreur = generer(PROMPT_ADMIN, corpus, max_tokens=1200)
         if texte:
             m = re.search(r"\{.*\}", texte, re.S)
             try:

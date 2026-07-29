@@ -1,10 +1,13 @@
 import json
+import re
 """BUS XPERIENCE — tests.
 
 Lancer:  python -m pytest tests/ -q
-Couvre: santé, cabine individuelle, réponses de tous types,
-impossibilité de réponse orpheline, concepts, rapport sans IA, rapport admin,
-exports, migration v1, redémarrage sans perte, fournisseurs IA simulés.
+Couvre: santé, cabine individuelle micro-obligatoire, consentement explicite,
+réponses de tous types, impossibilité de réponse orpheline, concepts,
+rapport sans IA, rapport admin, exports, migration v1 et v5, redémarrage sans
+perte, fournisseurs IA simulés, protection des données (pages, config,
+masquage PII, abandon de session, code de participation, cleanup.py).
 """
 import importlib
 import os
@@ -62,11 +65,21 @@ def _login(client):
     return r
 
 
+CODE_RE = re.compile(r"^BX-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$")
+
+
+def _session(client, participants=1, mic_ok=1, lang="fr"):
+    r = client.post("/api/sessions", data={"lang": lang,
+                    "participants": participants, "mic_ok": mic_ok})
+    assert r.status_code == 200, r.text
+    return r.json()["session_id"]
+
+
 # ------------------------------------------------------------- démarrage
 
 def test_health(client):
     d = client.get("/health").json()
-    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 4
+    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 5
     assert d["ai_provider"] == "none"
 
 
@@ -79,11 +92,25 @@ def test_cabine_servie(client):
     assert "class=\"curseur\"" not in h and "id=\"retour\"" not in h
     assert "aucune lecture automatique des réponses" in h
     assert "DU STEIGST EIN" in h and "TON EXPÉRIENCE" in h
+    # micro obligatoire: plus aucun parcours ni choix "sans micro"
+    assert "sans micro" not in h.lower()
+    assert "ohne mikrofon" not in h.lower()
+    assert "consentnomicro" not in h.lower()
+    assert "consent-no-micro" not in h.lower()
+    assert "fallback:[" not in h
+    # exactement deux choix de consentement par langue
+    assert '"Oui, je participe"' in h or "consentOui:\"Oui, je participe\"" in h
+    assert 'consentNon:"Non merci"' in h
+    assert 'consentOui:"Ja, ich mache mit"' in h
+    assert 'consentNon:"Nein, danke"' in h
+    # QR code local + lien discret protection des données
+    assert "/api/qr/" in h and "consent-privacy" in h
 
 
 def test_admin_protege(client):
     assert "Mot de passe" in client.get("/admin").text
-    _login(client)
+    r = _login(client)
+    assert "samesite=lax" in r.headers.get("set-cookie", "").lower()
     assert "Tableau de bord" in client.get("/admin").text
 
 
@@ -93,6 +120,15 @@ def test_migration_v1_reprise(client):
     assert d["sessions"] >= 1
     _login(client)
     assert "Ancien lieu v1" in client.get("/admin").text
+
+
+def test_migration_v5_colonnes_consentement(client):
+    import db
+    with db.conn() as c:
+        colonnes = {r["name"] for r in c.execute("PRAGMA table_info(sessions)")}
+    for attendue in ("consent_audio", "consent_le", "consent_version",
+                      "privacy_lang", "participant_code", "consent_micro"):
+        assert attendue in colonnes, attendue
 
 
 # ------------------------------------------------------------- parcours
@@ -107,13 +143,8 @@ def test_config_cabine(client):
     assert len(seg) == 1  # une seule question de segmentation
     cond = [q for q in d["questions"] if q["condition"]]
     assert cond, "au moins une question conditionnelle"
-
-
-def _session(client, participants=1, micro=1):
-    r = client.post("/api/sessions", data={"lang": "fr",
-                    "participants": participants, "consent_micro": micro})
-    assert r.status_code == 200
-    return r.json()["session_id"]
+    assert d["privacy"]["url_fr"] and d["privacy"]["url_de"]
+    assert d["privacy"]["version"]
 
 
 def test_session_strictement_individuelle(client):
@@ -122,8 +153,38 @@ def test_session_strictement_individuelle(client):
     with db.conn() as c:
         s = c.execute("SELECT participants FROM sessions WHERE id=?", (sid,)).fetchone()
     assert s["participants"] == 1
-    assert client.post("/api/sessions", data={"participants": 2}).status_code == 400
-    assert client.post("/api/sessions", data={"participants": 3}).status_code == 400
+    assert client.post("/api/sessions",
+                       data={"participants": 2, "mic_ok": 1}).status_code == 400
+    assert client.post("/api/sessions",
+                       data={"participants": 3, "mic_ok": 1}).status_code == 400
+
+
+def test_session_seulement_apres_autorisation_micro(client):
+    """Aucune session n'est créée sans mic_ok=1 (l'équivalent serveur du
+    consentement réellement explicite + autorisation navigateur)."""
+    import db
+    with db.conn() as c:
+        avant = c.execute("SELECT COUNT(*) n FROM sessions").fetchone()["n"]
+    r = client.post("/api/sessions", data={"lang": "fr", "participants": 1})
+    assert r.status_code == 403
+    r2 = client.post("/api/sessions",
+                     data={"lang": "fr", "participants": 1, "mic_ok": 0})
+    assert r2.status_code == 403
+    with db.conn() as c:
+        apres = c.execute("SELECT COUNT(*) n FROM sessions").fetchone()["n"]
+    assert apres == avant
+
+
+def test_consent_le_version_langue_et_code_enregistres(client):
+    sid = _session(client, lang="de")
+    import db
+    with db.conn() as c:
+        s = c.execute("SELECT * FROM sessions WHERE id=?", (sid,)).fetchone()
+    assert s["consent_audio"] == 1
+    assert s["consent_le"]
+    assert s["consent_version"]
+    assert s["privacy_lang"] == "de"
+    assert s["participant_code"] and CODE_RE.match(s["participant_code"])
 
 
 def test_reponses_tous_types_et_correction(client):
@@ -166,30 +227,55 @@ def test_concepts_impact_adoption(client):
     assert r.status_code == 400
 
 
-def test_micro_sans_consentement_refuse(client):
-    sid = _session(client, micro=0)
+def test_audio_nom_aleatoire_et_prive(client):
     d = client.get("/api/config").json()
     q_voix = next(q for q in d["questions"] if q["type"] == "voix")
+    sid = _session(client)
     r = client.post(f"/api/sessions/{sid}/reponses",
                     data={"question_id": q_voix["id"], "cle": "reponse"},
-                    files={"audio": ("x.webm", b"fake", "audio/webm")})
-    assert r.status_code == 403
-
-
-def test_question_vocale_devient_choix_sans_micro(client):
-    d = client.get("/api/config").json()
-    q_voix = next(q for q in d["questions"] if q["type"] == "voix")
-    sid = _session(client, micro=0)
-    valeur = "Les billets étaient plus faciles à comprendre"
-    r = client.post(f"/api/sessions/{sid}/reponses",
-                    data={"question_id": q_voix["id"], "cle": "reponse",
-                          "valeur": valeur})
+                    files={"audio": ("x.webm", b"fake-audio-bytes", "audio/webm")})
     assert r.status_code == 200
     import db
     with db.conn() as c:
-        row = c.execute("SELECT valeur, audio FROM reponses WHERE session=? AND question_id=?",
+        row = c.execute("SELECT audio FROM reponses WHERE session=? AND question_id=?",
                         (sid, q_voix["id"])).fetchone()
-    assert row["valeur"] == valeur and row["audio"] is None
+    nom = row["audio"]
+    # ancien schéma prévisible: "{session}_{question_id}.webm" (avec underscore).
+    # nouveau schéma: hex aléatoire uniquement, jamais dérivé de la session/question.
+    assert nom and not nom.startswith(sid) and "_" not in nom
+    # jamais accessible par une URL publique
+    assert client.get(f"/audio/{nom}").status_code == 404
+    # accessible seulement à l'admin connecté (client anonyme, sans cookie)
+    import app as module_app
+    from fastapi.testclient import TestClient
+    anon = TestClient(module_app.app)
+    r_anon = anon.get(f"/admin/audio/{nom}")
+    assert r_anon.status_code == 200 and "Mot de passe" in r_anon.text
+    _login(client)
+    r_admin = client.get(f"/admin/audio/{nom}")
+    assert r_admin.status_code == 200 and r_admin.content == b"fake-audio-bytes"
+
+
+def test_abandon_supprime_tout(client):
+    d = client.get("/api/config").json()
+    q_voix = next(q for q in d["questions"] if q["type"] == "voix")
+    sid = _session(client)
+    client.post(f"/api/sessions/{sid}/reponses",
+               data={"question_id": q_voix["id"], "cle": "reponse"},
+               files={"audio": ("x.webm", b"data", "audio/webm")})
+    import db
+    with db.conn() as c:
+        nom_audio = c.execute(
+            "SELECT audio FROM reponses WHERE session=?", (sid,)).fetchone()["audio"]
+    assert (db.AUDIO / nom_audio).exists()
+    r = client.post(f"/api/sessions/{sid}/abandonner")
+    assert r.status_code == 200
+    with db.conn() as c:
+        assert c.execute("SELECT COUNT(*) n FROM sessions WHERE id=?", (sid,)).fetchone()["n"] == 0
+        assert c.execute("SELECT COUNT(*) n FROM reponses WHERE session=?", (sid,)).fetchone()["n"] == 0
+    assert not (db.AUDIO / nom_audio).exists()
+    # idempotent
+    assert client.post(f"/api/sessions/{sid}/abandonner").status_code == 200
 
 
 def test_rapport_participant_sans_ia(client):
@@ -232,6 +318,34 @@ def test_admin_sections(client):
                           ("/admin/medias", "Klaxon"),
                           ("/admin/systeme", "fournisseur IA")):
         assert marqueur in client.get(url).text, url
+
+
+def test_systeme_bloc_protection_donnees(client):
+    _login(client)
+    h = client.get("/admin/systeme").text
+    assert "Protection des données" in h
+    assert "Consentements enregistrés" in h
+    assert "Sessions sans information de consentement" in h
+    assert "GEMINI_API_KEY" not in h and "ANTHROPIC_API_KEY" not in h
+    # ADMIN_PASS de test n'est pas une valeur faible connue -> pas d'alerte
+    assert "test-pass" not in h
+
+
+def test_recherche_et_suppression_par_code(client):
+    sid = _session(client)
+    import db
+    with db.conn() as c:
+        code = c.execute("SELECT participant_code FROM sessions WHERE id=?",
+                         (sid,)).fetchone()["participant_code"]
+    _login(client)
+    h = client.get(f"/admin/resultats?code={code}").text
+    assert sid in h or "Aucune réponse" in h  # session retrouvée (peut être sans réponse)
+    r = client.post("/admin/donnees/supprimer",
+                    data={"portee": "code", "participant_code": code},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    with db.conn() as c:
+        assert c.execute("SELECT COUNT(*) n FROM sessions WHERE id=?", (sid,)).fetchone()["n"] == 0
 
 
 def test_rapport_admin_et_exports(client):
@@ -387,6 +501,83 @@ def test_ancien_rapport_est_regenere():
     )
 
 
+# --------------------------------------------------- protection des données
+
+def test_masquage_donnees_personnelles():
+    import ai
+    texte = ("Contacte-moi au 079 123 45 67 ou test@example.com, "
+             "je m'appelle Jean Dupont, visite https://exemple.ch/moi maintenant, "
+             "mon dossier est le 583920123.")
+    masque = ai.masquer_donnees_personnelles(texte)
+    assert "test@example.com" not in masque
+    assert "079 123 45 67" not in masque
+    assert "https://exemple.ch" not in masque
+    assert "583920123" not in masque
+    assert "je m'appelle Jean Dupont" not in masque
+
+
+def test_aucun_audio_brut_envoye_a_gemini(monkeypatch):
+    import ai
+    captures = []
+
+    def capture(methode, url, **kw):
+        captures.append(kw)
+        return {"candidates": [{"content": {"parts": [{"text": json.dumps({
+            "titre": "Titre test", "paragraphe_1": "a " * 40,
+            "paragraphe_2": "b " * 40, "conclusion": "c"}, ensure_ascii=False)}]}}]}
+
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "cle-de-test")
+    monkeypatch.setattr(ai, "_http_json", capture)
+    ai.rapport_participant("fr", {
+        "verbatim": "Une réponse vocale transcrite localement, sans info perso.",
+        "etoiles": "5",
+    })
+    assert captures, "aucune requête interceptée"
+    charge = json.dumps(captures[0], ensure_ascii=False)
+    assert ".webm" not in charge
+    assert "audio" not in charge.lower()
+    assert "/data/" not in charge and str(Path.cwd()) not in charge
+
+
+def test_pages_protection_des_donnees_accessibles(client):
+    for url, mots in (("/protection-des-donnees",
+                       ["Protection des données", "Responsable du traitement", "Vos droits"]),
+                      ("/datenschutz",
+                       ["Datenschutz", "Verantwortliche Stelle", "Ihre Rechte"])):
+        r = client.get(url)
+        assert r.status_code == 200
+        for mot in mots:
+            assert mot in r.text, (url, mot)
+    # chaque page reste dans sa langue: pas de titre de section de l'autre langue
+    fr = client.get("/protection-des-donnees").text
+    de = client.get("/datenschutz").text
+    assert "Verantwortliche Stelle" not in fr
+    assert "Responsable du traitement" not in de
+
+
+def test_liens_officiels_poste_corrects():
+    import config
+    assert config.PRIVACY_URL_FR == (
+        "https://www.post.ch/fr/pages/footer/protection-des-donnees-et-informations-legales")
+    assert config.PRIVACY_URL_DE == (
+        "https://www.post.ch/de/pages/footer/datenschutz-und-rechtliches")
+
+
+def test_cleanup_dry_run(client, capsys):
+    import cleanup
+    old_argv = sys.argv
+    try:
+        sys.argv = ["cleanup.py", "--dry-run"]
+        assert cleanup.main() == 0
+    finally:
+        sys.argv = old_argv
+    sortie = capsys.readouterr().out
+    assert "simulation terminée" in sortie
+    # jamais de texte de réponse dans le journal de nettoyage
+    assert "Rarement" not in sortie and "correspondance" not in sortie.lower()
+
+
 # ------------------------------------------------------------- voix et sons
 
 def test_config_tts_et_sons(client):
@@ -439,16 +630,23 @@ def test_reglages_buzzer_admin(client):
                 "lecture_vitesse": "normale", "etoiles_delai_ms": "2500"})
 
 
+def test_arret_buzzer_present_dans_interface(client):
+    """« Tu peux arrêter à tout moment » correspond à une vraie fonction:
+    appui de 4 secondes + écran de confirmation, sans navigation JS classique."""
+    h = client.get("/cabine/").text
+    assert "STOP_PRESS=4000" in h
+    assert "openStopConfirm" in h and "confirmStopDelete" in h
+    assert "Arrêter et supprimer cette session ?" in h
+    assert "Sitzung abbrechen und löschen?" in h
+
+
 def test_rapport_storytelling_utilise_frequence_et_moment(client):
     d = client.get("/api/config").json()
     q_seg = next(q for q in d["questions"] if q["params"].get("segment"))
     q_moment = next(q for q in d["questions"]
                     if q["etape"] == "experience" and q["type"] == "choix"
                     and not q["params"].get("segment"))
-    sid = None
-    r = client.post("/api/sessions", data={"lang": "fr", "participants": 1,
-                                           "consent_micro": 1})
-    sid = r.json()["session_id"]
+    sid = _session(client)
     client.post(f"/api/sessions/{sid}/reponses",
                 data={"question_id": q_seg["id"], "cle": "reponse",
                       "valeur": "Presque tous les jours"})
@@ -471,7 +669,7 @@ def _compte(client):
 
 def test_suppression_session_precise(client):
     _login(client)
-    sid = client.post("/api/sessions", data={"lang": "fr", "participants": 1}).json()["session_id"]
+    sid = _session(client)
     d = client.get("/api/config").json()
     q = d["questions"][0]
     client.post(f"/api/sessions/{sid}/reponses",
@@ -500,6 +698,7 @@ def test_suppression_globale_exige_confirmation(client):
 def test_suppression_globale_avec_sauvegarde(client):
     _login(client)
     import db
+    sid = _session(client)  # garantit au moins une session avant suppression globale
     avant = _compte(client)
     assert avant["sessions"] > 0
     n_sauvegardes = len(list(db.BACKUPS.iterdir()))

@@ -1,0 +1,13 @@
+# Données runtime: réponses, audios, transcriptions, sauvegardes, base SQLite.
+# Ne doivent jamais être commitées (participants, protection des données).
+data/
+
+# Secrets et configuration locale.
+.env
+*.pem
+*.key
+
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ 'Protection des données · BUS XPERIENCE' if lang != 'de' else 'Datenschutz · BUS XPERIENCE' }}</title>
+<link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
+<style>
+:root{--jaune:#FFCC00;--noir:#111;--fond:#FAF8F2;--trait:#E4E0D4;--gris:#5b5c61}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--noir);
+ font:400 16px/1.55 "Swiss Post Sans",Arial,system-ui,sans-serif}
+header{background:var(--noir);color:#fff;padding:22px 20px}
+header .puce{display:inline-block;width:26px;height:9px;background:var(--jaune);border-radius:4px;margin-right:10px;vertical-align:middle}
+header b{font-size:18px;letter-spacing:.04em}
+main{max-width:760px;margin:0 auto;padding:28px 20px 70px}
+h1{font-size:clamp(26px,5vw,38px);letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:19px;margin:30px 0 8px}
+p{margin:8px 0}
+.gris{color:var(--gris)}
+.carte{background:#fff;border:1px solid var(--trait);border-radius:10px;padding:16px 18px;margin:12px 0}
+table{width:100%;border-collapse:collapse;margin-top:6px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--trait);font-size:14.5px;vertical-align:top}
+th{color:var(--gris);width:38%}
+a{color:#0a58ca}
+.avis{background:var(--jaune);color:var(--noir);border-radius:10px;padding:14px 16px;font-weight:600;font-size:14.5px;margin-top:26px}
+footer{color:var(--gris);font-size:12.5px;text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<header><span class="puce"></span><b>BUS XPERIENCE</b></header>
+<main>
+{% if lang == 'de' %}
+<h1>Datenschutz</h1>
+<p class="gris">Version {{ version }} der Datenschutzerklärung für BUS XPERIENCE.</p>
+
+<h2>Verantwortliche Stelle</h2>
+<div class="carte">
+ <p>{{ responsable }}</p>
+ <p class="gris">{{ adresse }}<br>Kontakt: <a href="mailto:{{ contact }}">{{ contact }}</a></p>
+ {% if not responsable_confirme %}<p class="gris">Die genaue projektverantwortliche Stelle für
+ BUS XPERIENCE ist noch von Legal/Datenschutz zu bestätigen.</p>{% endif %}
+</div>
+
+<h2>Welche Daten werden erhoben</h2>
+<div class="carte">
+ <p>Antworten auf die Fragen des Erlebnisses (Auswahl, Sterne, Skala), ein bis zwei
+ gesprochene Antworten (Audio, lokal transkribiert), sowie ein zufälliger
+ Teilnahmecode. Es werden keine Namen oder Kontaktdaten aktiv erfragt.</p>
+</div>
+
+<h2>Zweck der Bearbeitung</h2>
+<div class="carte"><p>Verständnis und Verbesserung des Bus-Erlebnisses (Nutzerforschung,
+ Innovation). Keine individuelle Profilbildung, kein Marketing.</p></div>
+
+<h2>Empfänger und Auftragsbearbeiter</h2>
+<div class="carte">
+ <table>
+  <tr><th>KI-Anbieter für das Reiseprofil</th><td>{{ provider }} — {{ destination }}</td></tr>
+  <tr><th>Bearbeitungsländer</th><td>{{ pays }}</td></tr>
+  <tr><th>Transkription</th><td>Ausschliesslich lokal (faster-whisper). Die Audiodatei
+   verlässt die Anlage nie.</td></tr>
+ </table>
+</div>
+
+<h2>Aufbewahrungsdauer</h2>
+<div class="carte">
+ <table>
+  <tr><th>Audioaufnahmen</th><td>{{ (audio_jours ~ ' Tage') if audio_jours else 'noch nicht konfiguriert' }}</td></tr>
+  <tr><th>Übrige Daten</th><td>{{ (donnees_jours ~ ' Tage') if donnees_jours else 'noch nicht konfiguriert' }}</td></tr>
+ </table>
+ <p class="gris">Danach automatische Löschung (cleanup.py).</p>
+</div>
+
+<h2>Ihre Rechte</h2>
+<div class="carte">
+ <p>Auskunft, Berichtigung und Löschung Ihrer Antworten sowie Widerruf der Einwilligung
+ sind jederzeit möglich. Bewahren Sie dazu Ihren Teilnahmecode (BX-…) auf und wenden
+ Sie sich an <a href="mailto:{{ contact }}">{{ contact }}</a>.</p>
+ <p>Die Teilnahme ist freiwillig; ohne Einwilligung wird keine Sitzung erstellt.</p>
+</div>
+
+<p class="gris">Allgemeine Datenschutzerklärung der Post:
+ <a href="{{ lien_general }}" target="_blank" rel="noopener">{{ lien_general }}</a></p>
+
+<div class="avis">Technische Umsetzung nach den Grundsätzen Transparenz, ausdrückliche
+ Einwilligung und Datenminimierung. Eine interne rechtliche Prüfung ist noch erforderlich.
+ Diese Seite stellt keine rechtliche Zertifizierung dar.</div>
+
+{% else %}
+<h1>Protection des données</h1>
+<p class="gris">Version {{ version }} de la notice de protection des données de BUS XPERIENCE.</p>
+
+<h2>Responsable du traitement</h2>
+<div class="carte">
+ <p>{{ responsable }}</p>
+ <p class="gris">{{ adresse }}<br>Contact : <a href="mailto:{{ contact }}">{{ contact }}</a></p>
+ {% if not responsable_confirme %}<p class="gris">Le responsable précis du projet BUS XPERIENCE
+ reste à confirmer par le service Legal/Datenschutz.</p>{% endif %}
+</div>
+
+<h2>Données collectées</h2>
+<div class="carte">
+ <p>Réponses aux questions du parcours (choix, étoiles, échelle), une ou deux réponses
+ vocales (audio, transcrites localement), et un code de participation aléatoire. Aucun
+ nom ni coordonnée n'est demandé activement.</p>
+</div>
+
+<h2>Finalités</h2>
+<div class="carte"><p>Comprendre et améliorer l'expérience du bus (recherche utilisateur,
+ innovation). Aucun profilage individuel, aucune finalité marketing.</p></div>
+
+<h2>Destinataires et sous-traitants</h2>
+<div class="carte">
+ <table>
+  <tr><th>Fournisseur IA pour le profil de voyage</th><td>{{ provider }} — {{ destination }}</td></tr>
+  <tr><th>Pays de traitement</th><td>{{ pays }}</td></tr>
+  <tr><th>Transcription</th><td>Exclusivement locale (faster-whisper). Le fichier audio
+   ne quitte jamais la borne.</td></tr>
+ </table>
+</div>
+
+<h2>Durée de conservation</h2>
+<div class="carte">
+ <table>
+  <tr><th>Enregistrements audio</th><td>{{ (audio_jours ~ ' jours') if audio_jours else 'pas encore configurée' }}</td></tr>
+  <tr><th>Autres données</th><td>{{ (donnees_jours ~ ' jours') if donnees_jours else 'pas encore configurée' }}</td></tr>
+ </table>
+ <p class="gris">Suppression automatique passé ce délai (cleanup.py).</p>
+</div>
+
+<h2>Vos droits</h2>
+<div class="carte">
+ <p>Accès, rectification et suppression de tes réponses, ainsi que retrait du consentement,
+ sont possibles à tout moment. Conserve pour cela ton code de participation (BX-…) et
+ contacte <a href="mailto:{{ contact }}">{{ contact }}</a>.</p>
+ <p>La participation est volontaire; sans consentement, aucune session n'est créée.</p>
+</div>
+
+<p class="gris">Notice générale de protection des données de La Poste :
+ <a href="{{ lien_general }}" target="_blank" rel="noopener">{{ lien_general }}</a></p>
+
+<div class="avis">Implémentation technique renforcée selon les principes de transparence,
+ consentement explicite et minimisation des données. Validation juridique interne encore
+ nécessaire. Cette page ne constitue pas une certification juridique.</div>
+{% endif %}
+</main>
+<footer>Powered by MobilityLab Sion</footer>
+</body>
+</html>

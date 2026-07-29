@@ -14,18 +14,26 @@ import json
 import os
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (FileResponse, HTMLResponse, RedirectResponse,
+                                StreamingResponse)
 from fastapi.templating import Jinja2Templates
 
 import ai
+import config as vieprivee
 import db
 import stats
 
 router = APIRouter(tags=["admin"])
 templates = Jinja2Templates(directory=str(db.RACINE / "templates"))
 
-ADMIN_PASS = os.environ.get("ADMIN_PASS", "busxperience")
+ADMIN_PASS_DEFAUT = "busxperience"
+ADMIN_PASS = os.environ.get("ADMIN_PASS", ADMIN_PASS_DEFAUT)
 SECRET_KEY = os.environ.get("SECRET_KEY", "a-changer-en-production")
+ADMIN_PASS_FAIBLE = ADMIN_PASS in ("admin", ADMIN_PASS_DEFAUT, "password", "123456")
+
+
+def _cookie_secure(request: Request) -> bool:
+    return request.url.scheme == "https" or os.environ.get("FORCE_SECURE_COOKIE") == "1"
 
 
 def _jeton() -> str:
@@ -52,10 +60,11 @@ def ctx_commun(c, section: str) -> dict:
 
 
 @router.post("/admin/login")
-def login(mot_de_passe: str = Form(...)):
+def login(request: Request, mot_de_passe: str = Form(...)):
     rep = RedirectResponse("/admin", status_code=303)
     if hmac.compare_digest(mot_de_passe, ADMIN_PASS):
-        rep.set_cookie("bx_admin", _jeton(), httponly=True, max_age=86400 * 30)
+        rep.set_cookie("bx_admin", _jeton(), httponly=True, max_age=86400 * 30,
+                       samesite="lax", secure=_cookie_secure(request))
     return rep
 
 
@@ -301,16 +310,22 @@ async def sauver_concept(request: Request, concept_id: int = Form(0),
 # ------------------------------------------------------------ 5. résultats
 
 @router.get("/admin/resultats", response_class=HTMLResponse)
-def resultats(request: Request, question: int = 0, session: str = ""):
+def resultats(request: Request, question: int = 0, session: str = "", code: str = ""):
     if not connecte(request):
         return page_login(request)
     with db.conn() as c:
         ctx = ctx_commun(c, "resultats")
         ctx["toutes"] = [dict(r) for r in c.execute(
             "SELECT id, ordre, type, fr FROM questions ORDER BY ordre")]
-        ctx["question"], ctx["session"] = question, session
+        ctx["question"], ctx["session"], ctx["code"] = question, session, code
         ctx["supprime"] = request.query_params.get("supprime")
         ctx["erreur"] = request.query_params.get("erreur")
+        if code.strip():
+            trouvee = c.execute(
+                "SELECT id FROM sessions WHERE participant_code=?",
+                (code.strip().upper(),)).fetchone()
+            session = trouvee["id"] if trouvee else "introuvable"
+            ctx["session"] = session
         cond, args = [], []
         if question:
             cond.append("r.question_id=?"); args.append(question)
@@ -318,7 +333,8 @@ def resultats(request: Request, question: int = 0, session: str = ""):
             cond.append("r.session=?"); args.append(session)
         sql_cond = ("WHERE " + " AND ".join(cond)) if cond else ""
         ctx["reponses"] = [dict(r) for r in c.execute(f"""
-            SELECT r.*, q.fr AS q_fr, co.nom_fr AS c_nom, s.lang, s.participants
+            SELECT r.*, q.fr AS q_fr, co.nom_fr AS c_nom, s.lang, s.participants,
+                   s.participant_code
             FROM reponses r LEFT JOIN questions q ON q.id=r.question_id
             LEFT JOIN concepts co ON co.id=r.concept_id
             LEFT JOIN sessions s ON s.id=r.session
@@ -326,20 +342,37 @@ def resultats(request: Request, question: int = 0, session: str = ""):
     return templates.TemplateResponse(request, "resultats.html", ctx)
 
 
+@router.get("/admin/audio/{nom}")
+def audio_admin(request: Request, nom: str):
+    """Seul un administrateur connecté peut télécharger ou écouter un audio.
+    Les fichiers ne sont jamais servis par une URL publique."""
+    if not connecte(request):
+        return page_login(request)
+    cible = db.AUDIO / nom
+    if "/" in nom or ".." in nom or not cible.exists():
+        return HTMLResponse("Introuvable", status_code=404)
+    return FileResponse(cible, media_type="audio/webm")
+
+
 @router.post("/admin/donnees/supprimer")
 def supprimer_donnees(request: Request, portee: str = Form(...),
                       session_id: str = Form(""), campagne_id: int = Form(0),
+                      participant_code: str = Form(""),
                       confirmation: str = Form("")):
     """Zone dangereuse: efface sessions, réponses, audios, transcriptions et
     rapports participants. Questions, concepts, campagnes, réglages et médias
     sont TOUJOURS conservés. Suppression globale: mot SUPPRIMER exigé et
-    sauvegarde datée de la base créée avant."""
+    sauvegarde datée de la base créée avant. Une demande de suppression peut
+    être retrouvée par le code de participation remis en fin de parcours."""
     if not connecte(request):
         return page_login(request)
     with db.conn() as c:
         if portee == "session" and session_id.strip():
             cible = "s.id=?"
             args = [session_id.strip()]
+        elif portee == "code" and participant_code.strip():
+            cible = "s.participant_code=?"
+            args = [participant_code.strip().upper()]
         elif portee == "campagne" and campagne_id:
             cible = "s.campagne_id=?"
             args = [campagne_id]
@@ -355,22 +388,7 @@ def supprimer_donnees(request: Request, portee: str = Form(...),
             return RedirectResponse("/admin/resultats?erreur=portee", status_code=303)
         ids = [r["id"] for r in c.execute(
             f"SELECT s.id FROM sessions s WHERE {cible}", args)]
-        n = {"sessions": 0, "reponses": 0, "audios": 0, "rapports": 0}
-        if ids:
-            marque = ",".join("?" * len(ids))
-            for r in c.execute(
-                    f"SELECT audio FROM reponses WHERE session IN ({marque})"
-                    " AND audio IS NOT NULL", ids):
-                chemin = db.AUDIO / r["audio"]
-                if chemin.exists():
-                    chemin.unlink()
-                    n["audios"] += 1
-            n["reponses"] = c.execute(
-                f"DELETE FROM reponses WHERE session IN ({marque})", ids).rowcount
-            n["rapports"] = c.execute(
-                f"DELETE FROM rapports WHERE session IN ({marque})", ids).rowcount
-            n["sessions"] = c.execute(
-                f"DELETE FROM sessions WHERE id IN ({marque})", ids).rowcount
+        n = db.supprimer_sessions(c, ids)
         db.journaliser(c, "suppression", f"portée={portee} {n}")
     return RedirectResponse(
         f"/admin/resultats?supprime={n['sessions']}s-{n['reponses']}r-"
@@ -555,9 +573,31 @@ def systeme(request: Request):
             "SELECT COUNT(*) n FROM reponses WHERE audio IS NOT NULL AND transcript IS NULL"
         ).fetchone()["n"]
         ctx["version_schema"] = db.VERSION_SCHEMA
+        ctx["n_consentements"] = c.execute(
+            "SELECT COUNT(*) n FROM sessions WHERE consent_le IS NOT NULL").fetchone()["n"]
+        ctx["n_sans_consentement"] = c.execute(
+            "SELECT COUNT(*) n FROM sessions WHERE consent_le IS NULL").fetchone()["n"]
     ctx["provider"] = ai.provider_actuel()
     ctx["modele"] = ai.modele_actuel(ctx["provider"])
     ctx["sauvegardes"] = sorted((p.name for p in db.BACKUPS.iterdir()), reverse=True)[:10]
+    ctx["admin_pass_faible"] = ADMIN_PASS_FAIBLE
+    ctx["vie_privee"] = {
+        "version": vieprivee.PRIVACY_NOTICE_VERSION,
+        "responsable_fr": vieprivee.DATA_CONTROLLER_FR,
+        "responsable_de": vieprivee.DATA_CONTROLLER_DE,
+        "responsable_confirme": vieprivee.DATA_CONTROLLER_IS_CONFIRMED,
+        "adresse": vieprivee.DATA_CONTROLLER_ADDRESS,
+        "contact": vieprivee.PRIVACY_CONTACT_EMAIL,
+        "audio_jours": vieprivee.AUDIO_RETENTION_DAYS,
+        "donnees_jours": vieprivee.DATA_RETENTION_DAYS,
+        "destination_fr": vieprivee.ai_data_destination_fr(ctx["provider"]),
+        "destination_de": vieprivee.ai_data_destination_de(ctx["provider"]),
+        "pays_fr": vieprivee.ai_processing_countries_fr(ctx["provider"]),
+        "pays_de": vieprivee.ai_processing_countries_de(ctx["provider"]),
+        "url_fr": vieprivee.PRIVACY_URL_FR,
+        "url_de": vieprivee.PRIVACY_URL_DE,
+    }
+    ctx["etat_config"] = vieprivee.etat_configuration()
     return templates.TemplateResponse(request, "systeme.html", ctx)
 
 

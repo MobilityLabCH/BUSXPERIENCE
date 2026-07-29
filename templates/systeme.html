@@ -1,5 +1,12 @@
 {% extends "base.html" %}{% block corps %}
 <h2>Système</h2>
+{% if admin_pass_faible %}
+<div class="carte" style="border-color:#B3261E;background:#fdeceb">
+ <b style="color:#B3261E">Mot de passe administrateur faible.</b>
+ <p class="petit">ADMIN_PASS vaut encore une valeur par défaut (« admin » ou similaire).
+ Le changer avant tout usage public: variable d'environnement ADMIN_PASS.</p>
+</div>
+{% endif %}
 <div class="carte kpis">
  <div><b>{{ provider }}</b><span class="gris">fournisseur IA (AI_PROVIDER)</span></div>
  <div><b>{{ modele or '—' }}</b><span class="gris">modèle</span></div>
@@ -11,6 +18,39 @@
   <button>Tester la connexion IA</button>
   <span class="gris petit">Le résultat s'inscrit dans le journal ci-dessous.
   Les clés ne sont jamais affichées.</span></form>
+</div>
+
+<h2>Protection des données</h2>
+{% if not etat_config.complet %}
+<div class="carte" style="border-color:#B3261E">
+ <b style="color:#B3261E">Paramètres à confirmer avant usage public :</b>
+ <ul class="petit">{% for m in etat_config.manquants %}<li>{{ m }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if not vie_privee.audio_jours or not vie_privee.donnees_jours %}
+<div class="carte" style="border-color:#B3261E">
+ Durée de conservation non configurée – à valider avant utilisation publique.
+</div>
+{% endif %}
+<div class="carte">
+ <table>
+  <tr><th>Version de la notice</th><td>{{ vie_privee.version }}</td></tr>
+  <tr><th>Responsable (FR)</th><td>{{ vie_privee.responsable_fr }}</td></tr>
+  <tr><th>Responsable (DE)</th><td>{{ vie_privee.responsable_de }}</td></tr>
+  <tr><th>Adresse / contact</th><td>{{ vie_privee.adresse }} · {{ vie_privee.contact }}</td></tr>
+  <tr><th>Conservation audios</th><td>{{ vie_privee.audio_jours ~ ' jours' if vie_privee.audio_jours else 'non configuré' }}</td></tr>
+  <tr><th>Conservation autres données</th><td>{{ vie_privee.donnees_jours ~ ' jours' if vie_privee.donnees_jours else 'non configuré' }}</td></tr>
+  <tr><th>Fournisseur IA</th><td>{{ provider }}</td></tr>
+  <tr><th>Destination des données (FR)</th><td>{{ vie_privee.destination_fr }}</td></tr>
+  <tr><th>Pays de traitement (FR)</th><td>{{ vie_privee.pays_fr }}</td></tr>
+  <tr><th>Lien FR</th><td><a href="{{ vie_privee.url_fr }}" target="_blank" rel="noopener">{{ vie_privee.url_fr }}</a></td></tr>
+  <tr><th>Lien DE</th><td><a href="{{ vie_privee.url_de }}" target="_blank" rel="noopener">{{ vie_privee.url_de }}</a></td></tr>
+  <tr><th>Consentements enregistrés</th><td>{{ n_consentements }}</td></tr>
+  <tr><th>Sessions sans information de consentement (ancienne version)</th><td>{{ n_sans_consentement }}</td></tr>
+ </table>
+ <p class="gris petit" style="margin-top:8px">Implémentation technique renforcée selon les
+ principes de transparence, consentement explicite et minimisation des données.
+ Validation juridique interne encore nécessaire.</p>
 </div>
 <h2>Sauvegardes</h2>
 <div class="carte">{% for s in sauvegardes %}<p class="petit">{{ s }}</p>
