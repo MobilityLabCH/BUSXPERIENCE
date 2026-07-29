@@ -9,9 +9,6 @@
   <div><label>Langue</label><select name="lang"><option value="">Toutes</option>
    <option value="fr" {{ 'selected' if f.lang=='fr' }}>FR</option>
    <option value="de" {{ 'selected' if f.lang=='de' }}>DE</option></select></div>
-  <div><label>Participation</label><select name="participants"><option value="">Toutes</option>
-   <option value="1" {{ 'selected' if f.participants=='1' }}>Seul·e</option>
-   <option value="2" {{ 'selected' if f.participants=='2' }}>À deux</option></select></div>
   <div><label>Parcours</label><select name="termine"><option value="">Tous</option>
    <option value="oui" {{ 'selected' if f.termine=='oui' }}>Terminés</option>
    <option value="non" {{ 'selected' if f.termine=='non' }}>Abandonnés</option></select></div>
@@ -31,7 +28,6 @@
  <div><b>{{ r.n_sessions }}</b><span class="gris">sessions</span></div>
  <div><b>{{ r.n_terminees }}</b><span class="gris">terminées</span></div>
  <div><b>{{ r.taux_completion }}%</b><span class="gris">complétion</span></div>
- <div><b>{{ r.n_duos }}</b><span class="gris">à deux</span></div>
  {% if r.duree_moyenne_s %}<div><b>{{ (r.duree_moyenne_s//60) }} min {{ r.duree_moyenne_s%60 }}</b>
   <span class="gris">durée moyenne (médiane {{ (r.duree_mediane_s//60) }} min)</span></div>{% endif %}
 </div>

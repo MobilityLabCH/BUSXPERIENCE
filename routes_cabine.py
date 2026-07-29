@@ -69,8 +69,9 @@ def config():
 @router.post("/sessions")
 def creer_session(lang: str = Form("fr"), participants: int = Form(1),
                   consent_micro: int = Form(0)):
-    if participants not in (1, 2):
-        raise HTTPException(400, "participants doit valoir 1 ou 2")
+    """Crée une session individuelle. Le mode à deux n'existe plus."""
+    if participants != 1:
+        raise HTTPException(400, "BUS XPERIENCE est une expérience individuelle")
     sid = str(uuid.uuid4())
     with db.conn() as c:
         c.execute(
@@ -78,7 +79,7 @@ def creer_session(lang: str = Form("fr"), participants: int = Form(1),
                consent_micro, demarree_le) VALUES (?,?,?,?,?,?,?)""",
             (sid, int(db.reglage(c, "campagne_courante", "1") or 1),
              int(db.reglage(c, "lieu_courant", "1") or 1),
-             lang, participants, consent_micro, db.now()))
+             lang, 1, consent_micro, db.now()))
     return {"session_id": sid}
 
 
@@ -144,10 +145,16 @@ def _transcrire_local(chemin) -> str | None:
 def rapport(sid: str, lang: str = Form("fr")):
     with db.conn() as c:
         deja = c.execute("SELECT * FROM rapports WHERE session=?", (sid,)).fetchone()
+        if deja and ai.rapport_cache_valide(deja["titre"], deja["texte"]):
+            ia_utilisee = deja["fournisseur"] != "none"
+            label = ("Mit KI personalisiert" if ia_utilisee else "Automatisch personalisiert")
+            if lang != "de":
+                label = "Personnalisé par IA" if ia_utilisee else "Personnalisé automatiquement"
+            return {"titre": deja["titre"], "texte": deja["texte"], "label": label}
         if deja:
-            return {"titre": deja["titre"], "texte": deja["texte"],
-                    "label": ("Rapport personnalisé par IA" if deja["fournisseur"] != "none"
-                              else "Rapport personnalisé automatiquement")}
+            # Les rapports de l'ancienne version (« Acte 1 », notes brutes, etc.)
+            # sont supprimés puis régénérés avec le nouveau moteur.
+            c.execute("DELETE FROM rapports WHERE session=?", (sid,))
         camp = c.execute(
             """SELECT ca.ton FROM sessions s LEFT JOIN campagnes ca
                ON ca.id=s.campagne_id WHERE s.id=?""", (sid,)).fetchone()
@@ -189,11 +196,17 @@ def rapport(sid: str, lang: str = Form("fr")):
                     with db.conn() as c:
                         c.execute("UPDATE reponses SET transcript=? WHERE id=?",
                                   (transcript, r["id"]))
+            # Dans le parcours sans micro, la question ouverte devient un choix
+            # structuré. Cette réponse reste exploitable dans le rapport final.
+            valeur_structuree = (r["valeur"] or "").strip()
             if transcript:
                 donnees["verbatim"] = transcript
+            elif valeur_structuree and not valeur_structuree.startswith("["):
+                donnees["verbatim"] = valeur_structuree
     if meilleur_concept:
+        # La note sert uniquement à sélectionner l'idée favorite; elle ne doit
+        # jamais apparaître dans le rapport participant ni être envoyée à l'IA.
         donnees["concept"] = meilleur_concept
-        donnees["concept_note"] = int(meilleure_note)
 
     doc = ai.rapport_participant(lang, donnees, ton=(camp["ton"] if camp else "complice"))
     with db.conn() as c:

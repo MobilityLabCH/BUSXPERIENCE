@@ -1,9 +1,9 @@
 # BUS XPERIENCE
 
 Une installation publique et un outil de recherche utilisateur pour comprendre
-et ameliorer l'experience client du bus. Parcours FR/DE de 4 a 5 minutes,
-buzzer, ecran tactile, concepts a tester, rapport final personnalise, rapport
-d'analyse pour l'administrateur. Powered by MobilityLab Sion.
+et ameliorer l'experience client du bus. Parcours individuel FR/DE de 4 a 5
+minutes, un seul buzzer, voix facultative, concepts a tester, profil de voyage
+final personnalise et rapport d'analyse administrateur. Powered by MobilityLab Sion.
 
 ## Typographie
 
@@ -15,18 +15,18 @@ fichier de police n'est inclus dans le projet.
 
 ## Un seul buzzer rouge
 
-Le parcours est entierement utilisable avec un seul gros buzzer rouge (le
-clic sur le bouton visuel, la touche Espace et le futur buzzer physique
-declenchent exactement la meme action). Pour les choix, la voix annonce les
-reponses une a une, la reponse lue est fortement mise en evidence, on buzze
-quand la bonne est annoncee. Etoiles: un buzz = une etoile, anneau de
-validation reglable, appui long (>= 0,7 s) pour annuler et recommencer.
-Echelle 0-10: les valeurs defilent vocalement et visuellement, on buzze sur
-la bonne. Voix: un appui demarre, un appui arrete, le silence arrete aussi.
-Un appui ne saute jamais une question sans reponse. Le tactile reste une
-solution de secours. Admin -> Medias: mode « Buzzer unique + voix », vitesse
-de lecture lente/normale/rapide, duree de validation des etoiles, test du
-buzzer et de l'appui long.
+Le parcours participant est strictement individuel et se pilote avec un seul
+buzzer physique. Un appui court parcourt les choix; un appui long (>= 0,7 s)
+valide. La meme logique s'applique aux langues, au consentement, aux questions
+a choix, aux etoiles, aux comparaisons et a l'echelle 0-10. Il n'y a plus de
+fleches gauche/droite, de curseur, de bouton « corriger » ni de navigation de
+site web. Espace/Entree simulent le buzzer pendant les tests; le tactile reste
+un secours discret.
+
+La synthese vocale lit uniquement la question, jamais les reponses. Avec le
+micro, une question ouverte peut etre enregistree. Sans micro ou si le micro
+est indisponible, une question structuree equivalente apparait directement,
+sans chronometre ni faux ecran d'enregistrement.
 
 ## Lancement (Codespaces ou local)
 
@@ -48,16 +48,15 @@ Aucune URL n'est codee en dur, tout est relatif.
 
 ## Le parcours
 
-Consentement configurable (LPD: information, volontariat, finalite) avec
-« Oui, je participe », « Participer sans micro », « Non merci », puis
-participation seul·e ou a deux (double accord requis a deux). Etapes visibles
-avec progression: Ton experience -> Ce qui coince -> Les idees a tester ->
-Ta priorite -> Ton rapport. Interactions selon la question: choix tactile ou
-fleches + buzzer, etoiles au buzzer (un buzz = une etoile, anneau de
-validation, correction par la fleche gauche), curseur 0-10, duel gauche/droite,
-voix 45 s avec compte a rebours, detection de silence, reecoute et reprise.
-Bouton « corriger » pour revenir en arriere (la reponse est remplacee, jamais
-dupliquee). Un appui buzzer ne saute jamais une question sans reponse.
+Apres le choix de la langue, une introduction forte place immediatement la
+personne au centre de l'experience. Le consentement propose trois voies:
+participer avec le micro, participer sans micro ou refuser. Une session
+correspond toujours a une seule personne.
+
+Chaque ecran tient dans une borne 1366x768 ou 1920x1080, sans defilement. La
+progression est exacte. Les listes longues passent automatiquement en grille.
+L'echelle 0-10 utilise onze cases lisibles plutot qu'un curseur. Les ecrans FR
+et DE sont entierement traduits et ne melangent jamais les langues.
 
 ## Concepts
 
@@ -83,8 +82,8 @@ fournisseur externe: la transcription est locale (faster-whisper,
 Huit sections: Tableau de bord, Campagnes, Questionnaires (liste compacte avec
 recherche, tri par ordre, duplication, edition en page dediee, versionnement),
 Concepts, Resultats (par question, par session, audio + correction manuelle des
-transcriptions), Rapports (filtres campagne/lieu/periode/langue/participation/
-termine/frequence, frictions, classement des concepts, verbatims, limites
+transcriptions), Rapports (filtres campagne/lieu/periode/langue/parcours/frequence,
+frictions, classement des concepts, verbatims, limites
 methodologiques, impression/PDF navigateur, exports CSV et JSON), Medias
 (musique, klaxon, voix des questions), Systeme (fournisseur IA, test de
 connexion, sauvegardes, journal).
@@ -126,7 +125,7 @@ exclut reponses, audios, transcriptions, sauvegardes et cles.
 
 ## Tests
 
-    python -m pytest tests/ -q        # 16 tests
+    python -m pytest tests/ -q        # 29 tests
 
 Voir CHANGELOG.md pour le detail de ce qui est teste, simule et non teste.
 
@@ -151,9 +150,8 @@ supprimes est affiche, et rien n'est recree au redemarrage.
 
 ## Procedure de migration
 
-Remplacer les fichiers du depot par ceux du ZIP et relancer ./start.sh. La
-migration v4 s'applique automatiquement avec sauvegarde prealable dans
-data/backups/ (reglages buzzer et tonalite; la question vocale par defaut
-devient « Termine cette phrase : je prendrais le bus plus souvent si… » si
-elle n'avait pas ete modifiee a la main). Les donnees, reglages et medias
-existants sont conserves entre les redemarrages.
+Remplacer les fichiers du depot par ceux du ZIP et relancer ./start.sh. Le
+schema reste en v4. Le seed v3 met a jour uniquement les anciens textes par
+defaut encore inchanges: consentement, premiere question de frequence et
+concept de l'arret confortable. Les textes personnalises dans l'admin, les
+donnees, les reglages et les medias sont conserves.

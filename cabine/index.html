@@ -2,968 +2,418 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BUS XPERIENCE</title>
 <link rel="stylesheet" href="https://fonts.post.ch/swiss-post-sans/v1/swiss-post-sans.css">
 <style>
-/* BUS XPERIENCE. Jaune CarPostal sur noir, aucune ressource externe:
-   pile de polices système, sons synthétisés, tout fonctionne hors ligne. */
-:root{--jaune:#FFCC00;--noir:#0A0A0C;--blanc:#F5F2EA;--orange:#FF6A13;--gris:#6E6B62}
-*{box-sizing:border-box;margin:0;user-select:none}
-html,body{height:100%}
-body{background:var(--noir);color:var(--jaune);overflow:hidden;
- font:400 22px/1.35 "Swiss Post Sans",Arial,system-ui,sans-serif}
-.titre{font-weight:900;letter-spacing:-.02em;line-height:1.06;text-align:left}
-.ecran{position:absolute;inset:0;display:none;flex-direction:column;
- justify-content:center;padding:11vh 8vw 8vh;gap:3.4vh}
-.ecran.actif{display:flex}
-.centre{align-items:center;text-align:center}
-h1{font-size:9.5vh}h2{font-size:6.4vh;max-width:22ch}
-.sous{color:var(--blanc);font-weight:700;font-size:2.6vh}
-.gris{color:var(--gris)}.blanc{color:var(--blanc)}
-.mini{font-size:1.9vh}
+:root{
+ --yellow:#ffcc00;--black:#08090b;--ink:#111216;--paper:#f7f4ed;
+ --white:#fff;--muted:#8a8a86;--line:#303136;--red:#e30613;--orange:#ff6a13;
+}
+*{box-sizing:border-box;margin:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{background:var(--black);color:var(--paper);font-family:"Swiss Post Sans",Arial,system-ui,sans-serif}
+button{font:inherit}
+[hidden]{display:none!important}
 
-/* progression */
-#tete{position:fixed;top:0;left:0;right:0;padding:2vh 8vw 0;z-index:5;display:none}
-#tete .ligne1{display:flex;justify-content:space-between;align-items:baseline;
- color:var(--blanc);font-weight:700;font-size:2.3vh}
-#tete .etape{color:var(--jaune)}
-#barre{height:.9vh;background:#2A2A2E;border-radius:1vh;margin-top:1vh;overflow:hidden}
-#barre i{display:block;height:100%;background:var(--jaune);width:0;transition:width .5s}
-#retour{position:fixed;bottom:2.4vh;left:8vw;z-index:6;display:none;background:none;
- border:2px solid var(--gris);color:var(--gris);border-radius:99px;
- padding:.9vh 2vh;font:700 2vh "Swiss Post Sans",Arial,sans-serif;cursor:pointer}
-#retour:hover{border-color:var(--jaune);color:var(--jaune)}
-#signature{position:fixed;bottom:2.6vh;right:8vw;color:#3d3d42;font-size:1.7vh;z-index:4}
+/* Cadre borne */
+#progress{position:fixed;left:clamp(28px,6vw,96px);right:clamp(28px,6vw,96px);top:20px;z-index:20;display:none}
+#progress-line{display:flex;justify-content:space-between;align-items:center;gap:24px;font-size:clamp(14px,1.55vw,22px);font-weight:800}
+#progress-step{color:var(--yellow)}
+#progress-count{color:var(--paper);font-variant-numeric:tabular-nums}
+#progress-track{height:8px;margin-top:10px;border-radius:99px;background:#27282d;overflow:hidden}
+#progress-fill{display:block;height:100%;width:0;background:var(--yellow);transition:width .35s ease}
+#signature{position:fixed;right:clamp(24px,5vw,78px);bottom:15px;z-index:15;color:#5b5c61;font-size:clamp(11px,1.1vw,16px);font-weight:600}
+#interaction{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:18;display:none;align-items:center;gap:12px;color:var(--paper);font-size:clamp(13px,1.25vw,18px);font-weight:800;white-space:nowrap}
+#interaction-dot{width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 5px 0 #75050a}
 
-/* Le buzzer rouge: rond, massif, légèrement brillant, enfoncement au clic,
-   halo lumineux qui pulse. Clic = Espace = futur buzzer physique. */
-:root{--rouge:#E30613}
-.buzzer{width:22vh;height:22vh;border-radius:50%;cursor:pointer;position:relative;
- background:radial-gradient(circle at 32% 26%, #ff6b6b 0%, var(--rouge) 42%, #8f040c 100%);
- box-shadow:0 2.6vh 0 #6d030a, 0 3.4vh 4vh rgba(0,0,0,.6),
-  inset 0 -1.2vh 2.4vh rgba(0,0,0,.35), 0 0 0 0 rgba(227,6,19,.55);
- animation:halo 1.8s infinite;transition:transform .07s, box-shadow .07s}
-.buzzer::after{content:"";position:absolute;left:16%;top:10%;width:46%;height:26%;
- border-radius:50%;background:rgba(255,255,255,.35);filter:blur(.6vh)}
-.buzzer.presse,.buzzer:active{transform:translateY(1.8vh);
- box-shadow:0 .8vh 0 #6d030a, 0 1.4vh 2vh rgba(0,0,0,.55),
-  inset 0 -0.6vh 1.6vh rgba(0,0,0,.4), 0 0 6vh 1vh rgba(227,6,19,.65);animation:none}
-@keyframes halo{60%{box-shadow:0 2.6vh 0 #6d030a,0 3.4vh 4vh rgba(0,0,0,.6),
-  inset 0 -1.2vh 2.4vh rgba(0,0,0,.35),0 0 0 3.6vh rgba(227,6,19,0)}
- 100%{box-shadow:0 2.6vh 0 #6d030a,0 3.4vh 4vh rgba(0,0,0,.6),
-  inset 0 -1.2vh 2.4vh rgba(0,0,0,.35),0 0 0 0 rgba(227,6,19,0)}}
-.buzzer.petit{position:fixed;bottom:3vh;left:50%;transform:translateX(-50%) scale(.34);
- transform-origin:bottom center;z-index:6;display:none}
-.buzzer.petit.presse{transform:translateX(-50%) scale(.34) translateY(1.8vh)}
-.opt.lu{border-color:var(--rouge);transform:translateX(1.6vh) scale(1.02);
- box-shadow:0 0 3vh rgba(227,6,19,.45)}
-.carte-duel.lu{border-color:var(--rouge);transform:scale(1.06);
- box-shadow:0 0 3.4vh rgba(227,6,19,.5)}
-.marque-bx{font-weight:900;letter-spacing:.12em;opacity:0;animation:apparait 1.6s .3s forwards}
-@keyframes apparait{to{opacity:1}}
+.screen{position:absolute;inset:0;display:none;overflow:hidden;padding:clamp(86px,11vh,120px) clamp(28px,7vw,112px) clamp(54px,8vh,78px)}
+.screen.active{display:flex}
+.screen.center{align-items:center;justify-content:center;text-align:center}
+.screen.question-layout{flex-direction:column;justify-content:center;gap:clamp(18px,3vh,34px)}
+.eyebrow{color:var(--yellow);font-size:clamp(15px,1.65vw,24px);font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+.headline{font-size:clamp(48px,7vw,110px);line-height:.9;letter-spacing:-.055em;font-weight:900;text-transform:uppercase;text-wrap:balance}
+.question{font-size:clamp(36px,5vw,76px);line-height:.98;letter-spacing:-.04em;font-weight:900;max-width:23ch;text-wrap:balance}
+.question.compact{font-size:clamp(30px,4.2vw,62px);max-width:28ch}
+.lead{font-size:clamp(20px,2.15vw,33px);line-height:1.25;font-weight:700;max-width:58ch;text-wrap:balance}
+.muted{color:var(--muted)}
 
-/* cartes et options */
-.options{display:flex;flex-direction:column;gap:1.8vh;max-width:74vw;width:100%}
-.opt{background:var(--jaune);color:var(--noir);border-radius:2vh;padding:2.1vh 3vh;
- font-weight:800;font-size:3.4vh;display:flex;gap:2.2vh;align-items:center;
- border:.55vh solid transparent;transition:transform .12s,border-color .12s}
-.opt.vise{border-color:var(--blanc);transform:translateX(1.2vh)}
-.opt.choisi{background:var(--orange);color:#fff}
-.opt .n{background:var(--noir);color:var(--jaune);border-radius:1.1vh;min-width:4.8vh;
- height:4.8vh;display:grid;place-items:center;font-size:3vh;flex:none}
+/* Transition */
+#wipe{position:fixed;inset:0;z-index:100;background:var(--yellow);transform:translateX(-102%);pointer-events:none}
+#wipe.go{animation:wipe .52s cubic-bezier(.72,0,.2,1)}
+@keyframes wipe{0%{transform:translateX(-102%)}45%,55%{transform:translateX(0)}100%{transform:translateX(102%)}}
 
-/* étoiles */
-.etoiles{display:flex;gap:2.4vh}
-.etoile{font-size:11vh;color:#2E2E33;transition:transform .15s}
-.etoile.on{color:var(--jaune);animation:pop .3s}
-@keyframes pop{50%{transform:scale(1.5) rotate(-8deg)}}
-.anneau{width:9vh;height:9vh;border-radius:50%;position:relative}
-.anneau svg{transform:rotate(-90deg)}
-.anneau span{position:absolute;inset:0;display:grid;place-items:center;
- font-weight:800;font-size:3vh;color:var(--blanc)}
+/* Buzzer principal */
+.buzzer{width:clamp(150px,20vh,225px);aspect-ratio:1;border:0;border-radius:50%;cursor:pointer;position:relative;background:radial-gradient(circle at 32% 24%,#ff7b82 0,#ef1b25 26%,var(--red) 52%,#8d020a 100%);box-shadow:0 clamp(18px,2.5vh,28px) 0 #6e0309,0 35px 55px rgba(0,0,0,.55),inset 0 -18px 28px rgba(0,0,0,.28);transition:transform .08s,box-shadow .08s}
+.buzzer:after{content:"";position:absolute;left:17%;top:11%;width:43%;height:24%;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(5px)}
+.buzzer.pressed{transform:translateY(15px);box-shadow:0 5px 0 #6e0309,0 18px 30px rgba(0,0,0,.5),inset 0 -10px 20px rgba(0,0,0,.35)}
 
-/* échelle 0-10 */
-.echelle{width:min(76vw,120vh)}
-.rail{position:relative;height:2.2vh;background:#2A2A2E;border-radius:2vh}
-.rail i{position:absolute;left:0;top:0;bottom:0;background:var(--jaune);border-radius:2vh}
-.curseur{position:absolute;top:50%;transform:translate(-50%,-50%);width:7vh;height:7vh;
- border-radius:50%;background:var(--jaune);color:var(--noir);display:grid;
- place-items:center;font-weight:800;font-size:3.4vh;box-shadow:0 .6vh 2vh rgba(0,0,0,.5)}
-.bornes{display:flex;justify-content:space-between;color:var(--gris);
- font-size:2.2vh;margin-top:1.6vh;font-weight:600}
+/* Sélections pilotées par un seul buzzer */
+.choices{display:grid;grid-template-columns:1fr;width:min(1080px,88vw);gap:clamp(8px,1.25vh,14px);min-height:0;align-content:center}
+.choices.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.choice{min-height:clamp(56px,8vh,82px);padding:clamp(11px,1.7vh,18px) clamp(16px,2vw,28px);display:flex;align-items:center;gap:18px;border:2px solid var(--line);border-radius:16px;background:#17181c;color:var(--paper);font-size:clamp(18px,2.15vw,31px);line-height:1.08;font-weight:800;text-align:left;transition:transform .14s,border-color .14s,background .14s,color .14s;cursor:pointer}
+.choice .number{display:grid;place-items:center;flex:0 0 auto;width:clamp(34px,3.3vw,48px);height:clamp(34px,3.3vw,48px);border-radius:9px;background:#2a2b31;color:var(--paper);font-size:.8em;font-variant-numeric:tabular-nums}
+.choice.selected{background:var(--yellow);color:var(--ink);border-color:var(--yellow);transform:translateX(9px)}
+.choice.selected .number{background:var(--ink);color:var(--yellow)}
+.choice.confirmed{background:var(--orange);border-color:var(--orange);color:#fff}
+.choice.confirmed .number{background:#fff;color:var(--orange)}
+.choices.many .choice{min-height:clamp(50px,6.7vh,66px);font-size:clamp(16px,1.75vw,25px);padding:10px 16px}
 
-/* compare */
-.duel{display:flex;gap:3vw;width:100%;max-width:88vw}
-.carte-duel{flex:1;background:var(--jaune);color:var(--noir);border-radius:2.4vh;
- padding:4vh 3vh;font-weight:800;font-size:4vh;text-align:center;
- border:.7vh solid transparent;transition:transform .12s,border-color .12s}
-.carte-duel.vise{border-color:var(--blanc);transform:scale(1.04)}
-.ou{align-self:center;color:var(--gris);font-weight:800;font-size:3vh}
+/* Langue / consentement */
+.hero-stack{display:flex;flex-direction:column;align-items:center;gap:clamp(18px,3vh,34px);width:min(1200px,90vw)}
+.language-title{font-size:clamp(54px,8vw,120px);font-weight:900;letter-spacing:-.05em;line-height:.88}
+#intro-title{max-width:20ch;font-size:clamp(40px,5.2vw,76px);line-height:.92}
+#e-intro .hero-stack{gap:clamp(12px,2vh,22px)}
+#consent-copy{white-space:pre-line;max-width:70ch;color:var(--paper);font-size:clamp(17px,1.8vw,26px);line-height:1.32;font-weight:600}
+#e-consent .choices{margin-top:4px}
 
-/* voix */
-.vu{display:flex;gap:1vh;height:10vh;align-items:flex-end}
-.vu i{width:2.4vh;background:var(--jaune);border-radius:.8vh;height:12%}
-.pilule{background:var(--blanc);color:var(--noir);font-weight:800;font-size:3vh;
- border-radius:99px;padding:.9vh 2.4vh;font-variant-numeric:tabular-nums}
-.rangee{display:flex;gap:2vh;flex-wrap:wrap;justify-content:center}
-.bouton{background:var(--jaune);color:var(--noir);border:0;border-radius:1.6vh;
- padding:1.8vh 3vh;font:700 2.8vh "Swiss Post Sans",Arial,sans-serif;cursor:pointer;
- border:.5vh solid transparent}
-.bouton.second{background:transparent;color:var(--jaune);border-color:var(--jaune)}
-.bouton.vise{border-color:var(--blanc)}
+/* Étoiles */
+.stars{display:flex;align-items:center;gap:clamp(10px,2vw,28px);min-height:140px}
+.star{font-size:clamp(68px,10vw,145px);line-height:1;color:#2a2b31;transition:color .14s,transform .14s}
+.star.on{color:var(--yellow);transform:translateY(-5px)}
+.value-badge{display:inline-flex;align-items:baseline;gap:10px;background:var(--yellow);color:var(--ink);border-radius:14px;padding:10px 18px;font-size:clamp(22px,2.8vw,40px);font-weight:900}
 
-/* concept */
-.fiche{background:var(--jaune);color:var(--noir);border-radius:2.4vh;
- padding:3.4vh 3.8vh;max-width:78vw}
-.fiche h3{font-size:4.6vh;font-weight:800}
-.fiche p{font-size:2.9vh;font-weight:600;margin-top:1.2vh}
-.fiche img{max-height:22vh;border-radius:1.5vh;margin-top:1.5vh}
+/* Échelle sans curseur */
+.scale-wrap{width:min(1180px,90vw);display:flex;flex-direction:column;gap:18px}
+.scale-values{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:clamp(5px,.7vw,11px)}
+.scale-value{height:clamp(52px,8vw,92px);display:grid;place-items:center;border:2px solid var(--line);border-radius:13px;background:#17181c;color:var(--paper);font-size:clamp(20px,2.6vw,38px);font-weight:900;transition:.14s}
+.scale-value.selected{background:var(--yellow);border-color:var(--yellow);color:var(--ink);transform:translateY(-7px)}
+.scale-labels{display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:clamp(14px,1.55vw,21px);font-weight:750}
+.scale-labels span{max-width:18ch}
+.scale-labels span:last-child{text-align:right}
 
-/* rapport final */
-#e-rapport{background:var(--jaune);color:var(--noir)}
-.calc{font-size:3vh;font-weight:700;color:var(--noir)}
-.diplome{background:var(--blanc);border:.8vh solid var(--noir);border-radius:2vh;
- padding:3.4vh 4vh;max-width:76vw;transform:scale(2.2) rotate(-8deg);opacity:0;
- box-shadow:1.2vh 1.2vh 0 var(--noir)}
-.diplome.pose{animation:tampon .55s cubic-bezier(.2,1.35,.3,1) forwards}
-@keyframes tampon{to{transform:scale(1) rotate(-1.2deg);opacity:1}}
-.diplome .entete{font-size:2vh;letter-spacing:.3em;color:var(--gris);font-weight:700}
-.diplome .grand-titre{font-size:4.2vh;font-weight:800;margin:1vh 0 1.6vh}
-.diplome .corps{font-size:2.7vh;line-height:1.45;font-weight:500;white-space:pre-wrap}
-.diplome .label{font-size:1.8vh;color:var(--gris);margin-top:2vh}
-.voile{position:fixed;inset:0;background:var(--jaune);transform:translateX(-102%);z-index:50}
-.voile.passe{animation:balaye .65s cubic-bezier(.7,0,.2,1)}
-@keyframes balaye{0%{transform:translateX(-102%)}45%,55%{transform:translateX(0)}100%{transform:translateX(102%)}}
-.mot{display:inline-block;opacity:0;transform:translateY(.5em)}
-.joue .mot{animation:monte .4s cubic-bezier(.2,.8,.2,1) forwards}
-@keyframes monte{to{opacity:1;transform:none}}
+/* Duel */
+.duel{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:clamp(16px,2.5vw,34px);width:min(1160px,90vw)}
+.duel-card{min-height:clamp(150px,25vh,260px);display:grid;place-items:center;padding:30px;border:3px solid var(--line);border-radius:22px;background:#17181c;color:var(--paper);font-size:clamp(25px,3vw,45px);line-height:1.04;font-weight:900;text-align:center;transition:.14s}
+.duel-card.selected{background:var(--yellow);border-color:var(--yellow);color:var(--ink);transform:translateY(-9px)}
+.duel-or{align-self:center;color:var(--muted);font-size:clamp(18px,2vw,28px);font-weight:900}
+
+/* Concept */
+.concept-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:clamp(22px,4vw,58px);width:min(1160px,90vw);max-height:58vh;padding:clamp(24px,4vh,44px);border-radius:24px;background:var(--paper);color:var(--ink);box-shadow:20px 20px 0 var(--yellow)}
+.concept-card.no-image{grid-template-columns:1fr}
+.concept-card h2{font-size:clamp(38px,5vw,72px);line-height:.95;letter-spacing:-.04em;font-weight:900;text-wrap:balance}
+.concept-card p{margin-top:18px;font-size:clamp(20px,2.2vw,31px);line-height:1.2;font-weight:650;max-width:48ch}
+.concept-card img{width:100%;height:100%;max-height:43vh;object-fit:cover;border-radius:15px}
+
+/* Voix */
+.voice-area{display:flex;flex-direction:column;gap:clamp(16px,2.5vh,30px);align-items:flex-start;width:min(1050px,88vw)}
+.meter{display:flex;align-items:flex-end;gap:10px;height:100px}
+.meter i{width:18px;height:14%;border-radius:10px;background:var(--yellow)}
+.timer{display:inline-flex;background:var(--paper);color:var(--ink);padding:8px 18px;border-radius:99px;font-size:clamp(20px,2.2vw,32px);font-weight:900;font-variant-numeric:tabular-nums}
+.voice-status{font-size:clamp(20px,2.1vw,30px);font-weight:800;color:var(--paper)}
+
+/* Rapport */
+#e-report{background:var(--yellow);color:var(--ink)}
+#report-loading{font-size:clamp(28px,3.5vw,54px);font-weight:900;text-align:center;max-width:30ch}
+.report-card{width:min(1180px,90vw);max-height:78vh;background:var(--paper);padding:clamp(28px,4.5vh,54px);border-radius:22px;box-shadow:22px 22px 0 var(--ink);text-align:left;opacity:0;transform:translateY(40px) scale(.96)}
+.report-card.reveal{animation:reveal .55s cubic-bezier(.2,1.2,.25,1) forwards}
+@keyframes reveal{to{opacity:1;transform:none}}
+.report-kicker{font-size:clamp(13px,1.35vw,19px);letter-spacing:.24em;text-transform:uppercase;color:#74736d;font-weight:900}
+.report-title{margin-top:12px;font-size:clamp(40px,5.6vw,82px);line-height:.9;letter-spacing:-.045em;text-transform:uppercase;font-weight:900;max-width:17ch}
+.report-body{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,58px);margin-top:clamp(20px,3vh,34px);font-size:clamp(17px,1.75vw,25px);line-height:1.36;font-weight:600}
+.report-conclusion{display:inline-block;margin-top:clamp(20px,3vh,34px);padding:11px 16px;background:var(--ink);color:var(--yellow);border-radius:8px;font-size:clamp(18px,2vw,28px);line-height:1.2;font-weight:900}
+.report-label{margin-top:16px;color:#7b7972;font-size:clamp(12px,1.2vw,17px);font-weight:650}
+
+/* Animation des titres */
+.word{display:inline-block;opacity:0;transform:translateY(.35em)}
+.play .word{animation:rise .35s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+
+@media (max-height:780px){
+ .screen{padding-top:78px;padding-bottom:48px}
+ .question-layout{gap:14px}
+ .question{font-size:clamp(32px,4.2vw,58px)}
+ .choice{min-height:52px;padding:9px 14px}
+ .choices.many .choice{min-height:46px}
+ .concept-card{max-height:55vh;padding:24px}
+ .report-card{max-height:76vh;padding:28px 34px}
+ .report-body{font-size:clamp(16px,1.5vw,21px)}
+}
+@media (max-width:900px){
+ .choices.two{grid-template-columns:1fr}
+ .choices.many{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .duel{grid-template-columns:1fr 1fr}.duel-or{display:none}
+ .concept-card{grid-template-columns:1fr}.concept-card img{display:none}
+ .report-body{grid-template-columns:1fr;gap:12px}
+ .scale-values{gap:4px}.scale-value{border-radius:8px}
+}
 </style>
 </head>
 <body>
-<div class="voile" id="voile"></div>
-
-<div id="tete">
- <div class="ligne1"><span class="etape" id="tete-etape"></span>
-  <span id="tete-compte"></span></div>
- <div id="barre"><i id="barre-fill"></i></div>
+<div id="wipe"></div>
+<div id="progress">
+ <div id="progress-line"><span id="progress-step"></span><span id="progress-count"></span></div>
+ <div id="progress-track"><i id="progress-fill"></i></div>
 </div>
-<button id="retour">← corriger</button>
+<div id="interaction"><span id="interaction-dot"></span><span id="interaction-text"></span></div>
 <div id="signature">Powered by MobilityLab Sion</div>
 
-<!-- ATTENTE -->
-<section class="ecran centre actif" id="e-attente">
- <p class="sous marque-bx" style="color:var(--jaune)">BUS XPERIENCE</p>
- <h1 class="titre" id="attente-titre" style="text-align:center;max-width:16ch">ET SI LE BUS T'ÉCOUTAIT VRAIMENT ?</h1>
- <p class="sous" id="attente-sous">Un buzzer. Ta voix. Quelques minutes pour changer la suite du voyage.</p>
- <div class="buzzer" id="buzzer-intro" role="button" aria-label="buzzer"></div>
- <p class="gris mini">Powered by MobilityLab Sion</p>
-</section>
-
-<!-- LANGUE -->
-<section class="ecran centre" id="e-langue">
- <h2 class="titre">Bienvenue.<br>Willkommen.</h2>
- <div class="rangee">
-  <button class="bouton" data-l="fr">Français</button>
-  <button class="bouton" data-l="de">Deutsch</button>
- </div>
- <p class="gris mini">← → pour choisir · buzzer pour valider</p>
-</section>
-
-<!-- CONSENTEMENT -->
-<section class="ecran" id="e-consent">
- <h2 class="titre" id="consent-titre" style="font-size:5vh">Avant de commencer.</h2>
- <p class="blanc" id="consent-texte" style="font-size:2.7vh;max-width:64ch;white-space:pre-line"></p>
- <div class="rangee" style="justify-content:flex-start">
-  <button class="bouton" id="btn-oui">Oui, je participe</button>
-  <button class="bouton second" id="btn-sans-micro">Participer sans micro</button>
-  <button class="bouton second" id="btn-non">Non merci</button>
+<section class="screen center active" id="e-waiting">
+ <div class="hero-stack">
+  <p class="eyebrow">BUS XPERIENCE</p>
+  <h1 class="headline" data-animated="1">TON EXPÉRIENCE.<br>DEIN ERLEBNIS.</h1>
+  <p class="lead">Appuie pour commencer · Zum Starten drücken</p>
+  <button class="buzzer" id="main-buzzer" aria-label="Commencer"></button>
  </div>
 </section>
 
-<!-- SOLO / DUO -->
-<section class="ecran" id="e-duo">
- <h2 class="titre" id="duo-titre">Tu participes…</h2>
- <div class="rangee" style="justify-content:flex-start">
-  <button class="bouton" id="btn-solo">Seul·e</button>
-  <button class="bouton second" id="btn-duo">À deux</button>
- </div>
- <div id="duo-accords" hidden>
-  <p class="sous" id="duo-info">À deux, chacun·e doit être d'accord.</p>
-  <div class="rangee" style="justify-content:flex-start;margin-top:1.6vh">
-   <button class="bouton second" id="acc1">Participant·e 1 : d'accord</button>
-   <button class="bouton second" id="acc2">Participant·e 2 : d'accord</button>
-   <button class="bouton" id="duo-go" disabled style="opacity:.4">C'est parti</button>
+<section class="screen center" id="e-language">
+ <div class="hero-stack">
+  <p class="eyebrow">BUS XPERIENCE</p>
+  <h1 class="language-title" data-animated="1">Bonjour.<br>Willkommen.</h1>
+  <div class="choices two" id="language-choices">
+   <button class="choice selected" data-lang="fr"><span class="number">1</span><span>Français</span></button>
+   <button class="choice" data-lang="de"><span class="number">2</span><span>Deutsch</span></button>
   </div>
  </div>
 </section>
 
-<!-- CHOIX -->
-<section class="ecran" id="e-choix">
- <h2 class="titre" id="choix-texte"></h2>
- <div class="options" id="choix-opts"></div>
- <p class="gris mini" id="choix-aide"></p>
-</section>
-
-<!-- ÉTOILES -->
-<section class="ecran" id="e-etoiles">
- <h2 class="titre" id="etoiles-texte"></h2>
- <div class="etoiles" id="etoiles-zone"></div>
- <div style="display:flex;gap:3vh;align-items:center">
-  <div class="anneau" id="etoiles-anneau" hidden>
-   <svg width="100%" height="100%" viewBox="0 0 40 40">
-    <circle cx="20" cy="20" r="17" fill="none" stroke="#2A2A2E" stroke-width="4"/>
-    <circle id="anneau-arc" cx="20" cy="20" r="17" fill="none" stroke="#FFCC00"
-     stroke-width="4" stroke-dasharray="106.8" stroke-dashoffset="0"/></svg>
-   <span id="anneau-s"></span></div>
-  <p class="sous" id="etoiles-aide"></p>
+<section class="screen center" id="e-intro">
+ <div class="hero-stack">
+  <p class="eyebrow">BUS XPERIENCE</p>
+  <h1 class="headline" id="intro-title"></h1>
+  <p class="lead" id="intro-subtitle"></p>
  </div>
 </section>
 
-<!-- ÉCHELLE -->
-<section class="ecran" id="e-echelle">
- <h2 class="titre" id="echelle-texte"></h2>
- <div class="echelle">
-  <div class="rail" id="rail"><i id="rail-fill"></i>
-   <div class="curseur" id="curseur">5</div></div>
-  <div class="bornes"><span id="borne-min"></span><span id="borne-max"></span></div>
+<section class="screen question-layout" id="e-consent">
+ <p class="eyebrow" id="consent-kicker"></p>
+ <h2 class="question compact" id="consent-title"></h2>
+ <p id="consent-copy"></p>
+ <div class="choices" id="consent-choices">
+  <button class="choice selected" data-consent="micro"><span class="number">1</span><span id="consent-micro"></span></button>
+  <button class="choice" data-consent="no-micro"><span class="number">2</span><span id="consent-no-micro"></span></button>
+  <button class="choice" data-consent="no"><span class="number">3</span><span id="consent-no"></span></button>
  </div>
- <p class="gris mini" id="echelle-aide"></p>
 </section>
 
-<!-- COMPARE -->
-<section class="ecran centre" id="e-compare">
- <h2 class="titre" id="compare-texte" style="text-align:center"></h2>
+<section class="screen question-layout" id="e-choice">
+ <h2 class="question" id="choice-question"></h2>
+ <div class="choices" id="choice-options"></div>
+</section>
+
+<section class="screen question-layout" id="e-stars">
+ <h2 class="question" id="stars-question"></h2>
+ <div class="stars" id="stars-zone"></div>
+ <div><span class="value-badge" id="stars-value"></span></div>
+</section>
+
+<section class="screen question-layout" id="e-scale">
+ <h2 class="question" id="scale-question"></h2>
+ <div class="scale-wrap">
+  <div class="scale-values" id="scale-values"></div>
+  <div class="scale-labels"><span id="scale-min"></span><span id="scale-max"></span></div>
+ </div>
+</section>
+
+<section class="screen question-layout" id="e-compare">
+ <h2 class="question" id="compare-question"></h2>
  <div class="duel">
-  <div class="carte-duel" id="duel-a"></div>
-  <span class="ou" id="duel-ou">ou</span>
-  <div class="carte-duel" id="duel-b"></div>
+  <button class="duel-card selected" id="compare-a"></button>
+  <span class="duel-or" id="compare-or"></span>
+  <button class="duel-card" id="compare-b"></button>
  </div>
- <p class="gris mini" id="compare-aide"></p>
 </section>
 
-<!-- CONCEPT (fiche puis impact étoiles puis adoption échelle) -->
-<section class="ecran" id="e-concept">
- <p class="sous" id="concept-sur"></p>
- <div class="fiche"><h3 id="concept-nom"></h3><p id="concept-desc"></p>
-  <img id="concept-img" hidden alt=""></div>
- <div class="rangee" style="justify-content:flex-start">
-  <button class="bouton" id="concept-go"></button></div>
-</section>
-
-<!-- VOIX -->
-<section class="ecran" id="e-voix">
- <h2 class="titre" id="voix-texte"></h2>
- <div class="vu" id="vu" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
- <div class="rangee" id="voix-rec-ligne" hidden>
-  <span class="pilule" id="voix-chrono">0:45</span>
-  <span class="sous" id="voix-silence"></span></div>
- <div class="rangee" id="voix-relecture" hidden>
-  <button class="bouton second" id="btn-reecouter">Réécouter</button>
-  <button class="bouton second" id="btn-refaire">Recommencer</button>
-  <button class="bouton" id="btn-valider-voix">Valider</button></div>
- <p class="sous" id="voix-aide"></p>
-</section>
-
-<!-- RAPPORT -->
-<section class="ecran centre" id="e-rapport">
- <p class="calc" id="calc-texte"></p>
- <div class="diplome" id="diplome" hidden>
-  <p class="entete">BUS XPERIENCE · RAPPORT OFFICIEL</p>
-  <p class="grand-titre" id="rapport-titre"></p>
-  <p class="corps" id="rapport-corps"></p>
-  <p class="label"><span id="rapport-label"></span> · Powered by MobilityLab Sion</p>
+<section class="screen question-layout" id="e-concept">
+ <p class="eyebrow" id="concept-kicker"></p>
+ <div class="concept-card" id="concept-card">
+  <div><h2 id="concept-title"></h2><p id="concept-description"></p></div>
+  <img id="concept-image" alt="" hidden>
  </div>
+</section>
+
+<section class="screen question-layout" id="e-voice">
+ <h2 class="question" id="voice-question"></h2>
+ <div class="voice-area">
+  <div class="meter" id="voice-meter" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <span class="timer" id="voice-timer" hidden>0:45</span>
+  <p class="voice-status" id="voice-status"></p>
+  <div class="choices" id="voice-review" hidden>
+   <button class="choice" data-action="listen"><span class="number">1</span><span id="voice-listen"></span></button>
+   <button class="choice" data-action="redo"><span class="number">2</span><span id="voice-redo"></span></button>
+   <button class="choice selected" data-action="save"><span class="number">3</span><span id="voice-save"></span></button>
+  </div>
+ </div>
+</section>
+
+<section class="screen center" id="e-report">
+ <p id="report-loading"></p>
+ <article class="report-card" id="report-card" hidden>
+  <p class="report-kicker" id="report-kicker"></p>
+  <h2 class="report-title" id="report-title"></h2>
+  <div class="report-body" id="report-body"></div>
+  <p class="report-conclusion" id="report-conclusion"></p>
+  <p class="report-label"><span id="report-label"></span> · MobilityLab Sion</p>
+ </article>
 </section>
 
 <script>
 "use strict";
-/* ============================================================ BUS XPERIENCE
-   Machine à états: attente → langue → consent → duo → étapes (choix, étoiles,
-   échelle, compare, concepts, voix) → rapport → attente.
-   Entrées: tactile/souris, clavier, ← → pour viser, Espace/Entrée = buzzer.
-   Un appui buzzer ne saute JAMAIS une question sans réponse enregistrée. */
+/* BUS XPERIENCE — expérience individuelle, pilotée par un seul buzzer.
+   Appui court: parcourir. Appui long: valider. Aucune flèche, aucun curseur,
+   aucune lecture automatique des réponses. */
 
-const ETAPES = {
- fr:{experience:"Ton expérience", friction:"Ce qui coince", idees:"Les idées à tester",
-     priorite:"Ta priorité", rapport:"Ton rapport"},
- de:{experience:"Dein Erlebnis", friction:"Was hakt", idees:"Ideen zum Testen",
-     priorite:"Deine Priorität", rapport:"Dein Bericht"},
+const STEPS={
+ fr:{experience:"Ton expérience",friction:"Ce qui coince",idees:"Les idées à tester",priorite:"Ta priorité"},
+ de:{experience:"Dein Erlebnis",friction:"Was hakt",idees:"Ideen zum Testen",priorite:"Deine Priorität"}
 };
-const TXT = {
- fr:{q:"Question", reste:"encore ~", choixAide:"← → pour viser · buzzer pour valider · ou touche l'écran",
-     etoilesAide:"Un buzz = une étoile. Attends l'anneau ou re-buzze pour ajouter. ← pour enlever.",
-     echelleAide:"← → pour régler · buzzer pour valider · ou glisse le curseur",
-     compareAide:"← ou → pour choisir · buzzer pour valider",
-     parle:"Buzzer pour parler.", enCours:"On t'écoute… buzzer pour terminer.",
-     silence:"(je t'écoute…)", relecture:"C'est bien ? Tu peux réécouter ou recommencer.",
-     sansMicro:"Pas de micro pour cette session — on passe cette question, aucun souci.",
-     concept:"Idée à tester", conceptGo:"Voyons ça",
-     impact:"Ça changerait quoi pour toi, au quotidien ?",
-     adoption:"Avec ça, tu prendrais le bus plus souvent ?",
-     rien:"Rien du tout", enorme:"Énormément", pasdutout:"Sûrement pas", certain:"Certainement",
-     calc:["BUS XPERIENCE analyse ton précieux témoignage…",
-           "Analyse du niveau de patience…",
-           "Recherche de la correspondance disparue…",
-           "Consultation du comité très officiel des arrêts de bus…",
-           "Vérification de deux ou trois petites contradictions…"],
-     merciNon:"Pas de souci, bonne route ! 👋", duoTitre:"Tu participes…", duoVous:"Vous participez…"},
- de:{q:"Frage", reste:"noch ~", choixAide:"← → zum Zielen · Buzzer zum Bestätigen · oder Bildschirm berühren",
-     etoilesAide:"Ein Buzz = ein Stern. Warte auf den Ring oder buzze erneut. ← zum Entfernen.",
-     echelleAide:"← → zum Einstellen · Buzzer zum Bestätigen · oder Regler ziehen",
-     compareAide:"← oder → wählen · Buzzer bestätigt",
-     parle:"Buzzer drücken und sprechen.", enCours:"Wir hören zu… Buzzer zum Beenden.",
-     silence:"(wir hören zu…)", relecture:"Passt das? Du kannst nochmals hören oder neu aufnehmen.",
-     sansMicro:"Kein Mikrofon für diese Session — wir überspringen diese Frage, kein Problem.",
-     concept:"Idee zum Testen", conceptGo:"Schauen wir mal",
-     impact:"Was würde das für dich im Alltag ändern?",
-     adoption:"Würdest du damit öfter den Bus nehmen?",
-     rien:"Gar nichts", enorme:"Sehr viel", pasdutout:"Sicher nicht", certain:"Ganz sicher",
-     calc:["BUS XPERIENCE analysiert deine wertvolle Aussage…",
-           "Analyse des Geduldspegels…",
-           "Suche nach dem verschwundenen Anschluss…",
-           "Anhörung des sehr offiziellen Haltestellen-Komitees…",
-           "Prüfung von zwei, drei kleinen Widersprüchen…"],
-     merciNon:"Kein Problem, gute Fahrt! 👋", duoTitre:"Du nimmst teil…", duoVous:"Ihr nehmt teil…"},
+const TXT={
+ fr:{
+  press:"Appuie pour continuer",choose:"Appuie pour parcourir · maintiens pour valider",
+  introTitle:"TU MONTES À BORD. À PARTIR DE MAINTENANT, C’EST TON EXPÉRIENCE QUI COMPTE.",
+  introSub:"5 minutes pour améliorer le bus.",consentKicker:"Avant de commencer",
+  consentTitle:"Tu choisis comment participer.",
+  consentMicro:"Participer avec le micro",consentNoMicro:"Participer sans micro",consentNo:"Non merci",
+  noThanks:"Pas de souci. Bonne route !",concept:"Idée à tester",or:"ou",
+  stars:"étoiles",star:"étoile",recordStart:"Appuie pour répondre librement.",
+  recording:"On t’écoute. Appuie quand tu as terminé.",review:"Ta réponse est prête.",
+  listen:"Réécouter",redo:"Recommencer",save:"Valider",
+  fallback:["Le bus était plus ponctuel","Les horaires étaient plus simples","Les correspondances étaient mieux assurées","Les arrêts étaient plus confortables","Le voyage à bord était plus agréable","Les billets étaient plus faciles à comprendre","Autre chose","Rien de particulier"],
+  calc:["On rassemble l’essentiel…","On repère ce qui compte vraiment…","On prépare ton profil de voyage…"],
+  reportKicker:"TON PROFIL DE VOYAGE"
+ },
+ de:{
+  press:"Drücken zum Weitergehen",choose:"Kurz drücken zum Auswählen · gedrückt halten zum Bestätigen",
+  introTitle:"DU STEIGST EIN. AB JETZT GEHT ES UM DEIN ERLEBNIS.",
+  introSub:"5 Minuten für ein besseres Bus-Erlebnis.",consentKicker:"Bevor es losgeht",
+  consentTitle:"Du entscheidest, wie du teilnimmst.",
+  consentMicro:"Mit Mikrofon teilnehmen",consentNoMicro:"Ohne Mikrofon teilnehmen",consentNo:"Nein danke",
+  noThanks:"Kein Problem. Gute Fahrt!",concept:"Idee zum Testen",or:"oder",
+  stars:"Sterne",star:"Stern",recordStart:"Drücke, um frei zu antworten.",
+  recording:"Wir hören zu. Drücke, wenn du fertig bist.",review:"Deine Antwort ist bereit.",
+  listen:"Anhören",redo:"Neu aufnehmen",save:"Bestätigen",
+  fallback:["Der Bus wäre pünktlicher","Die Fahrpläne wären einfacher","Die Anschlüsse wären besser gesichert","Die Haltestellen wären komfortabler","Die Fahrt wäre angenehmer","Die Billette wären leichter verständlich","Etwas anderes","Nichts Bestimmtes"],
+  calc:["Wir sammeln das Wesentliche…","Wir erkennen, was wirklich zählt…","Wir erstellen dein Reiseprofil…"],
+  reportKicker:"DEIN REISEPROFIL"
+ }
 };
-const DEMO_CFG = {campagne:{nom:"Démo", consent_fr:"Mode démo hors ligne. Rien n'est enregistré.",
- consent_de:"Demo-Modus offline. Nichts wird gespeichert.", musique:null, musique_volume:.3,
- musique_active:0, ton:"complice"}, lieu:{nom:"Démo"},
- questions:[
-  {id:1,ordre:10,etape:"experience",type:"choix",fr:"Le bus, tu le prends…",de:"Wie oft nimmst du den Bus?",
-   options_fr:["Presque tous les jours","Rarement","Jamais ou presque"],
-   options_de:["Fast täglich","Selten","Nie oder fast nie"],params:{segment:true},condition:null},
-  {id:2,ordre:20,etape:"experience",type:"etoiles",fr:"Ton dernier trajet mérite combien d'étoiles ?",
-   de:"Wie viele Sterne verdient deine letzte Fahrt?",options_fr:[],options_de:[],params:{max:5},
-   condition:{question_ordre:10,valeurs:["Jamais ou presque","Nie oder fast nie"],regle:"masquer_si"}},
-  {id:3,ordre:50,etape:"friction",type:"echelle",fr:"Tu fais confiance au bus pour être à l'heure ?",
-   de:"Vertraust du dem Bus, pünktlich zu sein?",options_fr:[],options_de:[],params:{max:10},condition:null},
-  {id:4,ordre:60,etape:"friction",type:"compare",fr:"On améliore quoi en premier ?",
-   de:"Was verbessern wir zuerst?",options_fr:["Des bus plus fréquents","Des bus plus ponctuels"],
-   options_de:["Häufigere Busse","Pünktlichere Busse"],params:{},condition:null},
-  {id:5,ordre:80,etape:"priorite",type:"voix",fr:"Tu changerais quoi en premier dans l'expérience du bus ?",
-   de:"Was würdest du am Buserlebnis zuerst ändern?",options_fr:[],options_de:[],
-   params:{duree_voix:30},condition:null}],
- concepts:[{id:1,nom_fr:"Garantie de correspondance",nom_de:"Anschlussgarantie",
-  desc_fr:"Si ton bus est en retard, ta correspondance t'attend.",
-  desc_de:"Ist dein Bus verspätet, wartet dein Anschluss.",image:null}]};
+const DEMO={campagne:{nom:"Démo",consent_fr:"Tes réponses servent à améliorer le bus. Une ou deux réponses peuvent être enregistrées, transcrites et analysées automatiquement. La participation est volontaire.",consent_de:"Deine Antworten helfen, das Bus-Erlebnis zu verbessern. Ein bis zwei Antworten können aufgenommen, transkribiert und automatisch ausgewertet werden. Die Teilnahme ist freiwillig.",musique:null,musique_active:0,musique_volume:.3,ton:"complice"},lieu:{nom:"Démo"},tts:{vitesse:.97,tonalite:1.05,voix_fr:"auto",voix_de:"auto"},sons:{klaxon_actif:0},questions:[
+ {id:1,ordre:10,etape:"experience",type:"choix",fr:"À quelle fréquence prends-tu le bus ?",de:"Wie oft fährst du mit dem Bus?",options_fr:["Tous les jours ou presque","Plusieurs fois par semaine","Quelques fois par mois","Rarement","Jamais"],options_de:["Täglich oder fast täglich","Mehrmals pro Woche","Ein paar Mal pro Monat","Selten","Nie"],params:{segment:true}},
+ {id:2,ordre:20,etape:"experience",type:"etoiles",fr:"Combien d’étoiles mérite ton dernier trajet ?",de:"Wie viele Sterne verdient deine letzte Busfahrt?",options_fr:[],options_de:[],params:{max:5}},
+ {id:3,ordre:30,etape:"friction",type:"echelle",fr:"Tu fais confiance au bus pour arriver à l’heure ?",de:"Vertraust du dem Bus, pünktlich anzukommen?",options_fr:[],options_de:[],params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Totalement",min_libelle_de:"Gar nicht",max_libelle_de:"Voll und ganz"}},
+ {id:4,ordre:40,etape:"priorite",type:"voix",fr:"Je prendrais le bus plus souvent si…",de:"Ich würde öfter den Bus nehmen, wenn…",options_fr:[],options_de:[],params:{duree_voix:45}}
+ ],concepts:[]};
 
-let cfg=DEMO_CFG, demo=true, lang="fr", session=null, participants=1, consentMicro=1;
-let etat="attente", seq=[], iEtape=0, reponsesLocales={};
-let timers=[], inactif=null;
+let cfg=DEMO,demo=true,lang="fr",session=null,consentMicro=1;
+let state="waiting",sequence=[],stepIndex=0,localAnswers={};
+let selection=0,currentItems=[],currentQuestion=null,currentScale=5,currentStars=1,currentCompare=0;
+let timers=[],idleTimer=null;
 const $=s=>document.querySelector(s);
-const purge=()=>{timers.forEach(clearTimeout);timers=[];};
-const apres=(ms,fn)=>timers.push(setTimeout(fn,ms));
-const t=()=>TXT[lang];
+const text=()=>TXT[lang];
+const later=(ms,fn)=>{const id=setTimeout(fn,ms);timers.push(id);return id};
+function clearTimers(){timers.forEach(clearTimeout);timers=[]}
 
-/* ------------------------------------------------ audio: sons synthétisés */
-let actx=null;
-const audio=()=>actx||(actx=new (window.AudioContext||window.webkitAudioContext)());
-function bip(freqs,duree=.12,type="sine",gain=.18){
- try{const a=audio(),t0=a.currentTime;
-  freqs.forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();
-   o.type=type;o.frequency.value=f;o.connect(g);g.connect(a.destination);
-   g.gain.setValueAtTime(0,t0+i*duree);
-   g.gain.linearRampToValueAtTime(gain,t0+i*duree+.02);
-   g.gain.linearRampToValueAtTime(0,t0+(i+1)*duree);
-   o.start(t0+i*duree);o.stop(t0+(i+1)*duree+.02);});}catch{}}
-const sonValide=()=>bip([660,880]);
-const sonTransition=()=>bip([440],.08,"triangle",.1);
-const sonErreur=()=>bip([180],.15,"square",.08);
-const sonRevelation=()=>bip([523,659,784,1047],.14);
-let KLAXON=null;
-function klaxon(){ // utilisé pour la révélation du rapport final
- const p=(cfg.sons)||{klaxon_actif:1,klaxon_volume:.9,klaxon_present:false};
- if(!p.klaxon_actif)return;
- if(!p.klaxon_present){sonRevelation();return;} // son neutre de secours
- if(KLAXON===null){KLAXON=new Audio("/medias/klaxon.mp3");
-  KLAXON.onerror=()=>{KLAXON=false;};}
- if(KLAXON){KLAXON.volume=p.klaxon_volume;KLAXON.currentTime=0;
-  KLAXON.play().catch(()=>sonRevelation());}
- else sonRevelation();}
+/* Audio */
+let audioCtx=null,questionAudio=null,background=null,backgroundTarget=0,klaxonAudio=null;
+function ctx(){return audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)())}
+function tone(freqs,duration=.1,gain=.12){try{const a=ctx(),start=a.currentTime;freqs.forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=f;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0,start+i*duration);g.gain.linearRampToValueAtTime(gain,start+i*duration+.015);g.gain.linearRampToValueAtTime(0,start+(i+1)*duration);o.start(start+i*duration);o.stop(start+(i+1)*duration+.02)})}catch{}}
+const soundMove=()=>tone([390],.045,.07),soundOk=()=>tone([650,860],.08,.12),soundError=()=>tone([180],.12,.08),soundTransition=()=>tone([470],.05,.06);
+function musicStart(){const c=cfg.campagne||{};if(!c.musique_active||!c.musique||background)return;background=new Audio("/medias/"+c.musique);background.loop=true;background.volume=0;backgroundTarget=Math.min(1,Math.max(0,c.musique_volume||.3));background.play().catch(()=>background=null);fade(backgroundTarget,1800)}
+function fade(target,ms){if(!background)return;const start=background.volume,t0=performance.now();(function tick(){if(!background)return;const k=Math.min(1,(performance.now()-t0)/ms);background.volume=start+(target-start)*k;if(k<1)requestAnimationFrame(tick)})()}
+function musicDuck(){fade(backgroundTarget*.2,300)}function musicNormal(){fade(backgroundTarget,650)}
+function musicStop(){if(!background)return;fade(0,800);later(850,()=>{if(background){background.pause();background=null}})}
+function horn(){const s=cfg.sons||{};if(!s.klaxon_actif){tone([523,659,784],.12);return}if(!klaxonAudio)klaxonAudio=new Audio("/medias/klaxon.mp3");klaxonAudio.volume=s.klaxon_volume||.7;klaxonAudio.currentTime=0;klaxonAudio.play().catch(()=>tone([523,659,784],.12))}
 
-/* ------------------------------------------------ musique de fond */
-let musique=null, musiqueCible=0;
-function musiqueInit(){
- const ca=cfg.campagne||{};
- if(!ca.musique_active||!ca.musique||musique) return;
- musique=new Audio("/medias/"+ca.musique); musique.loop=true; musique.volume=0;
- musiqueCible=Math.min(1,Math.max(0,ca.musique_volume||.35));
- musique.play().catch(()=>{musique=null;});
- fondu(musiqueCible,2500);}
-function fondu(cible,ms){
- if(!musique)return;
- const dep=musique.volume,t0=performance.now();
- (function pas(){if(!musique)return;
-  const k=Math.min(1,(performance.now()-t0)/ms);
-  musique.volume=dep+(cible-dep)*k;
-  if(k<1)requestAnimationFrame(pas);})();}
-const musiqueDuck=()=>fondu(musiqueCible*.25,400);
-const musiqueNormale=()=>fondu(musiqueCible,900);
-const musiqueCoupe=()=>{if(musique){fondu(0,300);apres(350,()=>musique&&musique.pause());}};
-const musiqueReprend=()=>{if(musique){musique.play().catch(()=>{});fondu(musiqueCible,1500);}};
-function musiqueStopFinal(){if(musique){fondu(0,1800);apres(1900,()=>{musique&&musique.pause();musique=null;});}}
+/* TTS: uniquement la question, jamais les réponses */
+let voiceCache={fr:null,de:null};
+function voiceScore(v){const n=v.name.toLowerCase();return (n.includes("natural")?8:0)+(n.includes("online")?5:0)+(n.includes("neural")?5:0)+(n.includes("google")?3:0)+(!v.localService?2:0)}
+function browserVoice(){if(voiceCache[lang])return voiceCache[lang];const list=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(lang));if(!list.length)return null;const pref=(cfg.tts&&cfg.tts["voix_"+lang])||"auto";voiceCache[lang]=(pref!=="auto"&&list.find(v=>v.name===pref))||list.sort((a,b)=>voiceScore(b)-voiceScore(a))[0];return voiceCache[lang]}
+if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>voiceCache={fr:null,de:null};
+function speak(value,done){if(!value){done&&done();return}try{const u=new SpeechSynthesisUtterance(value);u.lang=lang==="de"?"de-CH":"fr-CH";const v=browserVoice();if(v)u.voice=v;u.rate=(cfg.tts&&cfg.tts.vitesse)||.97;u.pitch=(cfg.tts&&cfg.tts.tonalite)||1.03;let finished=false;const end=()=>{if(finished)return;finished=true;musicNormal();done&&done()};u.onend=end;u.onerror=end;speechSynthesis.cancel();musicDuck();speechSynthesis.speak(u);setTimeout(end,1300+value.length*85)}catch{musicNormal();done&&done()}}
+function stopSpeech(){try{speechSynthesis.cancel()}catch{}if(questionAudio){questionAudio.pause();questionAudio=null}}
+function speakQuestion(q,done){stopSpeech();const spoken=(q["parle_"+lang]||"").trim()||(q.displayText||q[lang]||q.fr||"");const file=q["audio_"+lang];if(file){musicDuck();questionAudio=new Audio("/voix/"+file);questionAudio.onended=()=>{musicNormal();done&&done()};questionAudio.play().catch(()=>speak(spoken,done))}else speak(spoken,done)}
 
-/* ------------------------------------------------ voix des questions */
-let voixQ=null;
-function jouerVoix(q,apresVoix){
- taireVoix(); musiqueDuck();
- const f=q["audio_"+lang];
- const fini=()=>{musiqueNormale();if(apresVoix)apresVoix();};
- const parle=(q["parle_"+lang]||"").trim()
-  ||(q.texteAffiche||q[lang]||"").replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");
- if(f){voixQ=new Audio("/voix/"+f);voixQ.onended=fini;
-  voixQ.play().catch(()=>{dire(parle,fini);});}
- else dire(parle,fini);}
-/* TTS navigateur (TTS_PROVIDER=browser): meilleure voix naturelle disponible,
-   voix « Natural / Online » privilégiées (Edge), réglages depuis l'admin. */
-let voixCache={fr:null,de:null};
-function scoreVoix(v){let s=0;const n=v.name.toLowerCase();
- if(n.includes("natural"))s+=6;if(n.includes("online"))s+=4;if(n.includes("neural"))s+=4;
- if(n.includes("google"))s+=3;if(n.includes("premium")||n.includes("enhanced"))s+=3;
- if(!v.localService)s+=2;return s;}
-function choisirVoixTTS(l){
- if(voixCache[l])return voixCache[l];
- const vs=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(l));
- if(!vs.length)return null;
- const pref=(cfg.tts&&cfg.tts["voix_"+l])||"auto";
- let v=pref!=="auto"?vs.find(x=>x.name===pref):null;
- if(!v)v=vs.sort((a,b)=>scoreVoix(b)-scoreVoix(a))[0];
- voixCache[l]=v;return v;}
-if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>{voixCache={fr:null,de:null};};
-function dire(txt,fini){try{const u=new SpeechSynthesisUtterance(txt);
- u.lang=lang==="de"?"de-CH":"fr-CH";
- const v=choisirVoixTTS(lang);if(v)u.voice=v;
- u.rate=(cfg.tts&&cfg.tts.vitesse)||0.97;
- u.pitch=(cfg.tts&&cfg.tts.tonalite)||1.05;
- let fait=false;const fin=()=>{if(!fait){fait=true;if(fini)fini();}};
- u.onend=fin;u.onerror=fin;
- speechSynthesis.cancel();speechSynthesis.speak(u);
- // filet: certains navigateurs n'emettent pas onend
- setTimeout(fin, 1200 + txt.length*90);}catch{if(fini)fini();}}
-function taireVoix(){speechSynthesis.cancel();
- if(voixQ){voixQ.pause();voixQ=null;}}
+/* Écrans */
+function animateWords(screen){screen.classList.remove("play");screen.querySelectorAll(".headline,.question,.language-title,.report-title").forEach(el=>{if(el.dataset.animated==="1")return;const words=el.textContent.trim().split(/\s+/);el.innerHTML=words.map((w,i)=>`<span class="word" style="animation-delay:${i*28}ms">${w}</span>`).join(" ");el.dataset.animated="1"});void screen.offsetWidth;screen.classList.add("play")}
+function show(id){const wipe=$("#wipe");wipe.classList.remove("go");void wipe.offsetWidth;wipe.classList.add("go");soundTransition();setTimeout(()=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));const screen=$("#"+id);screen.classList.add("active");animateWords(screen)},230)}
+function setHelp(value){$("#interaction-text").textContent=value;$("#interaction").style.display=value?"flex":"none"}
+function hideChrome(){$("#progress").style.display="none";setHelp("")}
+function resetAnimated(...ids){ids.forEach(id=>{const el=$(id);if(el)el.dataset.animated="0"})}
 
-/* ------------------------------------------------ écrans et effets */
-function ecran(id){
- const v=$("#voile");v.classList.remove("passe");void v.offsetWidth;v.classList.add("passe");
- sonTransition();
- setTimeout(()=>{document.querySelectorAll(".ecran").forEach(e=>e.classList.remove("actif"));
-  const e=$("#"+id);e.classList.add("actif");anime(e);},300);}
-function anime(e){
- e.classList.remove("joue");
- e.querySelectorAll("h1,h2").forEach(h=>{
-  if(h.dataset.fixe)return;
-  const mots=h.textContent.trim().split(/\s+/);
-  h.innerHTML=mots.map((m,i)=>`<span class="mot" style="animation-delay:${i*60}ms">${m}</span>`).join(" ");});
- void e.offsetWidth;e.classList.add("joue");}
+/* Chargement */
+async function loadConfig(){try{const r=await fetch("/api/config");if(r.ok){cfg=await r.json();demo=false}}catch{demo=true}}
+loadConfig();
+function conditionsHide(step){if(step.kind!=="question"||!step.q.condition)return false;const c=step.q.condition,ref=(cfg.questions||[]).find(q=>q.ordre===c.question_ordre||q.id===c.question_id);if(!ref)return false;const value=localAnswers["q"+ref.id],matches=value!=null&&(c.valeurs||[]).includes(value);return c.regle==="seulement_si"?!matches:matches}
+function visibleSteps(){return sequence.filter(s=>!conditionsHide(s))}
+function buildSequence(){const qs=(cfg.questions||[]).slice().sort((a,b)=>a.ordre-b.ordre);const first=qs.filter(q=>q.etape==="experience"||q.etape==="friction");const last=qs.filter(q=>q.etape==="idees"||q.etape==="priorite");sequence=first.map(q=>({kind:"question",q}));(cfg.concepts||[]).forEach(c=>{sequence.push({kind:"concept",c},{kind:"concept-impact",c},{kind:"concept-adoption",c})});sequence.push(...last.map(q=>({kind:"question",q})));stepIndex=0;localAnswers={}}
+function updateProgress(step){const visible=visibleSteps(),index=visible.indexOf(step),stage=step.kind==="question"?step.q.etape:"idees";$("#progress-step").textContent=STEPS[lang][stage]||"";$("#progress-count").textContent=`${index+1} / ${visible.length}`;$("#progress-fill").style.width=`${100*(index+1)/Math.max(1,visible.length)}%`;$("#progress").style.display="block"}
 
-/* ------------------------------------------------ config et séquence */
-async function charger(){
- try{const r=await fetch("/api/config");if(r.ok){cfg=await r.json();demo=false;}}
- catch{demo=true;}}
-charger();
+/* Choix génériques */
+function renderChoices(container,items,selected=0){currentItems=items;selection=Math.max(0,Math.min(selected,items.length-1));container.replaceChildren();container.classList.toggle("two",items.length>5);container.classList.toggle("many",items.length>5);items.forEach((item,i)=>{const b=document.createElement("button");b.className="choice"+(i===selection?" selected":"");b.innerHTML=`<span class="number">${i+1}</span><span></span>`;b.lastElementChild.textContent=item;b.onclick=()=>{if(selection===i)validateCurrent();else{selection=i;refreshSelection();soundMove()}};container.appendChild(b)})}
+function refreshSelection(selector=".choice"){document.querySelectorAll(selector).forEach((el,i)=>el.classList.toggle("selected",i===selection))}
+function nextSelection(selector=".choice"){const nodes=[...document.querySelectorAll(selector)];if(!nodes.length)return;selection=(selection+1)%nodes.length;nodes.forEach((el,i)=>el.classList.toggle("selected",i===selection));soundMove()}
+function confirmSelection(selector=".choice"){const nodes=[...document.querySelectorAll(selector)],node=nodes[selection];if(node)node.classList.add("confirmed")}
 
-function construireSequence(){
- // questions actives + concepts insérés à l'étape « idees », conditions résolues à la volée
- const qs=(cfg.questions||[]).slice().sort((a,b)=>a.ordre-b.ordre);
- const avant=qs.filter(q=>q.etape==="experience"||q.etape==="friction");
- const apresQ=qs.filter(q=>q.etape==="priorite"||q.etape==="idees");
- seq=[...avant.map(q=>({genre:"question",q}))];
- (cfg.concepts||[]).forEach(co=>{
-  seq.push({genre:"concept-fiche",co});
-  seq.push({genre:"concept-impact",co});
-  seq.push({genre:"concept-adoption",co});});
- seq=seq.concat(apresQ.map(q=>({genre:"question",q})));
- iEtape=0;reponsesLocales={};}
+/* Démarrage */
+function start(){clearTimers();stopSpeech();state="language";selection=0;hideChrome();renderChoices($("#language-choices"),["Français","Deutsch"],0);show("e-language");setHelp("Appui court / kurz drücken · Maintenir / gedrückt halten")}
+function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const c=cfg.campagne||{};$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?c.consent_de:c.consent_fr)||"";$("#consent-micro").textContent=text().consentMicro;$("#consent-no-micro").textContent=text().consentNoMicro;$("#consent-no").textContent=text().consentNo;resetAnimated("#intro-title","#consent-title");state="intro";show("e-intro");setHelp(text().press)}
+function showConsent(){state="consent";renderChoices($("#consent-choices"),[text().consentMicro,text().consentNoMicro,text().consentNo],0);show("e-consent");setHelp(text().choose)}
+async function consentChoice(){if(selection===2)return refuse();consentMicro=selection===0?1:0;musicStart();await launchSession()}
+function refuse(){state="refused";hideChrome();$("#report-loading").textContent=text().noThanks;$("#report-card").hidden=true;show("e-report");later(3500,returnWaiting)}
+async function launchSession(){if(!demo){const fd=new FormData();fd.set("lang",lang);fd.set("participants","1");fd.set("consent_micro",String(consentMicro));try{const r=await fetch("/api/sessions",{method:"POST",body:fd});session=(await r.json()).session_id}catch{demo=true}}buildSequence();stepIndex=0;showStep(0)}
 
-function conditionCachee(pas){
- if(pas.genre!=="question"||!pas.q.condition)return false;
- const c=pas.q.condition;
- const ref=(cfg.questions||[]).find(q=>q.ordre===c.question_ordre||q.id===c.question_id);
- if(!ref)return false;
- const val=reponsesLocales["q"+ref.id];
- const touche=val!=null&&(c.valeurs||[]).includes(val);
- return c.regle==="seulement_si"?!touche:touche;}
+/* Enregistrement API */
+async function send(data){if(demo)return;const fd=new FormData();Object.entries(data).forEach(([k,v])=>{if(v!=null)fd.set(k,v)});try{await fetch(`/api/sessions/${session}/reponses`,{method:"POST",body:fd})}catch(e){console.error(e)}}
 
-function pasVisibles(){return seq.filter(p=>!conditionCachee(p));}
+/* Parcours */
+function showStep(delta=1){clearTimers();stopSpeech();let next=stepIndex+delta;while(next<sequence.length&&conditionsHide(sequence[next]))next+=delta>=0?1:-1;stepIndex=Math.max(0,next);if(stepIndex>=sequence.length)return finish();const step=sequence[stepIndex];updateProgress(step);if(step.kind==="question")showQuestion(step.q);else if(step.kind==="concept")showConcept(step.c);else if(step.kind==="concept-impact")showStars({id:0,concept:step.c,[lang]:lang==="de"?"Wie stark würde diese Idee dein Bus-Erlebnis verbessern?":"À quel point cette idée améliorerait-elle ton expérience du bus ?",params:{max:5},key:"impact"});else showScale({id:0,concept:step.c,[lang]:lang==="de"?"Würdest du damit öfter den Bus nehmen?":"Avec cette idée, prendrais-tu le bus plus souvent ?",params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Certainement",min_libelle_de:"Gar nicht",max_libelle_de:"Ganz sicher"},key:"adoption"})}
+function showQuestion(q){currentQuestion=q;q.displayText=(q[lang]||q.fr||"").replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");if(q.type==="choix")showChoice(q);else if(q.type==="etoiles")showStars(q);else if(q.type==="echelle")showScale(q);else if(q.type==="compare")showCompare(q);else showVoice(q)}
 
-function majTete(pas){
- const visibles=pasVisibles(), idx=visibles.indexOf(pas);
- const etape=pas.genre==="question"?pas.q.etape:"idees";
- $("#tete-etape").textContent=ETAPES[lang][etape]||"";
- $("#tete-compte").textContent=`${t().q} ${idx+1} · ${t().reste}${Math.max(0,visibles.length-idx-1)}`;
- $("#barre-fill").style.width=(100*(idx)/Math.max(1,visibles.length))+"%";
- $("#tete").style.display="block";
- $("#retour").style.display=idx>0?"block":"none";}
+function fitQuestion(el,textValue){el.textContent=textValue;el.classList.toggle("compact",textValue.length>75);el.dataset.animated="0"}
+function showChoice(q,overrideItems=null){state="choice";currentQuestion=q;fitQuestion($("#choice-question"),q.displayText||q[lang]||q.fr);const items=overrideItems||((q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr)||[];renderChoices($("#choice-options"),items,0);show("e-choice");setHelp(text().choose);speakQuestion(q)}
+async function validateChoice(){if(!currentItems.length){soundError();return}state="sending";confirmSelection("#choice-options .choice");soundOk();const value=currentItems[selection];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-/* ------------------------------------------------ enregistrement serveur */
-async function envoyer(donnees){
- if(demo)return;
- const fd=new FormData();
- Object.entries(donnees).forEach(([k,v])=>{if(v!=null)fd.set(k,v);});
- try{await fetch(`/api/sessions/${session}/reponses`,{method:"POST",body:fd});}
- catch(e){console.error("envoi différé",e);}}
+function showStars(q){state="stars";currentQuestion=q;currentStars=1;fitQuestion($("#stars-question"),q.displayText||q[lang]||q.fr);const max=(q.params&&q.params.max)||5,zone=$("#stars-zone");zone.replaceChildren();for(let i=1;i<=max;i++){const s=document.createElement("span");s.className="star";s.textContent="★";s.onclick=()=>{currentStars=i;refreshStars()};zone.appendChild(s)}refreshStars();show("e-stars");setHelp(text().choose);speakQuestion(q)}
+function refreshStars(){document.querySelectorAll("#stars-zone .star").forEach((s,i)=>s.classList.toggle("on",i<currentStars));$("#stars-value").textContent=`${currentStars} ${currentStars===1?text().star:text().stars}`}
+function nextStars(){const max=document.querySelectorAll("#stars-zone .star").length;currentStars=currentStars%max+1;refreshStars();soundMove()}
+async function validateStars(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"impact",valeur:String(currentStars)});else{localAnswers["q"+currentQuestion.id]=String(currentStars);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentStars)})}later(260,()=>showStep())}
 
-/* ================================================ déroulé principal */
-function demarrer(){
- purge();sonTransition();charger();
- lang="fr";etat="langue";viser=0;ecran("e-langue");surligneRangee("#e-langue .bouton");}
+function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;currentScale=Math.min(5,max);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();for(let i=0;i<=max;i++){const b=document.createElement("button");b.className="scale-value";b.textContent=String(i);b.onclick=()=>{currentScale=i;refreshScale()};zone.appendChild(b)}const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelp(text().choose);speakQuestion(q)}
+function refreshScale(){document.querySelectorAll("#scale-values .scale-value").forEach((b,i)=>b.classList.toggle("selected",i===currentScale))}
+function nextScale(){const max=document.querySelectorAll("#scale-values .scale-value").length-1;currentScale=currentScale>=max?0:currentScale+1;refreshScale();soundMove()}
+async function validateScale(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur:String(currentScale)});else{localAnswers["q"+currentQuestion.id]=String(currentScale);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentScale)})}later(260,()=>showStep())}
 
-function choisirLangue(l){
- lang=l;
- const ca=cfg.campagne||{};
- $("#consent-titre").textContent=lang==="de"?"Bevor wir starten.":"Avant de commencer.";
- $("#consent-texte").textContent=(lang==="de"?ca.consent_de:ca.consent_fr)||"";
- $("#btn-oui").textContent=lang==="de"?"Ja, ich mache mit":"Oui, je participe";
- $("#btn-sans-micro").textContent=lang==="de"?"Ohne Mikrofon teilnehmen":"Participer sans micro";
- $("#btn-non").textContent=lang==="de"?"Nein danke":"Non merci";
- etat="consent";viser=0;ecran("e-consent");surligneRangee("#e-consent .bouton");}
+function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();$("#compare-a").onclick=()=>{currentCompare=0;refreshCompare()};$("#compare-b").onclick=()=>{currentCompare=1;refreshCompare()};show("e-compare");setHelp(text().choose);speakQuestion(q)}
+function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCompare===0);$("#compare-b").classList.toggle("selected",currentCompare===1)}
+function nextCompare(){currentCompare=currentCompare?0:1;refreshCompare();soundMove()}
+async function validateCompare(){state="sending";soundOk();const value=currentItems[currentCompare];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-function consentir(micro){
- consentMicro=micro;musiqueInit();
- $("#duo-titre").textContent=t().duoTitre;
- $("#btn-solo").textContent=lang==="de"?"Allein":"Seul·e";
- $("#btn-duo").textContent=lang==="de"?"Zu zweit":"À deux";
- $("#acc1").textContent=lang==="de"?"Person 1: einverstanden":"Participant·e 1 : d'accord";
- $("#acc2").textContent=lang==="de"?"Person 2: einverstanden":"Participant·e 2 : d'accord";
- $("#duo-go").textContent=lang==="de"?"Los geht's":"C'est parti";
- $("#duo-info").textContent=lang==="de"?"Zu zweit müssen beide einverstanden sein."
-  :"À deux, chacun·e doit être d'accord.";
- $("#duo-accords").hidden=true;acc={1:false,2:false};
- etat="duo";viser=0;ecran("e-duo");surligneRangee("#e-duo .bouton");}
+function showConcept(c){state="concept";$("#concept-kicker").textContent=text().concept;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),card=$("#concept-card");if(c.image){img.src="/medias/"+c.image;img.hidden=false;card.classList.remove("no-image")}else{img.hidden=true;card.classList.add("no-image")}show("e-concept");setHelp(text().press)}
 
-function refuser(){
- etat="fin-non";
- $("#calc-texte").textContent=t().merciNon;
- $("#diplome").hidden=true;$("#tete").style.display="none";$("#retour").style.display="none";
- ecran("e-rapport");musiqueStopFinal();
- apres(4000,retourAttente);}
+/* Question vocale. Sans micro: équivalent structuré immédiat. */
+let recorder=null,chunks=[],lastBlob=null,voiceStream=null,voiceContext=null,voiceDeadline=0,voiceQuestion=null;
+function showVoice(q){voiceQuestion=q;if(!consentMicro){const fallback={...q,displayText:q.displayText||q[lang]||q.fr};return showChoice(fallback,text().fallback)}state="voice-intro";fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
+async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{consentMicro=0;return showChoice({...voiceQuestion,displayText:voiceQuestion.displayText},text().fallback)}voiceStream=stream;chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
+function updateTimer(){if(state!=="voice-recording")return;const seconds=Math.max(0,Math.ceil((voiceDeadline-Date.now())/1000));$("#voice-timer").textContent=`0:${String(seconds).padStart(2,"0")}`;if(seconds<=0)return stopRecording();later(250,updateTimer)}
+function startMeter(stream){try{voiceContext=new (window.AudioContext||window.webkitAudioContext)();const analyser=voiceContext.createAnalyser();voiceContext.createMediaStreamSource(stream).connect(analyser);analyser.fftSize=128;const data=new Uint8Array(analyser.frequencyBinCount),bars=[...document.querySelectorAll("#voice-meter i")];(function loop(){if(state!=="voice-recording"){voiceContext&&voiceContext.close();return}analyser.getByteFrequencyData(data);bars.forEach((b,i)=>b.style.height=Math.max(14,(data[i*3]||0)/255*100)+"%");requestAnimationFrame(loop)})()}catch{}}
+async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelp(text().choose)}
+function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObjectURL(lastBlob)).play();return}if(selection===1){state="voice-intro";$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;setHelp(text().press);return}saveVoice()}
+async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
-let acc={1:false,2:false};
-async function lancerParcours(nb){
- participants=nb;
- if(!demo){
-  const fd=new FormData();fd.set("lang",lang);fd.set("participants",nb);
-  fd.set("consent_micro",consentMicro);
-  try{const r=await fetch("/api/sessions",{method:"POST",body:fd});
-   session=(await r.json()).session_id;}catch{demo=true;}}
- construireSequence();etat="parcours";prochaine(0);}
+/* Rapport */
+async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
+function returnWaiting(){clearTimers();stopSpeech();musicStop();state="waiting";session=null;hideChrome();show("e-waiting")}
 
-function prochaine(delta=1){
- purge();stopCycle();taireVoix();
- let i=iEtape+delta;
- while(i<seq.length&&conditionCachee(seq[i]))i+=delta>=0?1:-1;
- if(i<0)i=0;
- iEtape=i;
- if(iEtape>=seq.length)return finParcours();
- const pas=seq[iEtape];majTete(pas);
- if(pas.genre==="question")montrerQuestion(pas.q);
- else if(pas.genre==="concept-fiche")montrerConceptFiche(pas.co);
- else if(pas.genre==="concept-impact")montrerEtoiles({
-  id:0,concept:pas.co,fr:t().impact,de:t().impact,params:{max:5},cle:"impact"});
- else montrerEchelle({id:0,concept:pas.co,fr:t().adoption,de:t().adoption,
-  params:{max:10,min_libelle_fr:t().pasdutout,max_libelle_fr:t().certain,
-          min_libelle_de:t().pasdutout,max_libelle_de:t().certain},cle:"adoption"});}
+/* Appui court / long */
+const LONG_PRESS=700;let pressStarted=0;
+function pressVisual(on){$("#main-buzzer").classList.toggle("pressed",on)}
+function pressDown(){if(pressStarted)return;pressStarted=Date.now();pressVisual(true);resetIdle()}
+function pressUp(){if(!pressStarted)return;const duration=Date.now()-pressStarted;pressStarted=0;pressVisual(false);duration>=LONG_PRESS?longPress():shortPress()}
+function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused")return returnWaiting();if(state==="language"||state==="consent"||state==="choice")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
+function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
+function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction()}
 
-function retourArriere(){if(etat.startsWith("voix"))return;prochaine(-1);}
+/* Entrées: le clavier Espace/Entrée représente le buzzer physique. Le tactile reste un secours. */
+document.addEventListener("keydown",e=>{if((e.code==="Space"||e.code==="Enter")&&!e.repeat){e.preventDefault();pressDown()}});
+document.addEventListener("keyup",e=>{if(e.code==="Space"||e.code==="Enter"){e.preventDefault();pressUp()}});
+$("#main-buzzer").addEventListener("pointerdown",e=>{e.preventDefault();pressDown()});
+$("#main-buzzer").addEventListener("pointerup",e=>{e.preventDefault();pressUp()});
+$("#main-buzzer").addEventListener("pointercancel",()=>{pressStarted=0;pressVisual(false)});
+$("#voice-review").addEventListener("click",e=>{const b=e.target.closest(".choice");if(!b)return;selection=[...$("#voice-review").children].indexOf(b);refreshSelection("#voice-review .choice")});
 
-function montrerQuestion(q){
- q.texteAffiche=(q[lang]||q.fr).replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");
- if(q.type==="choix")montrerChoix(q);
- else if(q.type==="etoiles")montrerEtoiles(q);
- else if(q.type==="echelle")montrerEchelle(q);
- else if(q.type==="compare")montrerCompare(q);
- else montrerVoixQ(q);}
-
-/* ---------------- mode buzzer unique: cycle annonce les options ---------------- */
-let cycleActif=false,cycleTimer=null;
-const buzzerUnique=()=>!!(cfg.buzzer&&cfg.buzzer.unique);
-const dweller=()=>({lente:1100,normale:650,rapide:320}[(cfg.buzzer&&cfg.buzzer.lecture)||"normale"]);
-function stopCycle(){cycleActif=false;clearTimeout(cycleTimer);}
-function cyclerChoix(items,marquer){
- // annonce chaque reponse a voix haute, met en evidence celle qui est lue,
- // boucle sans fin; le buzz selectionne la reponse en cours de lecture
- stopCycle();cycleActif=true;
- (function tour(){
-  if(!cycleActif)return;
-  marquer(viser);
-  dire(items[viser],()=>{
-   if(!cycleActif)return;
-   cycleTimer=setTimeout(()=>{
-    if(!cycleActif)return;
-    viser=(viser+1)%items.length;tour();},dweller());});
- })();}
-
-/* ---------------- choix ---------------- */
-let viser=0,optsCourantes=[];
-function surligne(lu){document.querySelectorAll("#choix-opts .opt")
- .forEach((o,i)=>{o.classList.toggle("vise",i===viser);
-  o.classList.toggle("lu",!!lu&&i===viser);});}
-function montrerChoix(q){
- etat="choix";viser=0;
- $("#choix-texte").textContent=q.texteAffiche;
- $("#choix-aide").textContent=t().choixAide;
- optsCourantes=(q["options_"+lang]&&q["options_"+lang].length?q["options_"+lang]:q.options_fr)||[];
- const zone=$("#choix-opts");zone.innerHTML="";
- optsCourantes.forEach((o,i)=>{
-  const d=document.createElement("div");
-  d.className="opt";d.innerHTML=`<span class="n">${i+1}</span><span>${o}</span>`;
-  d.style.cssText=`opacity:0;transform:translateX(-2vh);transition:all .35s ${150+i*70}ms`;
-  d.onclick=()=>{stopCycle();viser=i;surligne();validerChoix(q);};
-  zone.appendChild(d);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{d.style.opacity=1;d.style.transform="none";}));});
- surligne();ecran("e-choix");
- jouerVoix(q,()=>{if(etat==="choix"&&buzzerUnique())cyclerChoix(optsCourantes,i=>surligne(true));});}
-async function validerChoix(q){
- if(etat!=="choix")return;etat="envoi";stopCycle();taireVoix();
- const valeur=optsCourantes[viser];
- document.querySelectorAll("#choix-opts .opt")[viser].classList.add("choisi");
- sonValide();reponsesLocales["q"+q.id]=valeur;
- await envoyer({question_id:q.id,cle:"reponse",valeur});
- apres(420,()=>prochaine());}
-
-/* ---------------- étoiles (un buzz = une étoile) ---------------- */
-let nbEtoiles=0,etoilesQ=null,anneauT=null;
-function montrerEtoiles(q){
- etat="etoiles";etoilesQ=q;nbEtoiles=0;
- $("#etoiles-texte").textContent=q.texteAffiche||q[lang]||q.fr;
- if(q.concept)$("#etoiles-texte").textContent=q[lang];
- $("#etoiles-aide").textContent=t().etoilesAide;
- const max=(q.params&&q.params.max)||5,zone=$("#etoiles-zone");zone.innerHTML="";
- for(let i=0;i<max;i++){const s=document.createElement("span");
-  s.className="etoile";s.textContent="★";
-  s.onclick=()=>{nbEtoiles=i+1;majEtoiles();armerAnneau();};zone.appendChild(s);}
- $("#etoiles-anneau").hidden=true;
- ecran("e-etoiles");if(!q.concept)jouerVoix(q);else jouerVoix({[lang]:q[lang]});}
-function majEtoiles(){document.querySelectorAll(".etoile")
- .forEach((s,i)=>s.classList.toggle("on",i<nbEtoiles));bip([520+120*nbEtoiles],.09);}
-function buzzEtoile(){
- const max=document.querySelectorAll(".etoile").length;
- if(nbEtoiles<max){nbEtoiles++;majEtoiles();}
- armerAnneau();}
-function moinsEtoile(){if(nbEtoiles>0){nbEtoiles--;majEtoiles();}armerAnneau();}
-function annulerEtoiles(){ // appui long: on annule et on recommence
- if(etat!=="etoiles")return;
- clearInterval(anneauT);nbEtoiles=0;majEtoiles();
- $("#etoiles-anneau").hidden=true;sonErreur();}
-function armerAnneau(){
- // fenêtre réglable (admin) pour ajouter, anneau visible, puis validation claire
- clearInterval(anneauT);
- const a=$("#etoiles-anneau");a.hidden=nbEtoiles===0;
- const arc=$("#anneau-arc"),lab=$("#anneau-s");
- const total=(cfg.buzzer&&cfg.buzzer.etoiles_delai_ms)||2500;
- let restant=total;
- anneauT=setInterval(()=>{restant-=50;
-  arc.style.strokeDashoffset=String(106.8*(1-restant/total));
-  lab.textContent=Math.ceil(restant/1000);
-  if(restant<=0){clearInterval(anneauT);validerEtoiles();}},50);}
-async function validerEtoiles(){
- if(etat!=="etoiles"||nbEtoiles===0)return;etat="envoi";
- sonValide();
- const q=etoilesQ;
- if(q.concept){await envoyer({concept_id:q.concept.id,cle:"impact",valeur:nbEtoiles});}
- else{reponsesLocales["q"+q.id]=String(nbEtoiles);
-  await envoyer({question_id:q.id,cle:"reponse",valeur:nbEtoiles});}
- apres(350,()=>prochaine());}
-
-/* ---------------- échelle 0-10 ---------------- */
-let valEchelle=5,echelleQ=null;
-function montrerEchelle(q){
- etat="echelle";echelleQ=q;valEchelle=5;
- $("#echelle-texte").textContent=q.texteAffiche||q[lang]||q.fr;
- $("#echelle-aide").textContent=t().echelleAide;
- const p=q.params||{};
- $("#borne-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";
- $("#borne-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||"10";
- majEchelle();ecran("e-echelle");
- const apresV=()=>{if(etat==="echelle"&&buzzerUnique())cyclerEchelle();};
- if(q.concept)jouerVoix({[lang]:q[lang]},apresV);else jouerVoix(q,apresV);}
-function cyclerEchelle(){
- stopCycle();cycleActif=true;valEchelle=0;majEchelle();
- const max=(echelleQ.params&&echelleQ.params.max)||10;
- (function tour(){
-  if(!cycleActif)return;
-  majEchelle();bip([420+40*valEchelle],.05);
-  dire(String(valEchelle),()=>{
-   if(!cycleActif)return;
-   cycleTimer=setTimeout(()=>{
-    if(!cycleActif)return;
-    valEchelle=(valEchelle+1)%(max+1);tour();},Math.max(150,dweller()-250));});
- })();}
-function majEchelle(){
- const max=(echelleQ.params&&echelleQ.params.max)||10;
- const pc=100*valEchelle/max;
- $("#curseur").style.left=pc+"%";$("#curseur").textContent=valEchelle;
- $("#rail-fill").style.width=pc+"%";}
-function bougeEchelle(d){const max=(echelleQ.params&&echelleQ.params.max)||10;
- valEchelle=Math.max(0,Math.min(max,valEchelle+d));majEchelle();bip([420+40*valEchelle],.05);}
-function echelleDepuisPointeur(ev){
- const r=$("#rail").getBoundingClientRect();
- const x=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left;
- const max=(echelleQ.params&&echelleQ.params.max)||10;
- valEchelle=Math.max(0,Math.min(max,Math.round(max*x/r.width)));majEchelle();}
-async function validerEchelle(){
- if(etat!=="echelle")return;etat="envoi";stopCycle();taireVoix();sonValide();
- const q=echelleQ;
- if(q.concept){await envoyer({concept_id:q.concept.id,cle:"adoption",valeur:valEchelle});}
- else{reponsesLocales["q"+q.id]=String(valEchelle);
-  await envoyer({question_id:q.id,cle:"reponse",valeur:valEchelle});}
- apres(300,()=>prochaine());}
-
-/* ---------------- compare ---------------- */
-let compareQ=null,coteVise=0;
-function montrerCompare(q){
- etat="compare";compareQ=q;coteVise=-1;viser=0;
- $("#compare-texte").textContent=q.texteAffiche;
- $("#compare-aide").textContent=t().compareAide;
- const opts=(q["options_"+lang]&&q["options_"+lang].length?q["options_"+lang]:q.options_fr);
- $("#duel-a").textContent=opts[0]||"A";$("#duel-b").textContent=opts[1]||"B";
- $("#duel-a").onclick=()=>{stopCycle();coteVise=0;majDuel();validerCompare();};
- $("#duel-b").onclick=()=>{stopCycle();coteVise=1;majDuel();validerCompare();};
- majDuel();ecran("e-compare");
- jouerVoix(q,()=>{if(etat==="compare"&&buzzerUnique()){
-  coteVise=0;
-  cyclerChoix(opts,i=>{coteVise=i%2;majDuelLu();});
- }});}
-function majDuelLu(){$("#duel-a").classList.toggle("lu",coteVise===0);
- $("#duel-b").classList.toggle("lu",coteVise===1);}
-function majDuel(){$("#duel-a").classList.toggle("vise",coteVise===0);
- $("#duel-b").classList.toggle("vise",coteVise===1);}
-async function validerCompare(){
- if(etat!=="compare"||coteVise<0){sonErreur();return;}
- etat="envoi";stopCycle();taireVoix();sonValide();
- const opts=(compareQ["options_"+lang]&&compareQ["options_"+lang].length
-  ?compareQ["options_"+lang]:compareQ.options_fr);
- reponsesLocales["q"+compareQ.id]=opts[coteVise];
- await envoyer({question_id:compareQ.id,cle:"reponse",valeur:opts[coteVise]});
- apres(350,()=>prochaine());}
-
-/* ---------------- concept: fiche ---------------- */
-function montrerConceptFiche(co){
- etat="concept-fiche";
- $("#concept-sur").textContent=t().concept;
- $("#concept-nom").textContent=lang==="de"?co.nom_de:co.nom_fr;
- $("#concept-desc").textContent=lang==="de"?co.desc_de:co.desc_fr;
- const img=$("#concept-img");
- if(co.image){img.src="/medias/"+co.image;img.hidden=false;}else img.hidden=true;
- $("#concept-go").textContent=t().conceptGo;
- $("#concept-go").onclick=()=>prochaine();
- ecran("e-concept");
- jouerVoix({[lang]:(lang==="de"?co.nom_de+". "+co.desc_de:co.nom_fr+". "+co.desc_fr)});}
-
-/* ---------------- voix ---------------- */
-let rec=null,chunks=[],dernierBlob=null,voixCtx=null,voixDeadline=0,silenceDepuis=0,voixQCourante=null;
-function montrerVoixQ(q){
- voixQCourante=q;
- if(!consentMicro){ // jamais de saut silencieux: on l'explique et on enregistre le refus
-  etat="voix-skip";
-  $("#voix-texte").textContent=q.texteAffiche;
-  $("#voix-aide").textContent=t().sansMicro;
-  $("#vu").hidden=true;$("#voix-rec-ligne").hidden=true;$("#voix-relecture").hidden=true;
-  ecran("e-voix");
-  envoyer({question_id:q.id,cle:"reponse",valeur:"[sans micro]"});
-  apres(3200,()=>prochaine());return;}
- etat="voix-intro";
- $("#voix-texte").textContent=q.texteAffiche;
- $("#voix-aide").textContent=t().parle;
- $("#vu").hidden=true;$("#voix-rec-ligne").hidden=true;$("#voix-relecture").hidden=true;
- ecran("e-voix");jouerVoix(q);}
-async function voixDemarrer(){
- taireVoix();musiqueCoupe(); // musique complètement coupée avant le micro
- let flux;
- try{flux=await navigator.mediaDevices.getUserMedia({audio:true});}
- catch{sonErreur();$("#voix-aide").textContent=t().sansMicro;
-  await envoyer({question_id:voixQCourante.id,cle:"reponse",valeur:"[micro indisponible]"});
-  apres(2500,()=>prochaine());return;}
- chunks=[];dernierBlob=null;
- rec=new MediaRecorder(flux,{mimeType:"audio/webm"});
- rec.ondataavailable=e=>chunks.push(e.data);
- rec.onstop=()=>flux.getTracks().forEach(tr=>tr.stop());
- rec.start();
- etat="voix-rec";
- const duree=(voixQCourante.params&&voixQCourante.params.duree_voix)||45;
- voixDeadline=Date.now()+duree*1000;silenceDepuis=0;
- $("#voix-aide").textContent=t().enCours;
- $("#vu").hidden=false;$("#voix-rec-ligne").hidden=false;$("#voix-silence").textContent="";
- vumetre(flux);chronoVoix();}
-function chronoVoix(){
- if(etat!=="voix-rec")return;
- const s=Math.max(0,Math.ceil((voixDeadline-Date.now())/1000));
- $("#voix-chrono").textContent=`0:${String(s).padStart(2,"0")}`;
- if(s<=0)return voixArreter();
- apres(250,chronoVoix);}
-function vumetre(flux){
- voixCtx=new (window.AudioContext||window.webkitAudioContext)();
- const ana=voixCtx.createAnalyser();
- voixCtx.createMediaStreamSource(flux).connect(ana);ana.fftSize=256;
- const data=new Uint8Array(ana.frequencyBinCount);
- const barres=document.querySelectorAll("#vu i");
- (function boucle(){
-  if(etat!=="voix-rec"){voixCtx.close();return;}
-  ana.getByteFrequencyData(data);
-  const rms=Math.sqrt(data.reduce((a,v)=>a+v*v,0)/data.length)/255;
-  barres.forEach((b,i)=>b.style.height=Math.max(12,data[i*3]/255*100)+"%");
-  if(rms<0.045){ // détection de silence: 3 s sous le seuil → arrêt automatique
-   silenceDepuis+=16;
-   if(silenceDepuis>3000&&Date.now()<voixDeadline-1000){
-    $("#voix-silence").textContent="";return voixArreter();}
-   if(silenceDepuis>1200)$("#voix-silence").textContent=t().silence;
-  }else{silenceDepuis=0;$("#voix-silence").textContent="";}
-  requestAnimationFrame(boucle);})();}
-async function voixArreter(){
- if(etat!=="voix-rec")return;etat="voix-relecture";purge();
- if(rec&&rec.state!=="inactive")await new Promise(r=>{rec.onstop=r;rec.stop();});
- dernierBlob=new Blob(chunks,{type:"audio/webm"});
- $("#vu").hidden=true;$("#voix-rec-ligne").hidden=true;
- $("#voix-relecture").hidden=false;
- $("#btn-reecouter").textContent=lang==="de"?"Nochmals hören":"Réécouter";
- $("#btn-refaire").textContent=lang==="de"?"Neu aufnehmen":"Recommencer";
- $("#btn-valider-voix").textContent=lang==="de"?"Bestätigen":"Valider";
- $("#voix-aide").textContent=t().relecture;
- viser=2;surligneRangee("#voix-relecture .bouton");}
-function voixReecouter(){if(dernierBlob){const a=new Audio(URL.createObjectURL(dernierBlob));a.play();}}
-async function voixValider(){
- if(etat!=="voix-relecture"||!dernierBlob)return;etat="envoi";sonValide();
- await envoyer({question_id:voixQCourante.id,cle:"reponse",valeur:"[voix]",audio:dernierBlob});
- musiqueReprend();apres(300,()=>prochaine());}
-function voixRefaire(){etat="voix-intro";
- $("#voix-relecture").hidden=true;$("#voix-aide").textContent=t().parle;}
-
-/* ---------------- rangées de boutons pilotables au clavier ---------------- */
-let rangeeSel="";
-function surligneRangee(sel){rangeeSel=sel;
- document.querySelectorAll(sel).forEach((b,i)=>b.classList.toggle("vise",i===viser));}
-function rangeeBouge(d){
- const n=document.querySelectorAll(rangeeSel).length;if(!n)return;
- viser=(viser+d+n)%n;surligneRangee(rangeeSel);}
-function rangeeValide(){const b=document.querySelectorAll(rangeeSel)[viser];if(b)b.click();}
-
-/* ---------------- fin: rapport wow ---------------- */
-async function finParcours(){
- etat="rapport";purge();taireVoix();
- $("#tete").style.display="none";$("#retour").style.display="none";
- if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"});}catch{}}
- fondu(musiqueCible*.3,800);
- $("#diplome").hidden=true;$("#diplome").classList.remove("pose");
- ecran("e-rapport");
- // animation de calcul volontairement théâtrale
- const msgs=t().calc;let i=0;
- $("#calc-texte").textContent=msgs[0];
- const rot=setInterval(()=>{i++;
-  if(i<msgs.length)$("#calc-texte").textContent=msgs[i];},1500);
- let doc={titre:"", texte:"", label:""};
- if(demo){doc={titre:lang==="de"?"Bemerkenswerte Stimme des Tages":"Voix remarquable du jour",
-  texte:lang==="de"?"Demo-Modus: nichts wurde gespeichert, aber dein Lächeln zählt trotzdem."
-   :"Mode démo: rien n'a été enregistré, mais ton sourire compte quand même.",
-  label:lang==="de"?"Automatisch personalisierter Bericht":"Rapport personnalisé automatiquement"};
-  await new Promise(r=>setTimeout(r,4500));}
- else{
-  const fd=new FormData();fd.set("lang",lang);
-  const [rep]=await Promise.all([
-   fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd})
-    .then(r=>r.json()).catch(()=>null),
-   new Promise(r=>setTimeout(r,4500))]);
-  if(rep)doc=rep;}
- clearInterval(rot);
- $("#calc-texte").textContent="";
- klaxon();
- $("#rapport-titre").textContent=doc.titre||"";
- $("#rapport-corps").textContent=doc.texte||"";
- $("#rapport-label").textContent=doc.label||"";
- $("#diplome").hidden=false;void $("#diplome").offsetWidth;
- $("#diplome").classList.add("pose");
- musiqueStopFinal();
- apres(40000,retourAttente);}
-function retourAttente(){
- purge();stopCycle();taireVoix();etat="attente";$("#tete").style.display="none";
- $("#retour").style.display="none";ecran("e-attente");}
-
-/* ---------------- entrées globales ---------------- */
-function buzzer(){
- relanceInactivite();
- if(etat==="attente")return demarrer();
- if(etat==="langue"||etat==="consent"||etat==="duo")return rangeeValide();
- if(etat==="choix")return validerChoix(seqQuestionCourante());
- if(etat==="etoiles")return buzzEtoile();
- if(etat==="echelle")return validerEchelle();
- if(etat==="compare")return validerCompare();
- if(etat==="voix-intro")return voixDemarrer();
- if(etat==="voix-rec")return voixArreter();
- if(etat==="voix-relecture")return rangeeValide();
- if(etat==="rapport")return retourAttente();}
-function seqQuestionCourante(){const p=seq[iEtape];return p&&p.q;}
-function gauche(){relanceInactivite();
- if(["langue","consent","duo","voix-relecture"].includes(etat))return rangeeBouge(-1);
- if(etat==="choix"){viser=Math.max(0,viser-1);surligne();}
- if(etat==="etoiles")return moinsEtoile();
- if(etat==="echelle")return bougeEchelle(-1);
- if(etat==="compare"){coteVise=0;majDuel();}}
-function droite(){relanceInactivite();
- if(["langue","consent","duo","voix-relecture"].includes(etat))return rangeeBouge(1);
- if(etat==="choix"){viser=Math.min(optsCourantes.length-1,viser+1);surligne();}
- if(etat==="etoiles")return buzzEtoile();
- if(etat==="echelle")return bougeEchelle(1);
- if(etat==="compare"){coteVise=1;majDuel();}}
-
-const LONG_MS=700;let buzzT0=0;
-function buzzVisuel(on){document.querySelectorAll(".buzzer")
- .forEach(b=>b.classList.toggle("presse",on));}
-function buzzBas(){if(buzzT0)return;buzzT0=Date.now();buzzVisuel(true);}
-function buzzHaut(){if(!buzzT0)return;
- const duree=Date.now()-buzzT0;buzzT0=0;buzzVisuel(false);
- relanceInactivite();
- if(duree>=LONG_MS&&etat==="etoiles")return annulerEtoiles();
- buzzer();}
-document.addEventListener("keydown",e=>{
- if(e.code==="Space"||e.code==="Enter"){e.preventDefault();if(!e.repeat)buzzBas();return;}
- if(e.code==="ArrowLeft")return gauche();
- if(e.code==="ArrowRight")return droite();
- if(e.code==="ArrowUp"&&etat==="choix"){viser=Math.max(0,viser-1);surligne();return;}
- if(e.code==="ArrowDown"&&etat==="choix"){viser=Math.min(optsCourantes.length-1,viser+1);surligne();return;}
- if(e.code==="Backspace"&&etat!=="attente"){e.preventDefault();return retourArriere();}
- const n=parseInt(e.key,10);
- if(!isNaN(n)&&etat==="choix"&&n>=1&&n<=optsCourantes.length){
-  viser=n-1;surligne();validerChoix(seqQuestionCourante());}});
-
-document.addEventListener("keyup",e=>{
- if(e.code==="Space"||e.code==="Enter"){e.preventDefault();buzzHaut();}});
-["#buzzer-intro"].forEach(sel=>{const b=document.querySelector(sel);if(!b)return;
- b.addEventListener("pointerdown",e=>{e.stopPropagation();buzzBas();});
- b.addEventListener("pointerup",e=>{e.stopPropagation();buzzHaut();});});
-document.addEventListener("click",e=>{
- relanceInactivite();
- if(etat==="attente"&&!e.target.closest(".buzzer"))demarrer();});
-$("#retour").onclick=retourArriere;
-document.querySelectorAll("#e-langue .bouton").forEach(b=>
- b.onclick=()=>choisirLangue(b.dataset.l));
-$("#btn-oui").onclick=()=>consentir(1);
-$("#btn-sans-micro").onclick=()=>consentir(0);
-$("#btn-non").onclick=refuser;
-$("#btn-solo").onclick=()=>lancerParcours(1);
-$("#btn-duo").onclick=()=>{ $("#duo-accords").hidden=false;
- $("#duo-titre").textContent=t().duoVous;anime($("#e-duo"));};
-$("#acc1").onclick=()=>{acc[1]=true;$("#acc1").classList.add("choisi");majDuoGo();};
-$("#acc2").onclick=()=>{acc[2]=true;$("#acc2").classList.add("choisi");majDuoGo();};
-function majDuoGo(){const ok=acc[1]&&acc[2];
- $("#duo-go").disabled=!ok;$("#duo-go").style.opacity=ok?1:.4;}
-$("#duo-go").onclick=()=>{if(acc[1]&&acc[2])lancerParcours(2);};
-$("#btn-reecouter").onclick=voixReecouter;
-$("#btn-refaire").onclick=voixRefaire;
-$("#btn-valider-voix").onclick=voixValider;
-["mousedown","touchstart","mousemove","touchmove"].forEach(ev=>
- $("#rail").addEventListener(ev,e=>{
-  if(etat!=="echelle")return;
-  if(ev.includes("move")&&!(e.buttons||e.touches))return;
-  stopCycle();echelleDepuisPointeur(e);},{passive:true}));
-
-/* inactivité: retour à l'attente après 2 min, jamais pendant un enregistrement */
-function relanceInactivite(){
- clearTimeout(inactif);
- inactif=setTimeout(()=>{
-  if(etat!=="attente"&&etat!=="voix-rec"&&etat!=="rapport")retourAttente();},120000);}
-relanceInactivite();
-anime($("#e-attente"));
+function resetIdle(){clearTimeout(idleTimer);idleTimer=setTimeout(()=>{if(!["waiting","voice-recording","report"].includes(state))returnWaiting()},120000)}
+resetIdle();animateWords($("#e-waiting"));
 </script>
 </body>
 </html>

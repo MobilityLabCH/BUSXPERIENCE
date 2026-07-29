@@ -18,8 +18,6 @@ def _filtres_sql(f: dict) -> tuple[str, list]:
         cond.append("s.lieu_id=?"); args.append(f["lieu"])
     if f.get("lang"):
         cond.append("s.lang=?"); args.append(f["lang"])
-    if f.get("participants"):
-        cond.append("s.participants=?"); args.append(f["participants"])
     if f.get("termine") == "oui":
         cond.append("s.terminee_le IS NOT NULL")
     if f.get("termine") == "non":
@@ -51,8 +49,8 @@ def calculer(f: dict) -> dict:
         marque = ",".join("?" * len(ids))
 
         sess = c.execute(
-            f"""SELECT COUNT(*) n, SUM(terminee_le IS NOT NULL) fini,
-                SUM(participants=2) duos FROM sessions WHERE id IN ({marque})""",
+            f"""SELECT COUNT(*) n, SUM(terminee_le IS NOT NULL) fini
+                FROM sessions WHERE id IN ({marque})""",
             ids).fetchone()
         durees = [r["duree_s"] for r in c.execute(
             f"SELECT duree_s FROM sessions WHERE id IN ({marque}) AND duree_s IS NOT NULL",
@@ -120,7 +118,6 @@ def calculer(f: dict) -> dict:
     return {
         "n_sessions": sess["n"], "n_terminees": sess["fini"] or 0,
         "taux_completion": round(100 * (sess["fini"] or 0) / sess["n"]) if sess["n"] else 0,
-        "n_duos": sess["duos"] or 0,
         "duree_moyenne_s": round(st.mean(durees)) if durees else None,
         "duree_mediane_s": round(st.median(durees)) if durees else None,
         "questions": questions, "concepts": concepts, "frictions": frictions,

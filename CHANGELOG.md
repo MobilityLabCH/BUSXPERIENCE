@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## v3.2 — Cabine individuelle et interaction réellement au buzzer (2026-07-29)
+
+- Suppression complète du mode à deux: une session correspond toujours à une
+  seule personne; l'API refuse désormais `participants=2`.
+- Nouvelle logique uniforme: appui court pour parcourir, appui long pour
+  valider. Plus aucune flèche gauche/droite, aucun curseur, aucun bouton de
+  retour flottant et aucune navigation de formulaire classique.
+- La synthèse vocale lit uniquement la question. Les réponses ne sont plus
+  annoncées une à une.
+- L'échelle 0-10 devient une rangée de onze cases. Les listes de six réponses
+  ou plus passent en grille de deux colonnes, sans défilement vertical.
+- Parcours sans micro entièrement fonctionnel: la question ouverte est
+  remplacée immédiatement par une question structurée équivalente; aucun faux
+  chronomètre ni écran d'enregistrement n'apparaît.
+- Refonte graphique complète de la cabine: noir, jaune postal, blanc crème,
+  une seule sélection jaune, compositions éditoriales et pied de page unique.
+- Nouvelle entrée en matière FR/DE: «Tu montes à bord…» / «Du steigst ein…».
+- Traductions centralisées; vérification visuelle du parcours allemand sans
+  mélange de boutons français.
+- Progression exacte (`3 / 13`), plus de valeurs approximatives «encore ~».
+- Mise à jour douce du contenu par défaut: consentement, question de fréquence
+  et concept «Une Haltestelle zum Wohlfühlen».
+- Rapport final v3.1 conservé: JSON strict pour Gemini, moteur automatique
+  FR/DE, ancien rapport cassé régénéré.
+- 29 tests réussis. Syntaxe JavaScript vérifiée avec Node. Rendus contrôlés en
+  1366×768 pour l'accueil, l'introduction, le consentement, une liste de sept
+  réponses, l'échelle 0-10 et le parcours allemand sans micro.
+
+## v3.1 — Profil de voyage final entièrement refait (2026-07-29)
+
+- Suppression totale des « Acte 1 / 2 / 3 », notes de concept et valeurs brutes.
+- Nouveau contrat commun Gemini/Anthropic/Ollama: titre, deux paragraphes et
+  conclusion, en JSON strict, 60 à 90 mots, sans genre supposé.
+- Validation forte de la réponse IA: tout résultat incomplet, trop long,
+  mal ponctué ou hors format est rejeté et remplacé par le moteur automatique.
+- Nouveau moteur automatique FR/DE avec plus de 50 titres par langue, des
+  formulations liées aux irritants réels et des verbatims utilisés seulement
+  lorsqu'une idée claire peut être reformulée proprement.
+- Les anciens rapports mis en cache sont détectés et régénérés automatiquement.
+- Nouvel écran « TON PROFIL DE VOYAGE »: titre très visible, deux paragraphes,
+  conclusion mise en valeur et label IA discret.
+- 28 tests, dont dix combinaisons FR/DE et un test de réponse IA cassée.
+
 ## v3.0 — Buzzer unique, Swiss Post Sans, storytelling (2026-07-29)
 
 - Typographie Swiss Post Sans partout via la feuille officielle fonts.post.ch

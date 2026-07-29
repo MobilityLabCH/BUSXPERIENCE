@@ -22,7 +22,7 @@
 {% for r in reponses %}
 <div class="carte">
  <p class="gris petit">{{ r.cree_le[:16].replace('T',' · ') }} · {{ (r.lang or '?')|upper }}
-  · {{ r.participants or 1 }} pers. · session {{ r.session[:8] }} · {{ r.cle }}</p>
+  · session {{ r.session[:8] }} · {{ r.cle }}</p>
  <p><b>{{ r.c_nom or r.q_fr }}</b></p>
  {% if r.valeur %}<p>→ {{ r.valeur }}</p>{% endif %}
  {% if r.transcript %}<p>« {{ r.transcript }} »</p>{% endif %}

@@ -11,7 +11,7 @@ import json
 
 import db
 
-SEED_VERSION = "2"
+SEED_VERSION = "3"
 
 # (ordre, etape, type, fr, de, options_fr, options_de, params, condition, parle_fr, parle_de)
 QUESTIONS = [
@@ -54,7 +54,7 @@ QUESTIONS = [
      {}, None,
      "Qu'est-ce qui te stresse le plus avec le bus ?", "Was stresst dich am meisten beim Bus?"),
     # Mesure la confiance dans la fiabilité, le levier n°1 face à la voiture.
-    # Échelle 0-10, curseur tactile ou flèches, comparable entre campagnes.
+    # Échelle 0-10 en onze cases, pilotée au buzzer, comparable entre campagnes.
     (50, "friction", "echelle",
      "Rendez-vous important à 9h. Tu fais confiance au bus pour y être à l'heure ?",
      "Wichtiger Termin um 9 Uhr. Vertraust du dem Bus, pünktlich dort zu sein?",
@@ -122,10 +122,10 @@ CONCEPTS = [
      "Automatisches einfaches Billett",
      "Tu montes, tu voyages, le bon prix se calcule tout seul. Zéro réflexion billet.",
      "Einsteigen, fahren, der richtige Preis berechnet sich von selbst. Null Billett-Denken."),
-    ("Arrêt confortable et éclairé",
-     "Komfortable, beleuchtete Haltestelle",
-     "Un abri correct, de la lumière, un siège: attendre sans subir.",
-     "Ein richtiges Dach, Licht, ein Sitz: Warten ohne Leiden."),
+    ("Un arrêt où l’on se sent bien",
+     "Eine Haltestelle zum Wohlfühlen",
+     "À l’abri de la pluie, avec un bon éclairage et une vraie place pour s’asseoir. L’attente devient plus confortable et rassurante.",
+     "Geschützt vor Regen, gut beleuchtet und mit einer richtigen Sitzgelegenheit. So wird das Warten angenehmer und entspannter."),
     ("Signalement en deux secondes",
      "Melden in zwei Sekunden",
      "Un problème à bord ou à l'arrêt ? Tu le signales en deux gestes depuis ton téléphone.",
@@ -140,23 +140,17 @@ CONCEPTS = [
      "Bei der Ankunft siehst du, wie du ans Ziel kommst: zu Fuss, Leihvelo, Anschluss."),
 ]
 
-CONSENT_FR = """Bienvenue dans BUS XPERIENCE !
-Quelques minutes pour améliorer l'expérience du bus.
+CONSENT_FR = """Tes réponses nous aident à comprendre ce qui fonctionne, ce qui agace et ce qui devrait changer dans l’expérience du bus.
 
-Tes réponses servent à l'innovation, à la recherche utilisateur et à
-l'amélioration des services — pas pour analyser toute ta vie.
-Une ou deux réponses peuvent être enregistrées au micro puis transcrites
-et analysées automatiquement. La participation est volontaire et tu peux
-t'arrêter à tout moment."""
+Elles servent à l’innovation, à la recherche utilisateur et à l’amélioration des services — pas à savoir ce que tu as mangé à midi.
 
-CONSENT_DE = """Willkommen bei BUS XPERIENCE!
-Ein paar Minuten, um das Buserlebnis zu verbessern.
+Avec le micro, une ou deux réponses peuvent être enregistrées, transcrites et analysées automatiquement. Tu peux aussi participer sans micro. La participation est volontaire et tu peux arrêter à tout moment."""
 
-Deine Antworten dienen Innovation, Nutzerforschung und besseren
-Services — nicht, um dein ganzes Leben zu analysieren.
-Ein bis zwei Antworten können per Mikrofon aufgenommen, transkribiert und
-automatisch ausgewertet werden. Die Teilnahme ist freiwillig, du kannst
-jederzeit aufhören."""
+CONSENT_DE = """Deine Antworten helfen uns zu verstehen, was gut funktioniert, was stört und was sich am Bus-Erlebnis ändern sollte.
+
+Sie dienen Innovation, Nutzerforschung und der Verbesserung unserer Angebote — nicht dazu, herauszufinden, was du zu Mittag gegessen hast.
+
+Mit Mikrofon können ein bis zwei Antworten aufgenommen, transkribiert und automatisch ausgewertet werden. Du kannst auch ohne Mikrofon teilnehmen. Die Teilnahme ist freiwillig und du kannst jederzeit aufhören."""
 
 
 def semer() -> str:
@@ -197,6 +191,40 @@ def semer() -> str:
         for cle, valeur in (("nb_concepts", "2"),):
             if db.reglage(c, cle) is None:
                 db.poser_reglage(c, cle, valeur)
+
+        # Mise à jour douce des anciens contenus par défaut. On ne remplace
+        # jamais un texte déjà personnalisé dans l'administration.
+        c.execute(
+            """UPDATE questions SET fr=?, de=?, options_fr=?, options_de=?,
+               texte_parle_fr=?, texte_parle_de=?, modifie_le=?
+               WHERE ordre=10 AND fr='Pour commencer: le bus, tu le prends…'""",
+            (QUESTIONS[0][3], QUESTIONS[0][4], QUESTIONS[0][5], QUESTIONS[0][6],
+             QUESTIONS[0][9], QUESTIONS[0][10], db.now()))
+        c.execute(
+            """UPDATE concepts SET nom_fr=?, nom_de=?, desc_fr=?, desc_de=?
+               WHERE nom_fr='Arrêt confortable et éclairé'
+               AND nom_de='Komfortable, beleuchtete Haltestelle'""",
+            ("Un arrêt où l’on se sent bien", "Eine Haltestelle zum Wohlfühlen",
+             "À l’abri de la pluie, avec un bon éclairage et une vraie place pour s’asseoir. L’attente devient plus confortable et rassurante.",
+             "Geschützt vor Regen, gut beleuchtet und mit einer richtigen Sitzgelegenheit. So wird das Warten angenehmer und entspannter."))
+        anciens_fr = (
+            "Bienvenue dans BUS XPERIENCE !\nQuelques minutes pour améliorer l'expérience du bus.\n\n"
+            "Tes réponses servent à l'innovation, à la recherche utilisateur et à\n"
+            "l'amélioration des services — pas pour analyser toute ta vie.\n"
+            "Une ou deux réponses peuvent être enregistrées au micro puis transcrites\n"
+            "et analysées automatiquement. La participation est volontaire et tu peux\n"
+            "t'arrêter à tout moment."
+        )
+        c.execute("UPDATE campagnes SET consent_fr=? WHERE consent_fr=?", (CONSENT_FR, anciens_fr))
+        anciens_de = (
+            "Willkommen bei BUS XPERIENCE!\nEin paar Minuten, um das Buserlebnis zu verbessern.\n\n"
+            "Deine Antworten dienen Innovation, Nutzerforschung und besseren\n"
+            "Services — nicht, um dein ganzes Leben zu analysieren.\n"
+            "Ein bis zwei Antworten können per Mikrofon aufgenommen, transkribiert und\n"
+            "automatisch ausgewertet werden. Die Teilnahme ist freiwillig, du kannst\n"
+            "jederzeit aufhören."
+        )
+        c.execute("UPDATE campagnes SET consent_de=? WHERE consent_de=?", (CONSENT_DE, anciens_de))
         db.poser_reglage(c, "seed_version", SEED_VERSION)
         db.journaliser(c, "seed", f"contenu par défaut v{SEED_VERSION}")
     return "contenu par défaut semé"

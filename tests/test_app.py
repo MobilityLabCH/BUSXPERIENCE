@@ -1,7 +1,8 @@
+import json
 """BUS XPERIENCE — tests.
 
 Lancer:  python -m pytest tests/ -q
-Couvre: santé, cabine, admin, consentement solo/duo, réponses de tous types,
+Couvre: santé, cabine individuelle, réponses de tous types,
 impossibilité de réponse orpheline, concepts, rapport sans IA, rapport admin,
 exports, migration v1, redémarrage sans perte, fournisseurs IA simulés.
 """
@@ -72,7 +73,12 @@ def test_health(client):
 def test_cabine_servie(client):
     h = client.get("/cabine/").text
     assert "BUS XPERIENCE" in h and "Powered by MobilityLab Sion" in h
-    assert "fonts.googleapis" not in h  # hors ligne: aucune police externe
+    assert "fonts.googleapis" not in h
+    assert "e-duo" not in h and "À deux" not in h and "Zu zweit" not in h
+    assert "ArrowLeft" not in h and "ArrowRight" not in h
+    assert "class=\"curseur\"" not in h and "id=\"retour\"" not in h
+    assert "aucune lecture automatique des réponses" in h
+    assert "DU STEIGST EIN" in h and "TON EXPÉRIENCE" in h
 
 
 def test_admin_protege(client):
@@ -110,15 +116,14 @@ def _session(client, participants=1, micro=1):
     return r.json()["session_id"]
 
 
-def test_consentement_solo_et_duo(client):
-    assert _session(client, 1)
-    sid = _session(client, 2)
+def test_session_strictement_individuelle(client):
+    sid = _session(client, 1)
     import db
     with db.conn() as c:
         s = c.execute("SELECT participants FROM sessions WHERE id=?", (sid,)).fetchone()
-    assert s["participants"] == 2
-    r = client.post("/api/sessions", data={"participants": 3})
-    assert r.status_code == 400
+    assert s["participants"] == 1
+    assert client.post("/api/sessions", data={"participants": 2}).status_code == 400
+    assert client.post("/api/sessions", data={"participants": 3}).status_code == 400
 
 
 def test_reponses_tous_types_et_correction(client):
@@ -171,6 +176,22 @@ def test_micro_sans_consentement_refuse(client):
     assert r.status_code == 403
 
 
+def test_question_vocale_devient_choix_sans_micro(client):
+    d = client.get("/api/config").json()
+    q_voix = next(q for q in d["questions"] if q["type"] == "voix")
+    sid = _session(client, micro=0)
+    valeur = "Les billets étaient plus faciles à comprendre"
+    r = client.post(f"/api/sessions/{sid}/reponses",
+                    data={"question_id": q_voix["id"], "cle": "reponse",
+                          "valeur": valeur})
+    assert r.status_code == 200
+    import db
+    with db.conn() as c:
+        row = c.execute("SELECT valeur, audio FROM reponses WHERE session=? AND question_id=?",
+                        (sid, q_voix["id"])).fetchone()
+    assert row["valeur"] == valeur and row["audio"] is None
+
+
 def test_rapport_participant_sans_ia(client):
     d = client.get("/api/config").json()
     qs = {q["type"]: q for q in d["questions"]}
@@ -189,10 +210,12 @@ def test_rapport_participant_sans_ia(client):
                 data={"concept_id": co["id"], "cle": "adoption", "valeur": "9"})
     client.post(f"/api/sessions/{sid}/terminer")
     rep = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
-    assert rep["titre"] and rep["label"] == "Rapport personnalisé automatiquement"
-    assert "4" in rep["texte"] and "6/10" in rep["texte"]
+    assert rep["titre"] and rep["label"] == "Personnalisé automatiquement"
+    assert "quatre étoiles" in rep["texte"]
     assert co["nom_fr"] in rep["texte"]
-    assert rep["texte"].count("\n\n") >= 2  # trois actes
+    assert rep["texte"].count("\n\n") == 2
+    assert 60 <= len(rep["texte"].split()) <= 90
+    assert "Acte" not in rep["texte"] and "note" not in rep["texte"].lower()
     # idempotent
     rep2 = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
     assert rep2["texte"] == rep["texte"]
@@ -267,16 +290,30 @@ def test_providers_mocks(client, monkeypatch):
     # anthropic simulé
     monkeypatch.setenv("AI_PROVIDER", "anthropic")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "cle-de-test")
+    rapport_json = json.dumps({
+        "titre": "Billet clair, esprit léger",
+        "paragraphe_1": (
+            "Le bus fait partie de ton quotidien et ton dernier trajet obtient quatre "
+            "étoiles sur cinq. La relation roule donc plutôt bien, sans être parfaite."
+        ),
+        "paragraphe_2": (
+            "Le vrai point de tension reste le billet: dès qu'il faut deviner le bon "
+            "tarif, le voyage devient un petit escape game. Un billet automatique "
+            "retirerait ce casse-tête avant même le départ."
+        ),
+        "conclusion": "Ton verdict: monter, voyager, ne pas calculer.",
+    }, ensure_ascii=False)
     monkeypatch.setattr(ai, "_http_json", lambda m, u, **k: {
-        "content": [{"text": '{"titre":"Titre simulé","texte":"Corps simulé."}'}]})
+        "content": [{"text": rapport_json}]})
     doc = ai.rapport_participant("fr", {"etoiles": "5"})
-    assert doc["fournisseur"] == "anthropic" and doc["titre"] == "Titre simulé"
-    assert doc["label"] == "Rapport personnalisé par IA"
-    # gemini simulé
+    assert doc["fournisseur"] == "anthropic" and doc["titre"] == "Billet clair, esprit léger"
+    assert doc["label"] == "Personnalisé par IA"
+    assert doc["texte"].count("\n\n") == 2
+    # gemini simulé avec le même contrat JSON
     monkeypatch.setenv("AI_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "cle-de-test")
     monkeypatch.setattr(ai, "_http_json", lambda m, u, **k: {
-        "candidates": [{"content": {"parts": [{"text": '{"titre":"G","texte":"T"}'}]}}]})
+        "candidates": [{"content": {"parts": [{"text": rapport_json}]}}]})
     assert ai.rapport_participant("fr", {})["fournisseur"] == "gemini"
     # échec réseau: erreur propre + repli ANNONCÉ (label automatique), pas silencieux
     def kaput(m, u, **k):
@@ -284,11 +321,70 @@ def test_providers_mocks(client, monkeypatch):
     monkeypatch.setattr(ai, "_http_json", kaput)
     doc = ai.rapport_participant("fr", {"etoiles": "3"})
     assert doc["fournisseur"] == "none" and doc["erreur"]
-    assert doc["label"] == "Rapport personnalisé automatiquement"
+    assert doc["label"] == "Personnalisé automatiquement"
     # test de connexion sans clé
     monkeypatch.delenv("ANTHROPIC_API_KEY")
     monkeypatch.setenv("AI_PROVIDER", "anthropic")
     assert ai.tester_connexion()["ok"] is False
+
+
+def test_rapport_nouveau_format_dix_combinaisons(monkeypatch):
+    import ai
+    monkeypatch.setenv("AI_PROVIDER", "none")
+    cas = [
+        ("fr", {"frequence": "Chaque semaine", "etoiles": "5",
+                "irritant": "Ne pas savoir quel billet acheter",
+                "verbatim": "Je prendrais le bus plus souvent avec des prises USB"}),
+        ("fr", {"frequence": "Presque tous les jours", "etoiles": "2",
+                "irritant": "Rater la correspondance", "concept": "Garantie de correspondance"}),
+        ("fr", {"frequence": "Rarement", "etoiles": "3",
+                "irritant": "Attendre dans le froid ou le noir",
+                "concept": "Arrêt confortable et éclairé"}),
+        ("fr", {"frequence": "Quelques fois par mois", "etoiles": "4",
+                "irritant": "Un bus bondé", "priorite_arbitrage": "Des bus plus fréquents"}),
+        ("fr", {"frequence": "Jamais ou presque", "confiance": "3",
+                "moment": "Préparer le trajet et l'horaire"}),
+        ("de", {"frequence": "Jede Woche", "etoiles": "4",
+                "irritant": "Eine Verspätung ohne Information",
+                "concept": "Sofortige Verspätungsmeldung"}),
+        ("de", {"frequence": "Selten", "etoiles": "2",
+                "irritant": "Nicht wissen, welches Billett",
+                "verbatim": "Ich würde öfter fahren, wenn das Billett einfacher wäre"}),
+        ("de", {"frequence": "Fast täglich", "etoiles": "5",
+                "irritant": "Den Anschluss verpassen", "concept": "Anschlussgarantie"}),
+        ("de", {"frequence": "Ein paar Mal im Monat", "etoiles": "3",
+                "irritant": "Ein überfüllter Bus"}),
+        ("de", {"frequence": "Nie oder fast nie", "confiance": "2",
+                "irritant": "Warten in Kälte oder Dunkelheit"}),
+    ]
+    for lang, donnees in cas:
+        doc = ai.rapport_participant(lang, donnees)
+        assert doc["titre"]
+        assert doc["texte"].count("\n\n") == 2
+        assert 60 <= ai._mots(doc["texte"]) <= 90
+        assert not ai._FORBIDDEN_REPORT_RE.search(doc["titre"] + "\n" + doc["texte"])
+        assert "concept_note" not in doc["texte"]
+
+
+def test_reponse_ia_invalide_ne_saffiche_jamais(monkeypatch):
+    import ai
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "cle-de-test")
+    monkeypatch.setattr(ai, "_http_json", lambda m, u, **k: {
+        "candidates": [{"content": {"parts": [{"text":
+            "Acte 1: texte cassé. Note pour le concept préféré: 3"}]}}]})
+    doc = ai.rapport_participant("fr", {"etoiles": "3"})
+    assert doc["fournisseur"] == "none"
+    assert "Acte" not in doc["texte"]
+    assert doc["erreur"]
+
+
+def test_ancien_rapport_est_regenere():
+    import ai
+    assert not ai.rapport_cache_valide(
+        "Rapport BUS XPERIENCE",
+        "Acte 1: ancien texte.\n\nActe 2: suite.\n\nActe 3: fin.",
+    )
 
 
 # ------------------------------------------------------------- voix et sons
