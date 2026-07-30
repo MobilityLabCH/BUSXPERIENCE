@@ -127,11 +127,23 @@ button{font:inherit}
 .duel-or{align-self:center;color:var(--muted);font-size:clamp(18px,2vw,28px);font-weight:900}
 
 /* Concept */
-.concept-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:clamp(22px,4vw,58px);width:min(1160px,90vw);max-height:58vh;padding:clamp(24px,4vh,44px);border-radius:24px;background:var(--paper);color:var(--ink);box-shadow:20px 20px 0 var(--yellow)}
+.concept-subtitle{color:var(--paper);opacity:.8;font-size:clamp(15px,1.5vw,21px);font-weight:650;margin-top:-6px}
+.concept-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:clamp(22px,4vw,58px);width:min(1160px,90vw);max-height:56vh;padding:clamp(24px,4vh,44px);border-radius:24px;background:var(--paper);color:var(--ink);box-shadow:20px 20px 0 var(--yellow)}
 .concept-card.no-image{grid-template-columns:1fr}
 .concept-card h2{font-size:clamp(38px,5vw,72px);line-height:.95;letter-spacing:-.04em;font-weight:900;text-wrap:balance}
 .concept-card p{margin-top:18px;font-size:clamp(20px,2.2vw,31px);line-height:1.2;font-weight:650;max-width:48ch}
-.concept-card img{width:100%;height:100%;max-height:43vh;object-fit:cover;border-radius:15px}
+.concept-visual{width:100%;height:100%;display:flex}
+.concept-card img{width:100%;height:100%;max-height:41vh;object-fit:cover;border-radius:15px}
+.concept-icon{width:100%;height:100%;min-height:180px;max-height:41vh;display:flex;align-items:center;justify-content:center;gap:.15em;font-size:clamp(52px,7.5vw,96px);background:linear-gradient(135deg,#fff6cf,var(--yellow));border-radius:15px}
+
+/* Réactions (remplace les étoiles pour "cette idée te plairait-elle ?") */
+.reactions{display:flex;justify-content:center;align-items:stretch;gap:clamp(10px,2vw,26px);flex-wrap:wrap;width:min(1120px,92vw)}
+.reaction{flex:1 1 0;min-width:112px;max-width:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:clamp(16px,3vh,30px) 10px;border:2px solid var(--line);border-radius:20px;background:#17181c;color:var(--paper);cursor:pointer;position:relative;overflow:hidden;isolation:isolate;transition:transform .14s,border-color .14s,background .14s,color .14s}
+.reaction .hold-fill{position:absolute;inset:0;width:0%;background:rgba(255,255,255,.3);z-index:0;transition:width .06s linear}
+.reaction.selected .hold-fill{background:rgba(0,0,0,.16)}
+.reaction-emoji{font-size:clamp(38px,5.5vw,64px);line-height:1;position:relative;z-index:1}
+.reaction-label{font-size:clamp(13px,1.4vw,18px);font-weight:800;text-align:center;position:relative;z-index:1}
+.reaction.selected{background:var(--yellow);border-color:var(--yellow);color:var(--ink);transform:translateY(-9px)}
 
 /* Voix */
 .voice-area{display:flex;flex-direction:column;gap:clamp(16px,2.5vh,30px);align-items:flex-start;width:min(1050px,88vw)}
@@ -171,7 +183,7 @@ button{font:inherit}
  .choices.two{grid-template-columns:1fr}
  .choices.many{grid-template-columns:repeat(2,minmax(0,1fr))}
  .duel{grid-template-columns:1fr 1fr}.duel-or{display:none}
- .concept-card{grid-template-columns:1fr}.concept-card img{display:none}
+ .concept-card{grid-template-columns:1fr}.concept-visual{display:none}
  .report-body{grid-template-columns:1fr;gap:12px}
  .scale-values{gap:4px}.scale-value{border-radius:8px}
 }
@@ -283,10 +295,19 @@ button{font:inherit}
 
 <section class="screen question-layout" id="e-concept">
  <p class="eyebrow" id="concept-kicker"></p>
+ <p class="lead concept-subtitle" id="concept-subtitle"></p>
  <div class="concept-card" id="concept-card">
   <div><h2 id="concept-title"></h2><p id="concept-description"></p></div>
-  <img id="concept-image" alt="" hidden>
+  <div class="concept-visual" id="concept-visual">
+   <img id="concept-image" alt="" hidden>
+   <div class="concept-icon" id="concept-icon" hidden></div>
+  </div>
  </div>
+</section>
+
+<section class="screen question-layout" id="e-reaction">
+ <h2 class="question" id="reaction-question"></h2>
+ <div class="reactions" id="reaction-zone"></div>
 </section>
 
 <section class="screen question-layout" id="e-voice">
@@ -322,8 +343,8 @@ button{font:inherit}
    aucune lecture automatique des réponses. */
 
 const STEPS={
- fr:{experience:"Ton expérience",friction:"Ce qui coince",idees:"Les idées à tester",priorite:"Ta priorité"},
- de:{experience:"Dein Erlebnis",friction:"Was hakt",idees:"Ideen zum Testen",priorite:"Deine Priorität"}
+ fr:{experience:"Ton expérience",friction:"Ce qui coince",idees:"Ton trajet, en mieux",priorite:"Ta priorité"},
+ de:{experience:"Dein Erlebnis",friction:"Was hakt",idees:"Deine Fahrt, verbessert",priorite:"Deine Priorität"}
 };
 const TXT={
  fr:{
@@ -344,7 +365,9 @@ const TXT={
   stopContinue:"Continuer",stopDelete:"Arrêter et supprimer",
   participantCodeLabel:"Code de participation :",
   participantCodeHint:"Conserve-le si tu souhaites demander la suppression de tes réponses.",
-  noThanks:"Pas de souci. Bonne route !",concept:"Idée à tester",or:"ou",
+  noThanks:"Pas de souci. Bonne route !",or:"ou",
+  innovation:(n,total)=>`INNOVATION ${n} SUR ${total}`,
+  conceptSubtitle:"Des innovations pour rendre les transports publics plus agréables",
   stars:"étoiles",star:"étoile",recordStart:"Appuie pour répondre librement.",
   recording:"On t’écoute. Appuie quand tu as terminé.",review:"Ta réponse est prête.",
   listen:"Réécouter",redo:"Recommencer",save:"Valider",
@@ -369,12 +392,71 @@ const TXT={
   stopContinue:"Fortsetzen",stopDelete:"Abbrechen und löschen",
   participantCodeLabel:"Teilnahmecode:",
   participantCodeHint:"Bewahre ihn auf, falls du die Löschung deiner Antworten verlangen möchtest.",
-  noThanks:"Kein Problem. Gute Fahrt!",concept:"Idee zum Testen",or:"oder",
+  noThanks:"Kein Problem. Gute Fahrt!",or:"oder",
+  innovation:(n,total)=>`INNOVATION ${n} VON ${total}`,
+  conceptSubtitle:"Innovationen für ein angenehmeres öffentliches Verkehrsmittel",
   stars:"Sterne",star:"Stern",recordStart:"Drücke, um frei zu antworten.",
   recording:"Wir hören zu. Drücke, wenn du fertig bist.",review:"Deine Antwort ist bereit.",
   listen:"Anhören",redo:"Neu aufnehmen",save:"Bestätigen",
   calc:["Wir sammeln das Wesentliche…","Wir erkennen, was wirklich zählt…","Wir erstellen dein Reiseprofil…"],
   reportKicker:"DEIN REISEPROFIL"
+ }
+};
+
+/* Chaque innovation est jugée sur le critère qui la décrit vraiment (sécurité,
+   confort, simplicité, tranquillité…) plutôt que sur une échelle identique et
+   générique pour tout. Détection par mots-clés sur le nom/la description du
+   concept — fonctionne pour les concepts existants comme pour ceux ajoutés
+   plus tard dans l'admin (repli sur "agreable" si rien ne correspond). */
+function conceptTexte(c){return((c.nom_fr||"")+" "+(c.desc_fr||"")+" "+(c.nom_de||"")+" "+(c.desc_de||"")).toLowerCase()}
+function conceptCategorie(c){
+ const t=conceptTexte(c);
+ if(/signal|problème|sécurité|meld|sicherheit|gefahr/.test(t))return"securite";
+ if(/confort|assoir|asseoir|abri|éclairage|occupation|bondé|vide|komfort|beleuchtung|auslastung|überfüllt|sitz|wohlf/.test(t))return"confort";
+ if(/correspondance|retard|attend|prévenu|garantie|anschluss|verspätung|informiert|garantie/.test(t))return"confiance";
+ if(/billet|tarif|prix|itinéraire|route|kilomètre|départ|véhicule|chercher|billett|preis|kilometer|abfahrt|fahrzeug|abholen/.test(t))return"utilite";
+ return"agreable";
+}
+function conceptIcone(c){
+ const t=conceptTexte(c),table=[
+  [/correspondance|anschluss|umsteigen/,"🔄🚌"],
+  [/retard|verspät/,"⏱️🔔"],
+  [/itinéraire|route|perturbation|alternativ/,"🗺️➡️"],
+  [/occupation|bondé|überfüllt|auslastung|vide/,"👥📊"],
+  [/départ.*maison|losgeh|zuhause/,"🏠⏰"],
+  [/billet|tarif|prix|billett|preis/,"🎫✨"],
+  [/abri|éclairage|assoir|asseoir|sitz|licht|wohlf/,"🌦️💺"],
+  [/signal|problème|sécurité|meld|sicherheit/,"🚨📱"],
+  [/rabattement|véhicule|zubringer|abholen/,"🚐📍"],
+  [/dernier kilomètre|letzte meile|à pied|vélo|velo/,"🚶🚲"],
+ ];
+ for(const[re,icone]of table)if(re.test(t))return icone;
+ return"💡🚍";
+}
+const REACTIONS={
+ fr:{
+  agreable:{question:"Cette idée rendrait-elle tes trajets plus agréables ?",
+   items:[["😐","Pas vraiment"],["🙂","Un peu"],["😊","Oui"],["😄","Vraiment"],["🤩","Carrément"]]},
+  securite:{question:"Cette idée te ferait-elle sentir plus en sécurité ?",
+   items:[["😐","Pas vraiment"],["🙂","Un peu"],["🙌","Oui"],["🛡️","Vraiment"],["🤩","Complètement"]]},
+  confort:{question:"Cette idée rendrait-elle tes trajets plus confortables ?",
+   items:[["😐","Pas vraiment"],["🙂","Un peu"],["😌","Oui"],["😊","Vraiment"],["🤩","Beaucoup plus"]]},
+  utilite:{question:"Cette idée te simplifierait-elle la vie ?",
+   items:[["😐","Pas vraiment"],["🙂","Un peu"],["👍","Oui"],["😃","Vraiment"],["🤩","Énormément"]]},
+  confiance:{question:"Cette idée te rassurerait-elle dans tes trajets ?",
+   items:[["😐","Pas vraiment"],["🙂","Un peu"],["😊","Oui"],["😌","Vraiment"],["🤩","Complètement"]]}
+ },
+ de:{
+  agreable:{question:"Würde diese Idee deine Fahrten angenehmer machen?",
+   items:[["😐","Kaum"],["🙂","Etwas"],["😊","Ja"],["😄","Wirklich"],["🤩","Absolut"]]},
+  securite:{question:"Würdest du dich dadurch sicherer fühlen?",
+   items:[["😐","Kaum"],["🙂","Etwas"],["🙌","Ja"],["🛡️","Wirklich"],["🤩","Vollkommen"]]},
+  confort:{question:"Würde diese Idee deine Fahrten komfortabler machen?",
+   items:[["😐","Kaum"],["🙂","Etwas"],["😌","Ja"],["😊","Wirklich"],["🤩","Deutlich mehr"]]},
+  utilite:{question:"Würde dir diese Idee das Leben erleichtern?",
+   items:[["😐","Kaum"],["🙂","Etwas"],["👍","Ja"],["😃","Wirklich"],["🤩","Enorm"]]},
+  confiance:{question:"Würde dich diese Idee unterwegs beruhigen?",
+   items:[["😐","Kaum"],["🙂","Etwas"],["😊","Ja"],["😌","Wirklich"],["🤩","Vollkommen"]]}
  }
 };
 const DEMO={campagne:{nom:"Démo",musique:null,musique_active:0,musique_volume:.3,ton:"complice"},lieu:{nom:"Démo"},privacy:{
@@ -407,7 +489,15 @@ function tone(freqs,duration=.1,gain=.12){try{const a=ctx(),start=a.currentTime;
 const soundMove=()=>tone([390],.045,.07),soundOk=()=>tone([650,860],.08,.12),soundError=()=>tone([180],.12,.08),soundTransition=()=>tone([470],.05,.06);
 function musicStart(){const c=cfg.campagne||{};if(!c.musique_active||!c.musique||background)return;background=new Audio("/medias/"+c.musique);background.loop=true;background.volume=0;backgroundTarget=Math.min(1,Math.max(0,c.musique_volume||.3));background.play().catch(()=>background=null);fade(backgroundTarget,1800)}
 function fade(target,ms){if(!background)return;const start=background.volume,t0=performance.now();(function tick(){if(!background)return;const k=Math.min(1,(performance.now()-t0)/ms);background.volume=start+(target-start)*k;if(k<1)requestAnimationFrame(tick)})()}
-function musicDuck(){fade(backgroundTarget*.2,300)}function musicNormal(){fade(backgroundTarget,650)}
+function musicDuck(){fade(musicHardMuted?0:backgroundTarget*.2,300)}
+/* musicHardMuted: coupe totalement (pas seulement en fond sonore) avant et
+   pendant l'enregistrement d'une réponse vocale, car le micro physique capte
+   aussi la musique diffusée dans la pièce, pas seulement la voix. Tant que
+   ce verrou est actif, les duck/normal habituels de la lecture des questions
+   n'y remettent pas du son par-dessus l'enregistrement. */
+let musicHardMuted=false;
+function musicNormal(){if(musicHardMuted)return;fade(backgroundTarget,650)}
+function musicMute(){fade(0,250)}
 function musicStop(){if(!background)return;fade(0,800);later(850,()=>{if(background){background.pause();background=null}})}
 function horn(){const s=cfg.sons||{};if(!s.klaxon_actif){tone([523,659,784],.12);return}if(!klaxonAudio)klaxonAudio=new Audio("/medias/klaxon.mp3");klaxonAudio.volume=s.klaxon_volume||.7;klaxonAudio.currentTime=0;klaxonAudio.play().catch(()=>tone([523,659,784],.12))}
 
@@ -473,14 +563,14 @@ function refuse(){state="refused";hideChrome();$("#report-loading").textContent=
    session n'est créée si l'autorisation est refusée ou indisponible. */
 async function tryMicThenLaunch(){state="sending";setHelp("");let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{return showMicUnavailable()}stream.getTracks().forEach(t=>t.stop());musicStart();await launchSession()}
 async function launchSession(){if(demo){participantCode="BX-DEMO-0000";buildSequence();stepIndex=0;showStep(0);return}const fd=new FormData();fd.set("lang",lang);fd.set("participants","1");fd.set("mic_ok","1");fd.set("consent_version",(cfg.privacy&&cfg.privacy.version)||"");try{const r=await fetch("/api/sessions",{method:"POST",body:fd});if(!r.ok)throw new Error("refuse");const d=await r.json();session=d.session_id;participantCode=d.participant_code}catch{return showMicUnavailable()}buildSequence();stepIndex=0;showStep(0)}
-function showMicUnavailable(){clearTimers();stopSpeech();musicStop();state="mic-unavailable";session=null;hideChrome();show("e-mic-unavailable");later(3500,returnWaiting)}
+function showMicUnavailable(){clearTimers();stopSpeech();musicHardMuted=false;musicStop();state="mic-unavailable";session=null;hideChrome();show("e-mic-unavailable");later(3500,returnWaiting)}
 async function abandonnerSession(){if(!demo&&session){try{await fetch(`/api/sessions/${session}/abandonner`,{method:"POST"})}catch{}}}
 
 /* Enregistrement API */
 async function send(data){if(demo)return;const fd=new FormData();Object.entries(data).forEach(([k,v])=>{if(v!=null)fd.set(k,v)});try{await fetch(`/api/sessions/${session}/reponses`,{method:"POST",body:fd})}catch(e){console.error(e)}}
 
 /* Parcours */
-function showStep(delta=1){clearTimers();stopSpeech();let next=stepIndex+delta;while(next<sequence.length&&conditionsHide(sequence[next]))next+=delta>=0?1:-1;stepIndex=Math.max(0,next);if(stepIndex>=sequence.length)return finish();if(stepIndex===0&&!firstQuestionExplained){pendingFirstHint=true;firstQuestionExplained=true}const step=sequence[stepIndex];updateProgress(step);if(step.kind==="question")showQuestion(step.q);else if(step.kind==="concept")showConcept(step.c);else if(step.kind==="concept-impact")showStars({id:0,concept:step.c,[lang]:lang==="de"?"Wie stark würde diese Idee dein Bus-Erlebnis verbessern?":"À quel point cette idée améliorerait-elle ton expérience du bus ?",params:{max:5},key:"impact"});else showScale({id:0,concept:step.c,[lang]:lang==="de"?"Würdest du damit öfter den Bus nehmen?":"Avec cette idée, prendrais-tu le bus plus souvent ?",params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Certainement",min_libelle_de:"Gar nicht",max_libelle_de:"Ganz sicher"},key:"adoption"})}
+function showStep(delta=1){clearTimers();stopSpeech();let next=stepIndex+delta;while(next<sequence.length&&conditionsHide(sequence[next]))next+=delta>=0?1:-1;stepIndex=Math.max(0,next);if(stepIndex>=sequence.length)return finish();if(stepIndex===0&&!firstQuestionExplained){pendingFirstHint=true;firstQuestionExplained=true}const step=sequence[stepIndex];updateProgress(step);if(step.kind==="question")showQuestion(step.q);else if(step.kind==="concept")showConcept(step.c);else if(step.kind==="concept-impact")showReaction(step.c);else showScale({id:0,concept:step.c,[lang]:lang==="de"?"Würdest du damit öfter den Bus nehmen?":"Avec cette idée, prendrais-tu le bus plus souvent ?",params:{max:10,min_libelle_fr:"Pas du tout",max_libelle_fr:"Certainement",min_libelle_de:"Gar nicht",max_libelle_de:"Ganz sicher"},key:"adoption"})}
 function showQuestion(q){currentQuestion=q;q.displayText=(q[lang]||q.fr||"").replaceAll("{lieu}",(cfg.lieu&&cfg.lieu.nom)||"");if(q.type==="choix")showChoice(q);else if(q.type==="etoiles")showStars(q);else if(q.type==="echelle")showScale(q);else if(q.type==="compare")showCompare(q);else showVoice(q)}
 
 function fitQuestion(el,textValue){el.textContent=textValue;el.classList.toggle("compact",textValue.length>75);el.dataset.animated="0"}
@@ -502,23 +592,46 @@ function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCom
 function nextCompare(){currentCompare=currentCompare?0:1;refreshCompare();soundMove()}
 async function validateCompare(){state="sending";soundOk();const value=currentItems[currentCompare];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-function showConcept(c){state="concept";$("#concept-kicker").textContent=text().concept;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),card=$("#concept-card");if(c.image){img.src="/medias/"+c.image;img.hidden=false;card.classList.remove("no-image")}else{img.hidden=true;card.classList.add("no-image")}show("e-concept");setHelp(text().press)}
+function showConcept(c){state="concept";const total=(cfg.concepts||[]).length,idx=(cfg.concepts||[]).indexOf(c)+1;$("#concept-kicker").textContent=text().innovation(idx||1,total||1);$("#concept-subtitle").textContent=text().conceptSubtitle;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),iconEl=$("#concept-icon"),card=$("#concept-card");card.classList.remove("no-image");if(c.image){img.src="/medias/"+c.image;img.hidden=false;iconEl.hidden=true}else{img.hidden=true;iconEl.hidden=false;iconEl.textContent=conceptIcone(c)}show("e-concept");setHelp(text().press)}
+
+/* Réaction: remplace les étoiles pour "cette idée te plairait-elle ?". La
+   question et l'échelle d'émoticônes s'adaptent au critère réel du concept
+   (sécurité, confort, simplicité, tranquillité…) — jamais la même question
+   partout. Valeur envoyée: "1".."5", même format que l'ancien 1-5 étoiles. */
+let currentReaction=1;
+function showReaction(concept){
+ const cat=conceptCategorie(concept),def=REACTIONS[lang][cat];
+ const q={id:0,concept,[lang]:def.question,parle_fr:def.question,parle_de:def.question,displayText:def.question};
+ state="reaction";currentQuestion=q;currentReaction=1;
+ fitQuestion($("#reaction-question"),def.question);
+ const zone=$("#reaction-zone");zone.replaceChildren();
+ def.items.forEach(([emoji,label],i)=>{
+  const b=document.createElement("button");
+  b.className="reaction"+(i===0?" selected":"");b.tabIndex=-1;
+  b.innerHTML=`<i class="hold-fill"></i><span class="reaction-emoji">${emoji}</span><span class="reaction-label">${label}</span>`;
+  zone.appendChild(b);
+ });
+ show("e-reaction");setHelpChoose();speakQuestion(q);
+}
+function refreshReaction(){document.querySelectorAll("#reaction-zone .reaction").forEach((el,i)=>el.classList.toggle("selected",i===currentReaction-1))}
+function nextReaction(){const max=document.querySelectorAll("#reaction-zone .reaction").length;currentReaction=currentReaction%max+1;refreshReaction();soundMove()}
+async function validateReaction(){state="sending";soundOk();await send({concept_id:currentQuestion.concept.id,cle:"impact",valeur:String(currentReaction)});later(260,()=>showStep())}
 
 /* Question vocale: le microphone a déjà été autorisé au consentement.
    Il n'existe aucun autre chemin possible: si l'accès échoue ici, la
    session est supprimée et le message "microphone indisponible" s'affiche. */
 let recorder=null,chunks=[],lastBlob=null,voiceStream=null,voiceContext=null,voiceDeadline=0,voiceQuestion=null;
-function showVoice(q){voiceQuestion=q;state="voice-intro";fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
+function showVoice(q){voiceQuestion=q;state="voice-intro";musicHardMuted=true;musicMute();fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
 async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{await abandonnerSession();return showMicUnavailable()}voiceStream=stream;chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
 function updateTimer(){if(state!=="voice-recording")return;const seconds=Math.max(0,Math.ceil((voiceDeadline-Date.now())/1000));$("#voice-timer").textContent=`0:${String(seconds).padStart(2,"0")}`;if(seconds<=0)return stopRecording();later(250,updateTimer)}
 function startMeter(stream){try{voiceContext=new (window.AudioContext||window.webkitAudioContext)();const analyser=voiceContext.createAnalyser();voiceContext.createMediaStreamSource(stream).connect(analyser);analyser.fftSize=128;const data=new Uint8Array(analyser.frequencyBinCount),bars=[...document.querySelectorAll("#voice-meter i")];(function loop(){if(state!=="voice-recording"){voiceContext&&voiceContext.close();return}analyser.getByteFrequencyData(data);bars.forEach((b,i)=>b.style.height=Math.max(14,(data[i*3]||0)/255*100)+"%");requestAnimationFrame(loop)})()}catch{}}
-async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelpChoose()}
+async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());musicHardMuted=false;musicNormal();lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelpChoose()}
 function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObjectURL(lastBlob)).play();return}if(selection===1){state="voice-intro";$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;setHelp(text().press);return}saveVoice()}
 async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
 /* Rapport */
 async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
-function returnWaiting(){clearTimers();stopSpeech();musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
+function returnWaiting(){clearTimers();stopSpeech();musicHardMuted=false;musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
 
 /* ================================================================
    Gestionnaire central de pression — buzzer physique, Space, Enter,
@@ -539,7 +652,7 @@ function returnWaiting(){clearTimers();stopSpeech();musicStop();state="waiting";
 const LONG_PRESS=650,STOP_PRESS=4000;
 let pressStarted=0,pressHeld=false,thresholdReached=false,holdRAF=0,transitioning=false;
 let helpChooseMode=false,pendingFirstHint=false,firstQuestionExplained=false;
-const ABORTABLE=new Set(["choice","stars","scale","compare","concept","voice-intro","voice-recording","voice-review"]);
+const ABORTABLE=new Set(["choice","stars","scale","compare","concept","reaction","voice-intro","voice-recording","voice-review"]);
 let preAbortState=null,preAbortScreen=null;
 const soundReady=()=>tone([950],.09,.1);
 
@@ -553,7 +666,7 @@ function holdLoop(){
  const elapsed=Date.now()-pressStarted;
  const pct=Math.max(0,Math.min(100,elapsed/LONG_PRESS*100));
  setMeter(pct);
- const selectedFill=document.querySelector(".screen.active .choice.selected .hold-fill");
+ const selectedFill=document.querySelector(".screen.active .choice.selected .hold-fill,.screen.active .reaction.selected .hold-fill");
  if(selectedFill)selectedFill.style.width=pct+"%";
  if(elapsed>=LONG_PRESS&&!thresholdReached){
   thresholdReached=true;$("#press-meter").classList.add("ready");soundReady();
@@ -594,9 +707,9 @@ function resetPress(){
  if(helpChooseMode)helpText(text().pressIdle);
 }
 
-function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
+function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="reaction")return nextReaction();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
 function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","mic-unavailable","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
-function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
+function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="reaction")return validateReaction();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
 
 /* "Tu peux arrêter à tout moment": appui de 4 s pendant le parcours. */
 function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recorder&&recorder.state!=="inactive"&&recorder.stop()}catch{}voiceStream&&voiceStream.getTracks().forEach(t=>t.stop())}preAbortState=state;const active=document.querySelector(".screen.active");preAbortScreen=active?active.id:"e-waiting";state="stop-confirm";renderChoices($("#stop-confirm-choices"),[text().stopContinue,text().stopDelete],0);show("e-stop-confirm");setHelpChoose()}
@@ -632,6 +745,12 @@ function directTapSelect(target){
  if(scaleBtn){
   const idx=[...scaleBtn.parentElement.children].indexOf(scaleBtn);
   if(idx>=0){currentScale=idx;refreshScale();soundMove()}
+  return true;
+ }
+ const reactionBtn=target.closest(".reaction");
+ if(reactionBtn){
+  const idx=[...reactionBtn.parentElement.children].indexOf(reactionBtn);
+  if(idx>=0){currentReaction=idx+1;refreshReaction();soundMove()}
   return true;
  }
  if(target.closest("#compare-a")){if(currentCompare!==0){currentCompare=0;refreshCompare();soundMove()}return true}

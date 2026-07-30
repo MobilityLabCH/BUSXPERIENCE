@@ -238,6 +238,66 @@ def test_config_cabine(client):
     assert d["privacy"]["version"]
 
 
+def test_concepts_titres_benefices_voyageurs(client):
+    """Les titres de concepts sont reformulés en bénéfices voyageurs, pas en
+    noms techniques de fonctionnalité ou en travail expérimental à tester."""
+    d = client.get("/api/config").json()
+    noms = " ".join(c["nom_fr"] for c in d["concepts"]) + " " + \
+        " ".join(c.get("nom_de", "") for c in d["concepts"])
+    for interdit in ("Alerte retard immédiate", "Auslastungsanzeige",
+                      "Anschlussgarantie", "idée à tester", "Idee zum Testen"):
+        assert interdit not in noms
+
+
+def test_musique_coupee_pendant_enregistrement_micro(client):
+    """La musique de fond doit être totalement coupée avant et pendant
+    l'enregistrement d'une réponse vocale (le micro capte aussi le son
+    ambiant de la pièce, pas seulement la voix), pas seulement baissée."""
+    h = client.get("/cabine/").text
+    assert "function musicMute()" in h
+    assert "musicHardMuted" in h
+    # coupée dès l'affichage de la question vocale (avant même l'enregistrement)
+    m = re.search(r"function showVoice\(q\)\{([^}]*)\}", h)
+    assert m and "musicHardMuted=true" in m.group(1) and "musicMute()" in m.group(1)
+    # restaurée une fois l'enregistrement effectivement terminé
+    assert "musicHardMuted=false;musicNormal()" in h
+    # musicNormal() n'annule jamais la coupure tant qu'elle est active
+    # (sinon la lecture de la question la lèverait pendant l'enregistrement)
+    mn = re.search(r"function musicNormal\(\)\{([^}]*)\}", h)
+    assert mn and "if(musicHardMuted)return" in mn.group(0)
+
+
+def test_idee_a_tester_devient_innovation_dynamique(client):
+    """La séquence « idées à tester » est reformulée en « Ton trajet, en
+    mieux », avec un numéro d'innovation dynamique (jamais un nombre fixe:
+    le nombre de concepts est variable et aléatoire) et un sous-titre
+    positif. Les étoiles génériques ne servent plus à évaluer un concept:
+    une échelle de réactions adaptée au critère réel de chaque idée
+    (sécurité, confort, simplicité, tranquillité…) les remplace."""
+    h = client.get("/cabine/").text
+    assert "Ton trajet, en mieux" in h and "Deine Fahrt, verbessert" in h
+    assert "Les idées à tester" not in h and "Ideen zum Testen" not in h
+    # numéro d'innovation calculé dynamiquement, jamais un total figé
+    assert "INNOVATION ${n} SUR ${total}" in h
+    assert "INNOVATION ${n} VON ${total}" in h
+    assert "conceptSubtitle" in h
+    assert "Des innovations pour rendre les transports publics plus agréables" in h
+    # le vieux libellé "idée à tester" (eyebrow) a disparu
+    assert "concept:\"Idée à tester\"" not in h and "concept:\"Idee zum Testen\"" not in h
+    # remplace les étoiles pour l'évaluation d'un concept: un système de
+    # réactions distinct, avec plusieurs critères possibles (pas la même
+    # question partout)
+    assert "function showReaction(concept)" in h
+    assert "function conceptCategorie(c)" in h
+    assert "cle:\"impact\"" in h  # même format de réponse qu'avant (1 à 5)
+    for critere in ("agreable", "securite", "confort", "utilite", "confiance"):
+        assert f'{critere}:{{question:' in h.replace(" ", ""), critere
+    assert "Cette idée rendrait-elle tes trajets plus agréables ?" in h
+    assert "Cette idée te ferait-elle sentir plus en sécurité ?" in h
+    # icône ou illustration liée au contenu quand aucune image n'est déposée
+    assert "function conceptIcone(c)" in h
+
+
 def test_json_privacy_texte_legal_reel(client):
     """Le vrai texte légal (centralisé dans config.py) est bien celui exposé
     par /api/config — plus les anciens champs campagne.consent_fr/de."""
