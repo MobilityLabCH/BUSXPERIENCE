@@ -142,7 +142,7 @@ def test_bug_space_appui_long_corrige(client):
     assert 'visibilitychange' in h and "resetPress" in h
     assert 'addEventListener("pointercancel"' in h and "resetPress()" in h
     # une seule fonction traite le relâchement, quelle que soit la source
-    assert h.count("function pressUp()") == 1
+    assert h.count("function pressUp(") == 1
     assert h.count("function pressDown()") == 1
 
 
@@ -163,6 +163,39 @@ def test_tout_l_ecran_est_le_buzzer_sur_tactile(client):
     assert '$("#voice-review").addEventListener("click"' not in h
     # seul le vrai lien "Protection des données" échappe à la capture globale
     assert "pressIgnoredGesture" in h and ".privacy-card" in h
+
+
+def test_tap_direct_sur_une_carte_la_selectionne(client):
+    """Sur tactile, toucher directement une réponse/étoile/valeur/duel la
+    sélectionne tout de suite (plus naturel au doigt), sans pour autant
+    court-circuiter le modèle buzzer: un tap court dessus sélectionne sans
+    valider, un tap maintenu dessus sélectionne ET valide."""
+    h = client.get("/cabine/").text
+    assert "function directTapSelect(target)" in h
+    assert 'target.closest(".choice")' in h
+    assert 'target.closest(".star")' in h
+    assert 'target.closest(".scale-value")' in h
+    assert 'target.closest("#compare-a")' in h and 'target.closest("#compare-b")' in h
+    # câblé dans le geste global: pointerdown sélectionne, pointerup ne
+    # fait PAS aussi défiler vers l'option suivante quand c'était un tap direct
+    assert "pressDirectTap=directTapSelect(e.target)" in h
+    assert "pressUp(directTap)" in h
+    assert "if(directTap)return" in h
+
+
+def test_lecture_vocale_debloquee_des_le_premier_appui_ios(client):
+    """iOS Safari bloque speechSynthesis.speak() tant qu'il n'a pas été
+    appelé une fois de façon synchrone dans un vrai geste utilisateur. On le
+    déverrouille dès le tout premier appui (buzzer/tactile/clavier), sinon
+    les questions restent silencieuses sur iPhone après une transition
+    différée (setTimeout/await)."""
+    h = client.get("/cabine/").text
+    assert "function unlockSpeech()" in h
+    assert "speechUnlocked=true" in h
+    assert "new SpeechSynthesisUtterance(\"\")" in h
+    # appelé au tout début du point d'entrée unique de pression
+    m = re.search(r"function pressDown\(\)\{([^}]*)\}", h)
+    assert m and "unlockSpeech()" in m.group(1)
 
 
 def test_admin_protege(client):
