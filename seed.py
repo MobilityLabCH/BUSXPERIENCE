@@ -11,7 +11,7 @@ import json
 
 import db
 
-SEED_VERSION = "4"
+SEED_VERSION = "5"
 
 # (ordre, etape, type, fr, de, options_fr, options_de, params, condition, parle_fr, parle_de)
 QUESTIONS = [
@@ -98,44 +98,44 @@ QUESTIONS = [
 # Concepts testés: impact sur l'expérience (étoiles 1-5) + probabilité de
 # prendre le bus plus souvent (échelle 0-10). Jamais « bonne idée ? ».
 CONCEPTS = [
-    ("Garantie de correspondance",
-     "Anschlussgarantie",
+    ("Ne jamais rater ta correspondance",
+     "Deinen Anschluss nie mehr verpassen",
      "Si ton bus est en retard, ta correspondance t'attend ou une solution t'est proposée immédiatement.",
      "Ist dein Bus verspätet, wartet dein Anschluss oder du erhältst sofort eine Lösung."),
-    ("Alerte retard immédiate",
-     "Sofortige Verspätungsmeldung",
+    ("Savoir tout de suite si ton bus a du retard",
+     "Sofort wissen, wenn dein Bus Verspätung hat",
      "Dès qu'un retard est connu, tu es prévenu·e avec le nouveau temps d'attente réel.",
      "Sobald eine Verspätung bekannt ist, wirst du mit der neuen realen Wartezeit informiert."),
-    ("Itinéraire alternatif automatique",
-     "Automatische Alternativroute",
+    ("Toujours avoir un plan B en cas de perturbation",
+     "Bei Störungen immer einen Plan B haben",
      "En cas de perturbation, un autre itinéraire t'est proposé tout seul, sans chercher.",
      "Bei Störungen wird dir automatisch eine andere Route vorgeschlagen, ohne Suchen."),
-    ("Niveau d'occupation du bus",
-     "Auslastungsanzeige",
+    ("Savoir à l'avance si ton bus est bondé",
+     "Vorher wissen, ob dein Bus voll ist",
      "Avant de monter, tu sais si le bus est vide, normal ou bondé.",
      "Vor dem Einsteigen siehst du, ob der Bus leer, normal oder überfüllt ist."),
-    ("Alerte départ de la maison",
-     "Losgeh-Alarm",
+    ("Partir de chez toi pile au bon moment",
+     "Genau zur richtigen Zeit von zuhause losgehen",
      "Ton téléphone te dit quand partir de chez toi pour arriver pile à l'arrêt.",
      "Dein Handy sagt dir, wann du losgehen musst, um genau richtig an der Haltestelle zu sein."),
-    ("Billet automatique simplifié",
-     "Automatisches einfaches Billett",
+    ("Voyager sans jamais penser au billet",
+     "Fahren, ohne je ans Billett zu denken",
      "Tu montes, tu voyages, le bon prix se calcule tout seul. Zéro réflexion billet.",
      "Einsteigen, fahren, der richtige Preis berechnet sich von selbst. Null Billett-Denken."),
-    ("Un arrêt où l’on se sent bien",
-     "Eine Haltestelle zum Wohlfühlen",
+    ("Attendre ton bus au sec et en confiance",
+     "Trocken und entspannt auf den Bus warten",
      "À l’abri de la pluie, avec un bon éclairage et une vraie place pour s’asseoir. L’attente devient plus confortable et rassurante.",
      "Geschützt vor Regen, gut beleuchtet und mit einer richtigen Sitzgelegenheit. So wird das Warten angenehmer und entspannter."),
-    ("Signalement en deux secondes",
-     "Melden in zwei Sekunden",
+    ("Signaler un souci en un instant",
+     "Ein Problem in Sekunden melden",
      "Un problème à bord ou à l'arrêt ? Tu le signales en deux gestes depuis ton téléphone.",
      "Ein Problem im Bus oder an der Haltestelle? In zwei Gesten vom Handy gemeldet."),
-    ("Rabattement à la demande",
-     "Zubringer auf Abruf",
+    ("Rejoindre le bus même sans arrêt à proximité",
+     "Zum Bus kommen, auch ohne Haltestelle in der Nähe",
      "Un petit véhicule vient te chercher pour rejoindre la ligne principale quand il n'y a pas d'arrêt proche.",
      "Ein kleines Fahrzeug holt dich ab und bringt dich zur Hauptlinie, wenn keine Haltestelle nah ist."),
-    ("Info dernier kilomètre",
-     "Letzte-Meile-Info",
+    ("Savoir comment finir ton trajet sans réfléchir",
+     "Ohne Nachdenken wissen, wie du ans Ziel kommst",
      "À l'arrivée, on te montre comment finir le trajet: à pied, vélo en libre-service, correspondance.",
      "Bei der Ankunft siehst du, wie du ans Ziel kommst: zu Fuss, Leihvelo, Anschluss."),
 ]
@@ -245,6 +245,27 @@ def semer() -> str:
                  "werden. Du kannst auch ohne Mikrofon teilnehmen. Die Teilnahme ist freiwillig "
                  "und du kannst jederzeit aufhören.")
         c.execute("UPDATE campagnes SET consent_de=? WHERE consent_de=?", (CONSENT_DE, v3_de))
+        # v5 (seed): les titres de concepts deviennent des bénéfices voyageurs
+        # ("Savoir tout de suite si ton bus a du retard" plutôt qu'un nom
+        # technique de fonctionnalité). Ne remplace que les anciens titres par
+        # défaut exacts, jamais un concept renommé dans l'admin.
+        ANCIENS_TITRES_CONCEPTS = (
+            ("Garantie de correspondance", "Anschlussgarantie"),
+            ("Alerte retard immédiate", "Sofortige Verspätungsmeldung"),
+            ("Itinéraire alternatif automatique", "Automatische Alternativroute"),
+            ("Niveau d'occupation du bus", "Auslastungsanzeige"),
+            ("Alerte départ de la maison", "Losgeh-Alarm"),
+            ("Billet automatique simplifié", "Automatisches einfaches Billett"),
+            ("Un arrêt où l’on se sent bien", "Eine Haltestelle zum Wohlfühlen"),
+            ("Signalement en deux secondes", "Melden in zwei Sekunden"),
+            ("Rabattement à la demande", "Zubringer auf Abruf"),
+            ("Info dernier kilomètre", "Letzte-Meile-Info"),
+        )
+        for (ancien_fr, ancien_de), (nouveau_fr, nouveau_de, *_reste) in zip(
+                ANCIENS_TITRES_CONCEPTS, CONCEPTS):
+            c.execute(
+                "UPDATE concepts SET nom_fr=?, nom_de=? WHERE nom_fr=? AND nom_de=?",
+                (nouveau_fr, nouveau_de, ancien_fr, ancien_de))
         db.poser_reglage(c, "seed_version", SEED_VERSION)
         db.journaliser(c, "seed", f"contenu par défaut v{SEED_VERSION}")
     return "contenu par défaut semé"
