@@ -24,7 +24,7 @@ MEDIAS = DATA / "medias"        # musique, klaxon, images de concepts
 for d in (DATA, BACKUPS, AUDIO, VOIX, MEDIAS):
     d.mkdir(parents=True, exist_ok=True)
 
-VERSION_SCHEMA = 5
+VERSION_SCHEMA = 6
 
 
 def now() -> str:
@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS concepts (
     desc_fr TEXT DEFAULT '',
     desc_de TEXT DEFAULT '',
     image TEXT,                   -- fichier dans data/medias
+    icone TEXT DEFAULT '',        -- emoji choisi par l'admin (sinon détection auto)
     campagne_id INTEGER,          -- NULL = toutes campagnes
     actif INTEGER DEFAULT 1
 );
@@ -234,7 +235,9 @@ def migrer() -> list[str]:
                         "ALTER TABLE sessions ADD COLUMN consent_le TEXT",
                         "ALTER TABLE sessions ADD COLUMN consent_version TEXT",
                         "ALTER TABLE sessions ADD COLUMN privacy_lang TEXT",
-                        "ALTER TABLE sessions ADD COLUMN participant_code TEXT"):
+                        "ALTER TABLE sessions ADD COLUMN participant_code TEXT",
+                        # v6: pictogramme de concept personnalisable dans l'admin
+                        "ALTER TABLE concepts ADD COLUMN icone TEXT DEFAULT ''"):
                 try:
                     c.execute(alt)
                 except sqlite3.OperationalError:

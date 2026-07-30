@@ -24,6 +24,9 @@
    </select></div>
    <div><label>Image (optionnelle){{ ' · '+co.image if co.image }}</label>
     <input type="file" name="image" accept="image/*"></div>
+   <div><label>Picto (emoji, si pas d'image)</label>
+    <input name="icone" value="{{ co.icone or '' }}" maxlength="8" placeholder="ex: 🚌⏱️">
+    <span class="gris petit">Vide = pictogramme choisi automatiquement selon le sujet.</span></div>
   </div>
   <p style="margin-top:10px;display:flex;gap:10px">
    <label style="margin:0;display:flex;gap:6px;font-weight:400">
