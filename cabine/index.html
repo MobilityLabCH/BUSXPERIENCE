@@ -413,6 +413,20 @@ function horn(){const s=cfg.sons||{};if(!s.klaxon_actif){tone([523,659,784],.12)
 
 /* TTS: uniquement la question, jamais les réponses */
 let voiceCache={fr:null,de:null};
+/* iOS Safari bloque speechSynthesis.speak() tant qu'il n'a pas été appelé au
+   moins une fois de façon synchrone dans un vrai geste utilisateur (tap).
+   La lecture des questions arrive presque toujours après un setTimeout/await
+   (transition d'écran, autorisation micro…), ce que iOS ne compte plus comme
+   un geste — d'où un TTS silencieux sur iPhone. On "déverrouille" donc le
+   moteur une fois pour toutes dès le tout premier appui (buzzer, tactile ou
+   clavier), avec un utterance vide et muet: after that, tous les appels
+   suivants, même différés, restent audibles pour le reste de la session. */
+let speechUnlocked=false;
+function unlockSpeech(){
+ if(speechUnlocked||!("speechSynthesis" in window))return;
+ speechUnlocked=true;
+ try{const u=new SpeechSynthesisUtterance("");u.volume=0;speechSynthesis.speak(u)}catch{}
+}
 function voiceScore(v){const n=v.name.toLowerCase();return (n.includes("natural")?8:0)+(n.includes("online")?5:0)+(n.includes("neural")?5:0)+(n.includes("google")?3:0)+(!v.localService?2:0)}
 function browserVoice(){if(voiceCache[lang])return voiceCache[lang];const list=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(lang));if(!list.length)return null;const pref=(cfg.tts&&cfg.tts["voix_"+lang])||"auto";voiceCache[lang]=(pref!=="auto"&&list.find(v=>v.name===pref))||list.sort((a,b)=>voiceScore(b)-voiceScore(a))[0];return voiceCache[lang]}
 if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>voiceCache={fr:null,de:null};
@@ -550,20 +564,27 @@ function holdLoop(){
 
 /* Point d'entrée unique pour TOUTE source d'appui (buzzer, Space, Enter, tactile). */
 function pressDown(){
+ unlockSpeech();
  if(pressHeld)return; // ignore un second "down" tant que le premier n'est pas relâché
  pressHeld=true;pressStarted=Date.now();thresholdReached=false;
  pressVisual(true);armVisuals();resetIdle();
  if(helpChooseMode)helpText(text().pressHolding);
  holdRAF=requestAnimationFrame(holdLoop);
 }
-function pressUp(){
+/* directTap: le geste a démarré directement sur une carte reconnaissable
+   (choix, étoile, échelle, duel…) — elle a déjà été sélectionnée au posé du
+   doigt, donc un relâchement court ne doit pas en plus faire défiler vers la
+   suivante. Un relâchement long valide toujours, comme partout ailleurs. */
+function pressUp(directTap){
  if(!pressHeld)return;
  const duration=Date.now()-pressStarted;
  pressHeld=false;pressStarted=0;pressVisual(false);disarmVisuals();
  if(helpChooseMode)helpText(pendingFirstHint?text().firstQuestionHint:text().pressIdle);
  if(transitioning)return; // une transition d'écran est en cours: ignorer, jamais de double validation
  if(duration>=STOP_PRESS&&ABORTABLE.has(state))return openStopConfirm();
- duration>=LONG_PRESS?longPress():shortPress();
+ if(duration>=LONG_PRESS)return longPress();
+ if(directTap)return;
+ shortPress();
 }
 /* Remise à zéro sans exécuter d'action: perte de focus, onglet caché,
    pointeur annulé, ou changement d'écran en cours. */
@@ -587,20 +608,53 @@ async function confirmStopDelete(){state="sending";clearTimers();stopSpeech();mu
    n'importe où équivaut à un appui court, un tap maintenu équivaut à un
    appui long — même geste, même seuils, même code que le buzzer physique et
    Space/Entrée. Seul le lien réel "Protection des données" (une vraie
-   navigation) est exclu de cette capture. */
+   navigation) est exclu de cette capture.
+
+   En plus de ça, le tactile permet aussi de toucher directement une carte
+   précise (réponse, étoile, valeur d'échelle, duel…) pour la sélectionner
+   tout de suite — plus naturel au doigt qu'un simple défilement. Un tap
+   court dessus la sélectionne (sans valider); un tap maintenu dessus la
+   sélectionne ET valide, comme partout ailleurs. */
+function directTapSelect(target){
+ const btn=target.closest(".choice");
+ if(btn&&btn.parentElement&&btn.parentElement.id){
+  const idx=[...btn.parentElement.children].indexOf(btn);
+  if(idx>=0&&idx!==selection){selection=idx;refreshSelection("#"+btn.parentElement.id+" .choice");soundMove()}
+  return true;
+ }
+ const star=target.closest(".star");
+ if(star){
+  const idx=[...star.parentElement.children].indexOf(star);
+  if(idx>=0){currentStars=idx+1;refreshStars();soundMove()}
+  return true;
+ }
+ const scaleBtn=target.closest(".scale-value");
+ if(scaleBtn){
+  const idx=[...scaleBtn.parentElement.children].indexOf(scaleBtn);
+  if(idx>=0){currentScale=idx;refreshScale();soundMove()}
+  return true;
+ }
+ if(target.closest("#compare-a")){if(currentCompare!==0){currentCompare=0;refreshCompare();soundMove()}return true}
+ if(target.closest("#compare-b")){if(currentCompare!==1){currentCompare=1;refreshCompare();soundMove()}return true}
+ return false;
+}
 document.addEventListener("keydown",e=>{if((e.code==="Space"||e.code==="Enter")&&!e.repeat){e.preventDefault();pressDown()}});
 document.addEventListener("keyup",e=>{if(e.code==="Space"||e.code==="Enter"){e.preventDefault();pressUp()}});
-let pressIgnoredGesture=false;
+let pressIgnoredGesture=false,pressDirectTap=false;
 document.addEventListener("pointerdown",e=>{
  pressIgnoredGesture=!!e.target.closest(".privacy-card");
  if(pressIgnoredGesture)return;
- e.preventDefault();pressDown();
+ e.preventDefault();
+ pressDirectTap=directTapSelect(e.target);
+ pressDown();
 });
 document.addEventListener("pointerup",e=>{
  if(pressIgnoredGesture){pressIgnoredGesture=false;return}
- e.preventDefault();pressUp();
+ e.preventDefault();
+ const directTap=pressDirectTap;pressDirectTap=false;
+ pressUp(directTap);
 });
-document.addEventListener("pointercancel",()=>{pressIgnoredGesture=false;resetPress()});
+document.addEventListener("pointercancel",()=>{pressIgnoredGesture=false;pressDirectTap=false;resetPress()});
 window.addEventListener("blur",resetPress);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)resetPress()});
 
