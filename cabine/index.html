@@ -14,7 +14,11 @@
 }
 *{box-sizing:border-box;margin:0}
 html,body{width:100%;height:100%;overflow:hidden}
-body{background:var(--black);color:var(--paper);font-family:"Swiss Post Sans",Arial,system-ui,sans-serif}
+body{background:var(--black);color:var(--paper);font-family:"Swiss Post Sans",Arial,system-ui,sans-serif;
+ touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* Le lien "Protection des données" reste un vrai lien: on lui laisse son
+   comportement tactile normal (ouverture, appui long = menu du navigateur). */
+.privacy-card{touch-action:manipulation;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
 button{font:inherit}
 [hidden]{display:none!important}
 
@@ -434,7 +438,12 @@ function buildSequence(){const qs=(cfg.questions||[]).slice().sort((a,b)=>a.ordr
 function updateProgress(step){const visible=visibleSteps(),index=visible.indexOf(step),stage=step.kind==="question"?step.q.etape:"idees";$("#progress-step").textContent=STEPS[lang][stage]||"";$("#progress-count").textContent=`${index+1} / ${visible.length}`;$("#progress-fill").style.width=`${100*(index+1)/Math.max(1,visible.length)}%`;$("#progress").style.display="block"}
 
 /* Choix génériques */
-function renderChoices(container,items,selected=0){currentItems=items;selection=Math.max(0,Math.min(selected,items.length-1));container.replaceChildren();container.classList.toggle("two",items.length>5);container.classList.toggle("many",items.length>5);items.forEach((item,i)=>{const b=document.createElement("button");b.className="choice"+(i===selection?" selected":"");b.tabIndex=-1;b.innerHTML=`<i class="hold-fill"></i><span class="number">${i+1}</span><span></span>`;b.lastElementChild.textContent=item;b.onclick=()=>{if(selection===i)validateCurrent();else{selection=i;refreshSelection();soundMove()}};container.appendChild(b)})}
+/* Les cartes de choix sont purement visuelles: sur mobile/tactile comme au
+   clavier ou au buzzer physique, c'est UNIQUEMENT le gestionnaire de
+   pression global (plus bas) qui décide de l'action — jamais un tap direct
+   sur une carte précise. Un appui court partout sur l'écran équivaut à un
+   appui court sur le buzzer, un appui long partout équivaut à un appui long. */
+function renderChoices(container,items,selected=0){currentItems=items;selection=Math.max(0,Math.min(selected,items.length-1));container.replaceChildren();container.classList.toggle("two",items.length>5);container.classList.toggle("many",items.length>5);items.forEach((item,i)=>{const b=document.createElement("button");b.className="choice"+(i===selection?" selected":"");b.tabIndex=-1;b.innerHTML=`<i class="hold-fill"></i><span class="number">${i+1}</span><span></span>`;b.lastElementChild.textContent=item;container.appendChild(b)})}
 function refreshSelection(selector=".choice"){document.querySelectorAll(selector).forEach((el,i)=>el.classList.toggle("selected",i===selection))}
 function nextSelection(selector=".choice"){const nodes=[...document.querySelectorAll(selector)];if(!nodes.length)return;selection=(selection+1)%nodes.length;nodes.forEach((el,i)=>el.classList.toggle("selected",i===selection));soundMove()}
 function confirmSelection(selector=".choice"){const nodes=[...document.querySelectorAll(selector)],node=nodes[selection];if(node)node.classList.add("confirmed")}
@@ -464,17 +473,17 @@ function fitQuestion(el,textValue){el.textContent=textValue;el.classList.toggle(
 function showChoice(q,overrideItems=null){state="choice";currentQuestion=q;fitQuestion($("#choice-question"),q.displayText||q[lang]||q.fr);const items=overrideItems||((q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr)||[];renderChoices($("#choice-options"),items,0);show("e-choice");setHelpChoose();speakQuestion(q)}
 async function validateChoice(){if(!currentItems.length){soundError();return}state="sending";confirmSelection("#choice-options .choice");soundOk();const value=currentItems[selection];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-function showStars(q){state="stars";currentQuestion=q;currentStars=1;fitQuestion($("#stars-question"),q.displayText||q[lang]||q.fr);const max=(q.params&&q.params.max)||5,zone=$("#stars-zone");zone.replaceChildren();for(let i=1;i<=max;i++){const s=document.createElement("span");s.className="star";s.textContent="★";s.onclick=()=>{currentStars=i;refreshStars()};zone.appendChild(s)}refreshStars();show("e-stars");setHelpChoose();speakQuestion(q)}
+function showStars(q){state="stars";currentQuestion=q;currentStars=1;fitQuestion($("#stars-question"),q.displayText||q[lang]||q.fr);const max=(q.params&&q.params.max)||5,zone=$("#stars-zone");zone.replaceChildren();for(let i=1;i<=max;i++){const s=document.createElement("span");s.className="star";s.textContent="★";zone.appendChild(s)}refreshStars();show("e-stars");setHelpChoose();speakQuestion(q)}
 function refreshStars(){document.querySelectorAll("#stars-zone .star").forEach((s,i)=>s.classList.toggle("on",i<currentStars));$("#stars-value").textContent=`${currentStars} ${currentStars===1?text().star:text().stars}`}
 function nextStars(){const max=document.querySelectorAll("#stars-zone .star").length;currentStars=currentStars%max+1;refreshStars();soundMove()}
 async function validateStars(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"impact",valeur:String(currentStars)});else{localAnswers["q"+currentQuestion.id]=String(currentStars);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentStars)})}later(260,()=>showStep())}
 
-function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;currentScale=Math.min(5,max);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();for(let i=0;i<=max;i++){const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.textContent=String(i);b.onclick=()=>{currentScale=i;refreshScale()};zone.appendChild(b)}const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
+function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;currentScale=Math.min(5,max);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();for(let i=0;i<=max;i++){const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.textContent=String(i);zone.appendChild(b)}const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
 function refreshScale(){document.querySelectorAll("#scale-values .scale-value").forEach((b,i)=>b.classList.toggle("selected",i===currentScale))}
 function nextScale(){const max=document.querySelectorAll("#scale-values .scale-value").length-1;currentScale=currentScale>=max?0:currentScale+1;refreshScale();soundMove()}
 async function validateScale(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur:String(currentScale)});else{localAnswers["q"+currentQuestion.id]=String(currentScale);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentScale)})}later(260,()=>showStep())}
 
-function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();$("#compare-a").onclick=()=>{currentCompare=0;refreshCompare()};$("#compare-b").onclick=()=>{currentCompare=1;refreshCompare()};show("e-compare");setHelpChoose();speakQuestion(q)}
+function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();show("e-compare");setHelpChoose();speakQuestion(q)}
 function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCompare===0);$("#compare-b").classList.toggle("selected",currentCompare===1)}
 function nextCompare(){currentCompare=currentCompare?0:1;refreshCompare();soundMove()}
 async function validateCompare(){state="sending";soundOk();const value=currentItems[currentCompare];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
@@ -573,16 +582,27 @@ function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recor
 function stopConfirmChoice(){if(selection===1)return confirmStopDelete();state=preAbortState;show(preAbortScreen);if(preAbortState==="voice-recording"||preAbortState==="voice-review"){state="voice-intro";$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice")}if(state==="voice-intro"||state==="concept")setHelp(text().press);else setHelpChoose()}
 async function confirmStopDelete(){state="sending";clearTimers();stopSpeech();musicStop();await abandonnerSession();returnWaiting()}
 
-/* Entrées: le clavier Espace/Entrée représente le buzzer physique. Le tactile reste un secours. */
+/* Entrées: le clavier Espace/Entrée représente le buzzer physique. Sur
+   mobile/tactile (iPhone compris), TOUT l'écran est le buzzer: un tap court
+   n'importe où équivaut à un appui court, un tap maintenu équivaut à un
+   appui long — même geste, même seuils, même code que le buzzer physique et
+   Space/Entrée. Seul le lien réel "Protection des données" (une vraie
+   navigation) est exclu de cette capture. */
 document.addEventListener("keydown",e=>{if((e.code==="Space"||e.code==="Enter")&&!e.repeat){e.preventDefault();pressDown()}});
 document.addEventListener("keyup",e=>{if(e.code==="Space"||e.code==="Enter"){e.preventDefault();pressUp()}});
-$("#main-buzzer").addEventListener("pointerdown",e=>{e.preventDefault();pressDown()});
-$("#main-buzzer").addEventListener("pointerup",e=>{e.preventDefault();pressUp()});
-$("#main-buzzer").addEventListener("pointercancel",resetPress);
-$("#main-buzzer").addEventListener("pointerleave",()=>{if(pressHeld)resetPress()});
+let pressIgnoredGesture=false;
+document.addEventListener("pointerdown",e=>{
+ pressIgnoredGesture=!!e.target.closest(".privacy-card");
+ if(pressIgnoredGesture)return;
+ e.preventDefault();pressDown();
+});
+document.addEventListener("pointerup",e=>{
+ if(pressIgnoredGesture){pressIgnoredGesture=false;return}
+ e.preventDefault();pressUp();
+});
+document.addEventListener("pointercancel",()=>{pressIgnoredGesture=false;resetPress()});
 window.addEventListener("blur",resetPress);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)resetPress()});
-$("#voice-review").addEventListener("click",e=>{const b=e.target.closest(".choice");if(!b)return;selection=[...$("#voice-review").children].indexOf(b);refreshSelection("#voice-review .choice")});
 
 function resetIdle(){clearTimeout(idleTimer);idleTimer=setTimeout(()=>{if(!["waiting","voice-recording","report"].includes(state))returnWaiting()},120000)}
 resetIdle();animateWords($("#e-waiting"));

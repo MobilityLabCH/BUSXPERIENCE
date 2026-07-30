@@ -140,10 +140,29 @@ def test_bug_space_appui_long_corrige(client):
     assert "if(transitioning)return" in h
     assert 'addEventListener("blur",resetPress)' in h
     assert 'visibilitychange' in h and "resetPress" in h
-    assert 'addEventListener("pointercancel",resetPress)' in h
+    assert 'addEventListener("pointercancel"' in h and "resetPress()" in h
     # une seule fonction traite le relâchement, quelle que soit la source
     assert h.count("function pressUp()") == 1
     assert h.count("function pressDown()") == 1
+
+
+def test_tout_l_ecran_est_le_buzzer_sur_tactile(client):
+    """Sur mobile (iPhone compris), un tap court ou maintenu n'importe où sur
+    l'écran doit produire le même effet qu'un appui court/long sur le buzzer
+    physique: gestionnaire global unique, pas de raccourci par carte qui
+    court-circuiterait ou doublonnerait ce geste."""
+    h = client.get("/cabine/").text
+    assert 'document.addEventListener("pointerdown"' in h
+    assert 'document.addEventListener("pointerup"' in h
+    # aucune carte de choix / étoile / échelle / duel n'a plus sa propre
+    # action au clic: seul le geste global (court/long) décide
+    assert "b.onclick=" not in h
+    assert "s.onclick=" not in h
+    assert '$("#compare-a").onclick=' not in h
+    assert '$("#compare-b").onclick=' not in h
+    assert '$("#voice-review").addEventListener("click"' not in h
+    # seul le vrai lien "Protection des données" échappe à la capture globale
+    assert "pressIgnoredGesture" in h and ".privacy-card" in h
 
 
 def test_admin_protege(client):
