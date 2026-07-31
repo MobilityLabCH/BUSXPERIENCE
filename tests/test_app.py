@@ -252,12 +252,27 @@ def test_concepts_titres_benefices_voyageurs(client):
 def test_rapport_final_presente_un_billet_personnalise(client):
     """La dernière page (le rapport) doit prendre la forme d'un billet de
     voyage: souche avec le code de participation mis en avant (preuve
-    concrète de personnalisation), pictogramme, et le lieu affiché dans
-    l'accroche quand il est connu — pas juste un bloc de texte générique."""
+    concrète de personnalisation), pictogramme, et le lieu affiché — pas
+    juste un bloc de texte générique."""
     h = client.get("/cabine/").text
     assert 'class="report-main"' in h and 'class="report-stub"' in h
     assert 'id="report-confetti"' in h or 'class="report-confetti"' in h
     assert "lieuNom" in h and "cfg.lieu" in h
+
+
+def test_billet_indique_le_buzzer_lheure_exacte_et_un_mot_de_remerciement(client):
+    """Le billet final doit dire où se trouve le buzzer utilisé (nom du
+    lieu de la campagne), la date et l'heure exactes de la session, et se
+    terminer par un mot chaleureux plutôt qu'un simple bloc de données."""
+    h = client.get("/cabine/").text
+    assert 'id="report-stub-lieu"' in h and 'id="report-stub-datetime"' in h
+    assert 'id="report-thanks"' in h
+    assert "reportBuzzerLabel" in h and "reportDateLabel" in h and "reportThanks" in h
+    # une heure/date réelles, calculées au moment du rapport - pas un texte figé
+    assert "new Date()" in h and "toLocaleDateString" in h and "toLocaleTimeString" in h
+    # les deux langues ont un message de remerciement distinct et non vide
+    assert "Merci pour ce moment passé avec nous" in h
+    assert "Danke für diesen Moment mit uns" in h
 
 
 def test_pictogramme_admin_prioritaire_sur_la_detection_auto(client):
@@ -265,6 +280,15 @@ def test_pictogramme_admin_prioritaire_sur_la_detection_auto(client):
     être utilisé de préférence au picto détecté automatiquement par mots-clés."""
     h = client.get("/cabine/").text
     assert '(c.icone&&c.icone.trim())||conceptIcone(c)' in h
+
+
+def test_photo_de_concept_repli_sur_picto_si_le_fichier_echoue(client):
+    """Si l'image d'un concept ne charge pas (fichier manquant, chemin
+    invalide), on doit basculer sur le pictogramme plutôt que de laisser un
+    cadre d'image cassé et vide."""
+    h = client.get("/cabine/").text
+    assert "function showConcept(c){" in h
+    assert "img.onerror=showIcon" in h
 
 
 def test_admin_peut_definir_le_picto_dun_concept(client):
@@ -286,6 +310,26 @@ def test_admin_peut_definir_le_picto_dun_concept(client):
     assert icone == "🚀🎉"
 
 
+def test_concept_illustre_par_une_photo_toujours_tire_en_priorite(client):
+    """Un concept illustré par une photo (ajoutée par l'admin) doit toujours
+    sortir dans le tirage aléatoire des concepts présentés en session -
+    sinon, avec peu de concepts tirés au sort parmi beaucoup, la photo
+    n'apparaît quasiment jamais et donne l'impression qu'elle ne marche pas."""
+    _login(client)
+    import db as module_db
+    with module_db.conn() as c:
+        row = c.execute("SELECT id, nom_fr, nom_de FROM concepts ORDER BY id LIMIT 1").fetchone()
+        cid = row["id"]
+    files = {"image": ("photo.jpg", b"\xff\xd8\xff\xe0FAKE", "image/jpeg")}
+    data = {"concept_id": cid, "nom_fr": row["nom_fr"], "nom_de": row["nom_de"],
+            "desc_fr": "", "desc_de": "", "icone": "", "campagne_id": 0, "actif": 1}
+    client.post("/admin/concepts", data=data, files=files, follow_redirects=False)
+    client.post("/admin/concepts", data={"nb_concepts": 1})
+    for _ in range(15):
+        cfg = client.get("/api/config").json()
+        assert any(c["id"] == cid for c in cfg["concepts"])
+
+
 def test_musique_coupee_pendant_enregistrement_micro(client):
     """La musique de fond doit être totalement coupée avant et pendant
     l'enregistrement d'une réponse vocale (le micro capte aussi le son
@@ -302,6 +346,25 @@ def test_musique_coupee_pendant_enregistrement_micro(client):
     # (sinon la lecture de la question la lèverait pendant l'enregistrement)
     mn = re.search(r"function musicNormal\(\)\{([^}]*)\}", h)
     assert mn and "if(musicHardMuted)return" in mn.group(0)
+
+
+def test_fade_musique_ne_peut_pas_etre_ecrasee_par_une_rampe_perimee(client):
+    """Bug réel identifié en usage: deux fade() qui se chevauchent (ex: un
+    fade-up résiduel de 650ms d'une lecture de question qu'on vient
+    d'interrompre, suivi de près par le fade-to-0 de 250ms du coupe-son
+    micro) continuaient TOUTES LES DEUX de piloter background.volume image
+    par image, sans mécanisme d'annulation — la rampe la plus longue, encore
+    active après que la coupure a fini la sienne, remontait le son en pleine
+    coupure. fade() doit invalider toute rampe précédente dès qu'une
+    nouvelle démarre (jeton de génération)."""
+    h = client.get("/cabine/").text
+    m = re.search(r"function fade\(target,ms\)\{([^}]*(?:\{[^}]*\}[^}]*)*)\}", h)
+    assert m, "fonction fade() introuvable"
+    corps = m.group(0)
+    assert "gen" in corps and "fadeGen" in corps, (
+        "fade() doit utiliser un jeton de génération pour invalider les "
+        "rampes précédentes encore en cours")
+    assert "gen!==fadeGen" in corps or "fadeGen!==gen" in corps
 
 
 def test_idee_a_tester_devient_innovation_dynamique(client):

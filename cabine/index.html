@@ -134,7 +134,7 @@ button{font:inherit}
 .concept-card p{margin-top:18px;font-size:clamp(19px,1.9vw,26px);line-height:1.2;font-weight:650;max-width:48ch}
 .concept-visual{width:100%;height:100%;display:flex}
 .concept-card img{width:100%;height:100%;max-height:41vh;object-fit:cover;border-radius:15px}
-.concept-icon{width:100%;height:100%;min-height:180px;max-height:41vh;display:flex;align-items:center;justify-content:center;gap:.15em;font-size:clamp(48px,6.4vw,80px);background:linear-gradient(135deg,#fff6cf,var(--yellow));border-radius:15px}
+.concept-icon{width:100%;height:100%;min-height:180px;max-height:41vh;display:flex;align-items:center;justify-content:center;gap:.15em;font-size:clamp(48px,6.4vw,80px);background:var(--yellow);border-radius:15px}
 
 /* Réactions (remplace les étoiles pour "cette idée te plairait-elle ?") */
 .reactions{display:flex;justify-content:center;align-items:stretch;gap:clamp(10px,2vw,26px);flex-wrap:wrap;width:min(1120px,92vw)}
@@ -166,8 +166,13 @@ button{font:inherit}
 .report-body{display:grid;grid-template-columns:1fr 1fr;gap:clamp(22px,3.4vw,46px);margin-top:clamp(20px,3vh,34px);font-size:clamp(16px,1.6vw,22px);line-height:1.38;font-weight:600}
 .report-conclusion{position:relative;display:inline-block;margin-top:clamp(20px,3vh,34px);padding:13px 20px 13px 38px;background:var(--ink);color:var(--yellow);border-radius:10px;font-size:clamp(16px,1.7vw,22px);line-height:1.28;font-weight:900}
 .report-conclusion:before{content:"\201C";position:absolute;left:12px;top:.02em;font-size:1.5em;font-weight:900;opacity:.5;line-height:1}
-.report-stub{position:relative;z-index:1;background:#efe8d6;border-left:2px dashed rgba(17,18,22,.22);padding:clamp(24px,4vh,44px) clamp(20px,2.6vw,30px);display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.report-thanks{margin-top:clamp(16px,2.4vh,26px);color:#5f5d57;font-size:clamp(13px,1.25vw,17px);font-weight:650;font-style:italic;max-width:52ch}
+.report-stub{position:relative;z-index:1;background:#efe8d6;border-left:2px dashed rgba(17,18,22,.22);padding:clamp(24px,4vh,44px) clamp(20px,2.6vw,30px);display:flex;flex-direction:column;gap:20px}
 .report-stub-icon{width:46px;height:46px;display:grid;place-items:center;background:var(--yellow);border-radius:12px;font-size:22px;flex:0 0 auto}
+.report-stub-fields{display:flex;flex-direction:column;gap:14px;flex:1}
+.report-stub-field{color:#6f6d66;font-size:clamp(11px,1.05vw,14px);font-weight:650;line-height:1.4}
+.report-stub-field b{display:block;margin-top:3px;color:var(--ink);font-size:clamp(15px,1.5vw,19px);font-weight:800}
+.report-stub-footer{display:flex;flex-direction:column;gap:16px}
 .report-barcode{height:32px;border-radius:3px;opacity:.8;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 5px,var(--ink) 5px 6px,transparent 6px 10px,var(--ink) 10px 13px,transparent 13px 15px,var(--ink) 15px 18px,transparent 18px 23px,var(--ink) 23px 24px,transparent 24px 28px)}
 .report-label{color:#8b887f;font-size:clamp(11px,1.05vw,14px);font-weight:650}
 .report-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
@@ -360,12 +365,19 @@ button{font:inherit}
    <h2 class="report-title" id="report-title"></h2>
    <div class="report-body" id="report-body"></div>
    <p class="report-conclusion" id="report-conclusion"></p>
+   <p class="report-thanks" id="report-thanks"></p>
   </div>
   <div class="report-stub">
    <div class="report-stub-icon" aria-hidden="true">🚌</div>
-   <p id="participant-code-line" hidden></p>
-   <div class="report-barcode" aria-hidden="true"></div>
-   <p class="report-label"><span id="report-label"></span> · MobilityLab Sion</p>
+   <div class="report-stub-fields">
+    <p class="report-stub-field" id="report-stub-lieu" hidden></p>
+    <p class="report-stub-field" id="report-stub-datetime"></p>
+    <p id="participant-code-line" hidden></p>
+   </div>
+   <div class="report-stub-footer">
+    <div class="report-barcode" aria-hidden="true"></div>
+    <p class="report-label"><span id="report-label"></span> · MobilityLab Sion</p>
+   </div>
   </div>
  </article>
 </section>
@@ -406,7 +418,9 @@ const TXT={
   recording:"On t’écoute. Appuie quand tu as terminé.",review:"Ta réponse est prête.",
   listen:"Réécouter",redo:"Recommencer",save:"Valider",
   calc:["On rassemble l’essentiel…","On repère ce qui compte vraiment…","On prépare ton profil de voyage…"],
-  reportKicker:"TON PROFIL DE VOYAGE"
+  reportKicker:"TON PROFIL DE VOYAGE",
+  reportBuzzerLabel:"Buzzer",reportDateLabel:"Le",
+  reportThanks:"Merci pour ce moment passé avec nous. À très bientôt, pour de vrai, sur nos lignes !"
  },
  de:{
   press:"Drücken zum Weitergehen",
@@ -433,7 +447,9 @@ const TXT={
   recording:"Wir hören zu. Drücke, wenn du fertig bist.",review:"Deine Antwort ist bereit.",
   listen:"Anhören",redo:"Neu aufnehmen",save:"Bestätigen",
   calc:["Wir sammeln das Wesentliche…","Wir erkennen, was wirklich zählt…","Wir erstellen dein Reiseprofil…"],
-  reportKicker:"DEIN REISEPROFIL"
+  reportKicker:"DEIN REISEPROFIL",
+  reportBuzzerLabel:"Buzzer",reportDateLabel:"Am",
+  reportThanks:"Danke für diesen Moment mit uns. Bis bald – ganz real – auf unseren Linien!"
  }
 };
 
@@ -522,7 +538,14 @@ function ctx(){return audioCtx||(audioCtx=new (window.AudioContext||window.webki
 function tone(freqs,duration=.1,gain=.12){try{const a=ctx(),start=a.currentTime;freqs.forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=f;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0,start+i*duration);g.gain.linearRampToValueAtTime(gain,start+i*duration+.015);g.gain.linearRampToValueAtTime(0,start+(i+1)*duration);o.start(start+i*duration);o.stop(start+(i+1)*duration+.02)})}catch{}}
 const soundMove=()=>tone([390],.045,.07),soundOk=()=>tone([650,860],.08,.12),soundError=()=>tone([180],.12,.08),soundTransition=()=>tone([470],.05,.06);
 function musicStart(){const c=cfg.campagne||{};if(!c.musique_active||!c.musique||background)return;background=new Audio("/medias/"+c.musique);background.loop=true;background.volume=0;backgroundTarget=Math.min(1,Math.max(0,c.musique_volume||.3));background.play().catch(()=>background=null);fade(backgroundTarget,1800)}
-function fade(target,ms){if(!background)return;const start=background.volume,t0=performance.now();(function tick(){if(!background)return;const k=Math.min(1,(performance.now()-t0)/ms);background.volume=start+(target-start)*k;if(k<1)requestAnimationFrame(tick)})()}
+/* Chaque fade() invalide le précédent (jeton de génération): sans ça, deux
+   rampes qui se chevauchent (ex: un fade-up résiduel d'une lecture de
+   question tout juste annulée, plus long, croisant un fade-to-0 du coupe-son
+   micro, plus court) continuent toutes les deux d'écrire background.volume
+   image par image — celle qui termine en dernier "gagne" et peut remonter le
+   son en pleine coupure, même après que le mute a fini sa propre rampe. */
+let fadeGen=0;
+function fade(target,ms){if(!background)return;const gen=++fadeGen;const start=background.volume,t0=performance.now();(function tick(){if(!background||gen!==fadeGen)return;const k=Math.min(1,(performance.now()-t0)/ms);background.volume=start+(target-start)*k;if(k<1)requestAnimationFrame(tick)})()}
 function musicDuck(){fade(musicHardMuted?0:backgroundTarget*.2,300)}
 /* musicHardMuted: coupe totalement (pas seulement en fond sonore) avant et
    pendant l'enregistrement d'une réponse vocale, car le micro physique capte
@@ -626,7 +649,7 @@ function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCom
 function nextCompare(){currentCompare=currentCompare?0:1;refreshCompare();soundMove()}
 async function validateCompare(){state="sending";soundOk();const value=currentItems[currentCompare];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-function showConcept(c){state="concept";const total=(cfg.concepts||[]).length,idx=(cfg.concepts||[]).indexOf(c)+1;$("#concept-kicker").textContent=text().innovation(idx||1,total||1);$("#concept-subtitle").textContent=text().conceptSubtitle;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),iconEl=$("#concept-icon"),card=$("#concept-card");card.classList.remove("no-image");if(c.image){img.src="/medias/"+c.image;img.hidden=false;iconEl.hidden=true}else{img.hidden=true;iconEl.hidden=false;iconEl.textContent=(c.icone&&c.icone.trim())||conceptIcone(c)}show("e-concept");setHelp(text().press)}
+function showConcept(c){state="concept";const total=(cfg.concepts||[]).length,idx=(cfg.concepts||[]).indexOf(c)+1;$("#concept-kicker").textContent=text().innovation(idx||1,total||1);$("#concept-subtitle").textContent=text().conceptSubtitle;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),iconEl=$("#concept-icon"),card=$("#concept-card");card.classList.remove("no-image");const showIcon=()=>{img.hidden=true;iconEl.hidden=false;iconEl.textContent=(c.icone&&c.icone.trim())||conceptIcone(c)};if(c.image){img.onerror=showIcon;img.src="/medias/"+c.image;img.hidden=false;iconEl.hidden=true}else showIcon();show("e-concept");setHelp(text().press)}
 
 /* Réaction: remplace les étoiles pour "cette idée te plairait-elle ?". La
    question et l'échelle d'émoticônes s'adaptent au critère réel du concept
@@ -664,7 +687,7 @@ function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObject
 async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
 /* Rapport */
-async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};const lieuNom=cfg.lieu&&cfg.lieu.nom;$("#report-kicker").textContent=text().reportKicker+(lieuNom?" · "+lieuNom:"");$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
+async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};const lieuNom=cfg.lieu&&cfg.lieu.nom;$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;const lieuEl=$("#report-stub-lieu");if(lieuNom){lieuEl.innerHTML=`${text().reportBuzzerLabel}<b>${lieuNom}</b>`;lieuEl.hidden=false}else lieuEl.hidden=true;const finLocale=lang==="de"?"de-CH":"fr-CH",now=new Date();$("#report-stub-datetime").innerHTML=`${text().reportDateLabel}<b>${now.toLocaleDateString(finLocale,{day:"2-digit",month:"2-digit",year:"numeric"})} · ${now.toLocaleTimeString(finLocale,{hour:"2-digit",minute:"2-digit"})}</b>`;$("#report-thanks").textContent=text().reportThanks;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
 function returnWaiting(){clearTimers();stopSpeech();musicHardMuted=false;musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
 
 /* ================================================================
