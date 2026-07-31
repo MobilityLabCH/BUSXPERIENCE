@@ -133,42 +133,53 @@ TONS = {
     "institutionnel": "professionnel, humain et très légèrement souriant",
 }
 
+CATEGORIES_VISUELLES = (
+    "panorama", "ponctualite", "information", "confort", "affluence",
+    "securite", "prix", "correspondance", "dernier_kilometre", "generique",
+)
+
 PROMPT_PARTICIPANT = """Tu écris le profil de voyage BUS XPERIENCE d'une seule
-personne. Langue: {langue}. Ton: {ton}.
+personne, à partir de ses réponses réelles à un parcours BUS XPERIENCE
+(réponses structurées, préférences, frustrations, transcriptions vocales,
+innovations évaluées et leur potentiel d'adoption). Langue: {langue}. Ton:
+{ton}.
 
-À partir des données JSON fournies, sélectionne seulement 3 ou 4 informations
-réellement intéressantes. Transforme les valeurs brutes en langage naturel.
-N'invente rien et ne cherche jamais à tout reprendre.
+Le profil doit provoquer, dans cet ordre, trois réactions chez la personne
+qui le lit: « c'est moi », puis « c'est drôle », puis « cette conclusion est
+utile ». Sélectionne seulement les informations réellement intéressantes
+dans les données fournies; n'invente jamais un fait absent des réponses et
+ne cherche jamais à tout reprendre. N'écris ni un simple résumé, ni un
+langage institutionnel.
 
-Le résultat doit contenir exactement:
-1. un titre personnalisé, court, mémorable et légèrement drôle;
-2. paragraphe_1: la relation de la personne au bus;
-3. paragraphe_2: son principal irritant et l'amélioration qui lui serait utile;
-4. une conclusion qui donne le sourire: une phrase courte façon citation ou
-   pensée positive (style fable, proverbe, sagesse populaire ou grand nom
-   connu), reliée avec humour au sujet réel de sa réponse — jamais une
-   formule vague ou interchangeable d'un profil à l'autre.
+Réponds uniquement avec ce JSON strict, exactement ces six clés:
+{{"titre_profil":"...","plaisir":"...","friction":"...","idee_a_tester":"...","verdict":"...","categorie_visuelle":"..."}}
 
-Exemples du niveau de qualité attendu pour la conclusion (uniquement pour le
-style, ne recopie jamais ces phrases telles quelles):
-- pour un irritant "correspondance ratée": «Ton verdict: la Fontaine l'a
-  dit — mieux vaut partir à point.»
-- pour un irritant "retard sans info": «Ton verdict: même un coucou suisse
-  te préviendrait mieux avant de sonner.»
-- pour un irritant "bus bondé": «Ton verdict: on ne tasse pas les gens
-  comme une fondue à partager.»
-Chaque exemple nomme un décalage concret et inattendu avec l'irritant réel,
-avec une image simple à visualiser, au lieu d'une morale générique ou
-abstraite. Une conclusion comme «de l'info avant les mauvaises surprises»
-ou «la patience, ça paie» est un échec: c'est vague, interchangeable et
-sans surprise — à proscrire absolument.
+Contenu attendu pour chaque clé:
+- titre_profil: un nom de profil court, amusant et mémorable, 3 à 7 mots,
+  qui tient sur deux lignes maximum à l'affichage;
+- plaisir: ce que la personne apprécie réellement dans le bus, fondé sur une
+  préférence qu'elle a vraiment exprimée, 15 à 28 mots;
+- friction: son principal point de friction, fondé sur un problème qu'elle a
+  vraiment exprimé, 15 à 28 mots;
+- idee_a_tester: une solution concrète, réaliste et testable par CarPostal
+  pour répondre à cette friction, 10 à 20 mots;
+- verdict: une excellente punchline personnelle, intelligente et légèrement
+  impertinente, qui conclut le profil avec humour, 12 à 25 mots;
+- categorie_visuelle: exactement une valeur parmi panorama, ponctualite,
+  information, confort, affluence, securite, prix, correspondance,
+  dernier_kilometre, generique — celle qui correspond le mieux au sujet
+  principal du profil (utilise "generique" si aucune ne convient vraiment).
+
+Exemple du niveau de qualité attendu (uniquement pour le style et le
+calibrage des longueurs, ne recopie jamais ces phrases telles quelles, et
+n'utilise ce clin d'œil suisse que si les réponses réelles s'y prêtent):
+{{"titre_profil":"Le guetteur du premier rang","plaisir":"Tu montes rarement dans le bus, mais quand tu le fais, tu choisis la fenêtre et tu regardes le monde passer.","friction":"Tu acceptes qu'un trajet prenne du retard. Beaucoup moins que personne ne te dise pourquoi.","idee_a_tester":"Une information immédiate en cas de retard, avec une alternative claire.","verdict":"Tu n'exiges pas la précision d'une montre suisse. Juste qu'on te dise pourquoi elle retarde.","categorie_visuelle":"panorama"}}
 
 Contraintes absolues:
 - ne reproduis jamais un nom de personne, numéro de téléphone, adresse
   postale, e-mail ou autre information personnelle qui aurait pu être
   prononcée par erreur dans une transcription; si une telle information
   apparaît dans les données, ignore-la simplement;
-- 60 à 90 mots au total pour les trois textes, titre non compris;
 - tutoiement en français, «du» en allemand;
 - aucun genre supposé;
 - aucun «Acte 1», «Acte 2», «Acte 3» ou structure annoncée;
@@ -176,21 +187,24 @@ Contraintes absolues:
   valeur brute incompréhensible, JSON visible ou formule administrative;
 - ne jamais écrire «le répondant a indiqué» ni son équivalent;
 - ne pas recopier une transcription maladroite: reformule-la sans en changer le sens;
-- une image légère est bienvenue, mais pas une plaisanterie dans chaque phrase;
-- vocabulaire simple et concret partout, y compris dans la conclusion:
-  une image ou métaphore facile à visualiser plutôt qu'une formule
-  abstraite; les images du quotidien suisse (montagnes, lacs, précision
-  horlogère, fondue, chocolat, cornet, etc.) sont bienvenues quand elles
-  collent naturellement au sujet, sans en forcer une à chaque fois;
-- la conclusion peut s'inspirer du ton ou de l'esprit d'une citation
-  célèbre, d'une fable ou d'un proverbe, mais toujours reformulée avec tes
-  propres mots: ne recopie jamais mot pour mot une réplique de film, de
-  dessin animé ou de toute autre œuvre protégée par le droit d'auteur;
-- le titre ne dépasse pas 10 mots;
-- aucun markdown.
+- vocabulaire simple et concret partout: une image ou métaphore facile à
+  visualiser plutôt qu'une formule abstraite;
+- un seul clin d'œil suisse maximum sur l'ensemble du ticket (montre
+  suisse, fondue, raclette, chocolat, montagne, météo, précision, etc.), et
+  seulement s'il sert directement le verdict — jamais ajouté artificiellement,
+  jamais dans plusieurs champs à la fois;
+- n'invente jamais de citation et ne mentionne jamais Einstein ni aucune
+  autre personnalité, réelle ou fictive;
+- ne recopie jamais mot pour mot une réplique de film, de dessin animé ou
+  de toute autre œuvre protégée par le droit d'auteur;
+- ne répète dans aucune valeur JSON l'intitulé de sa propre rubrique
+  («Ton verdict», «Ton plaisir», «Ce qui te refroidit», etc.) ni aucun
+  équivalent dans l'autre langue: le texte va directement au contenu;
+- écris directement en français ou en allemand naturel selon la langue
+  demandée, jamais une traduction littérale de l'autre langue;
+- aucun markdown, aucun emoji.
 
-Réponds uniquement avec ce JSON strict:
-{{"titre":"...","paragraphe_1":"...","paragraphe_2":"...","conclusion":"..."}}"""
+Réponds uniquement avec le JSON demandé, rien d'autre."""
 
 # Plus de 50 titres par langue, organisés par thème. Aucun titre ne suppose
 # le genre de la personne.
@@ -458,43 +472,86 @@ def _extraire_json(texte: str) -> dict | None:
     return doc if isinstance(doc, dict) else None
 
 
+# Longueur attendue (en mots) pour chaque champ du nouveau contrat de
+# rapport. Partagée entre la validation de la réponse IA et le moteur de
+# règles (qui doit lui aussi respecter ces bornes par construction).
+_LONGUEURS_CHAMPS = {
+    "titre_profil": (3, 7),
+    "plaisir": (15, 28),
+    "friction": (15, 28),
+    "idee_a_tester": (10, 20),
+    "verdict": (12, 25),
+}
+
+# Un fournisseur IA respecte rarement à 100% la consigne "ne répète pas
+# l'intitulé de la rubrique dans la valeur": on nettoie ce préfixe s'il
+# apparaît malgré tout, plutôt que de rejeter toute la réponse pour ça.
+_RE_PREFIXE_RUBRIQUE = re.compile(
+    r"^(ton\s+plaisir|ce\s+qui\s+te\s+refroidit|"
+    r"l['’]idée\s+qui\s+te\s+ferait\s+remonter\s+à\s+bord|ton\s+verdict|"
+    r"ton\s+profil(?:\s+de\s+voyage)?|deine\s+freude|was\s+dich\s+abkühlt|"
+    r"deine\s+comeback[- ]idee|dein\s+fazit|dein\s+reiseprofil)\s*[:\-–—]\s*",
+    re.IGNORECASE,
+)
+
+
+def _sans_guillemets_englobants(texte: str) -> str:
+    """Retire une seule paire de guillemets qui engloberait tout le texte
+    (Gemini renvoie parfois «comme ceci» au lieu de comme ceci)."""
+    t = texte.strip()
+    for ouvre, ferme in (("«", "»"), ("“", "”"), ('"', '"'), ("'", "'")):
+        if len(t) >= 2 and t.startswith(ouvre) and t.endswith(ferme):
+            return t[len(ouvre):-len(ferme)].strip()
+    return t
+
+
 def _valider_rapport_ia(texte: str) -> dict | None:
     doc = _extraire_json(texte)
     if not doc:
         return None
-    cles = ("titre", "paragraphe_1", "paragraphe_2", "conclusion")
+    cles = ("titre_profil", "plaisir", "friction", "idee_a_tester", "verdict")
     if any(not isinstance(doc.get(cle), str) for cle in cles):
         return None
-    propre = {cle: _nettoyer_fragment(doc[cle], 160 if cle == "titre" else 520)
-              for cle in cles}
+    propre = {}
+    for cle in cles:
+        valeur = _nettoyer_fragment(doc[cle], 90 if cle == "titre_profil" else 260)
+        valeur = _RE_PREFIXE_RUBRIQUE.sub("", valeur, count=1).strip()
+        valeur = _sans_guillemets_englobants(valeur)
+        propre[cle] = valeur
     if any(not propre[cle] for cle in cles):
         return None
-    if _mots(propre["titre"]) > 10:
-        return None
-    corps = "\n\n".join(propre[cle] for cle in cles[1:])
-    if not 60 <= _mots(corps) <= 90:
-        return None
-    tout = propre["titre"] + "\n" + corps
+    for cle, (mini, maxi) in _LONGUEURS_CHAMPS.items():
+        if not mini <= _mots(propre[cle]) <= maxi:
+            return None
+    categorie = doc.get("categorie_visuelle")
+    categorie = categorie.strip().lower() if isinstance(categorie, str) else ""
+    if categorie not in CATEGORIES_VISUELLES:
+        categorie = "generique"
+    tout = " ".join(propre.values())
     if _FORBIDDEN_REPORT_RE.search(tout) or "{" in tout or "}" in tout:
+        return None
+    if "einstein" in tout.lower():
         return None
     if not _quotes_equilibrees(tout):
         return None
-    return {
-        "titre": propre["titre"],
-        "paragraphe_1": propre["paragraphe_1"],
-        "paragraphe_2": propre["paragraphe_2"],
-        "conclusion": propre["conclusion"],
-        "texte": corps,
-    }
+    return {**propre, "categorie_visuelle": categorie}
 
 
-def rapport_cache_valide(titre: str, texte: str) -> bool:
-    """Écarte les anciens rapports afin qu’ils soient régénérés après mise à jour."""
-    titre, texte = _nettoyer_fragment(titre, 180), (texte or "").strip()
-    if not titre or not texte or _FORBIDDEN_REPORT_RE.search(titre + "\n" + texte):
+def rapport_cache_valide(doc: dict) -> bool:
+    """Écarte les rapports d’un ancien format ou incomplets afin qu’ils
+    soient régénérés après une mise à jour du contrat de sortie."""
+    if not isinstance(doc, dict):
         return False
-    parties = [p.strip() for p in re.split(r"\n\s*\n", texte) if p.strip()]
-    return len(parties) == 3 and 45 <= _mots(texte) <= 100 and _quotes_equilibrees(texte)
+    cles = ("titre_profil", "plaisir", "friction", "idee_a_tester", "verdict")
+    valeurs = {cle: _nettoyer_fragment(doc.get(cle) or "", 260) for cle in cles}
+    if any(not v for v in valeurs.values()):
+        return False
+    if _FORBIDDEN_REPORT_RE.search(" ".join(valeurs.values())):
+        return False
+    for cle, (mini, maxi) in _LONGUEURS_CHAMPS.items():
+        if not mini <= _mots(valeurs[cle]) <= maxi:
+            return False
+    return doc.get("categorie_visuelle") in CATEGORIES_VISUELLES
 
 
 def _entier(d: dict, cle: str, mini: int, maxi: int) -> int | None:
@@ -520,51 +577,68 @@ def _profil_frequence(valeur: str, lang: str) -> str:
     return "inconnu"
 
 
-def _phrase_relation(lang: str, d: dict) -> str:
-    fr = lang != "de"
-    profil = _profil_frequence(str(d.get("frequence") or ""), lang)
-    etoiles = _entier(d, "etoiles", 1, 5)
+# plaisir: fondé sur la fréquence réellement déclarée (un vrai signal de
+# préférence exprimée) plutôt que sur un fait qui pourrait ne pas avoir été
+# communiqué. Deux variantes par profil, tirées au sort sans répétition
+# immédiate — toutes vérifiées entre 15 et 28 mots.
+_PLAISIR_FR = {
+    "quotidien": [
+        "Le bus fait clairement partie de ton quotidien, et ça se voit: tu montes presque sans y penser, comme un réflexe bien rodé.",
+        "Tu prends le bus tous les jours ou presque, et cette habitude a quelque chose de rassurant: un vrai point fixe dans ta journée.",
+    ],
+    "hebdo": [
+        "Le bus et toi, vous avez un vrai rythme: chaque semaine, ce même trajet trouve naturellement sa place dans ton quotidien.",
+        "Une ou deux fois par semaine, tu retrouves le bus avec une aisance qui montre que le trajet fait déjà partie de tes habitudes.",
+    ],
+    "mensuel": [
+        "Le bus et toi, c’est une habitude choisie plutôt que subie: quelques fois par mois, et toujours avec le même naturel.",
+        "Tu montes dans le bus quelques fois par mois, juste assez pour apprécier ce moment sans qu’il devienne une contrainte du quotidien.",
+    ],
+    "rare": [
+        "Le bus reste une relation occasionnelle, mais assumée: quand tu montes à bord, c’est toujours par choix, jamais par défaut.",
+        "Tu ne prends le bus que rarement, mais chaque trajet compte double: une vraie petite parenthèse plutôt qu’une habitude banale.",
+    ],
+    "jamais": [
+        "Le bus et toi, c’est une histoire qui commence à peine, avec la curiosité de qui découvre un tout nouveau trajet.",
+        "Tu ne prends presque jamais le bus, ce qui rend ce moment un peu à part: l’occasion parfaite pour se faire un premier avis.",
+    ],
+    "inconnu": [
+        "Le bus et toi partagez déjà quelques kilomètres, assez pour savoir ce qui, dans ce trajet, te convient vraiment le mieux.",
+        "Ta relation avec le bus a déjà pris forme, avec ses petites habitudes et ce que tu apprécies sans même y penser.",
+    ],
+}
+_PLAISIR_DE = {
+    "quotidien": [
+        "Der Bus gehört klar zu deinem Alltag, das merkt man: Du steigst fast automatisch ein, wie ein gut eingespielter Reflex.",
+        "Du fährst fast täglich Bus, und diese Gewohnheit hat etwas Beruhigendes: ein richtiger fester Punkt in deinem Tag.",
+    ],
+    "hebdo": [
+        "Du und der Bus, ihr habt einen echten Rhythmus: Jede Woche findet diese Fahrt ganz natürlich ihren Platz in deinem Alltag.",
+        "Ein- oder zweimal pro Woche triffst du den Bus mit einer Selbstverständlichkeit, die zeigt: Diese Fahrt gehört schon zur Gewohnheit.",
+    ],
+    "mensuel": [
+        "Du und der Bus, das ist eine bewusst gewählte statt aufgezwungene Gewohnheit: ein paar Mal im Monat, immer mit derselben Selbstverständlichkeit.",
+        "Du fährst ein paar Mal im Monat Bus, gerade genug, um den Moment zu geniessen, ohne dass er zur Last wird.",
+    ],
+    "rare": [
+        "Der Bus bleibt eine gelegentliche Beziehung, aber eine bewusste: Wenn du einsteigst, dann immer aus eigener Wahl, nie aus Mangel an Alternativen.",
+        "Du fährst nur selten Bus, aber jede Fahrt zählt doppelt: eine echte kleine Auszeit statt einer banalen Gewohnheit.",
+    ],
+    "jamais": [
+        "Du und der Bus, diese Geschichte fängt gerade erst an, mit der Neugier von jemandem, der eine neue Strecke entdeckt.",
+        "Du fährst fast nie Bus, was diesen Moment etwas Besonderes macht: die perfekte Gelegenheit für einen ersten echten Eindruck.",
+    ],
+    "inconnu": [
+        "Du und der Bus, ihr habt schon einige Kilometer gemeinsam, genug, um zu wissen, was an dieser Fahrt wirklich zu dir passt.",
+        "Deine Beziehung zum Bus hat schon Form angenommen, mit ihren kleinen Gewohnheiten und dem, was dir gefällt, ohne dass du gross darüber nachdenkst.",
+    ],
+}
 
-    if fr:
-        debuts = {
-            "quotidien": "Le bus fait clairement partie de ton quotidien.",
-            "hebdo": "Le bus et toi, vous vous retrouvez chaque semaine.",
-            "mensuel": "Le bus et toi, vous vous croisez quelques fois par mois.",
-            "rare": "Le bus et toi, c’est encore une relation occasionnelle.",
-            "jamais": "Le bus et toi, c’est encore une relation à construire.",
-            "inconnu": "Le bus et toi, vous avez déjà quelques kilomètres en commun.",
-        }
-        suites = {
-            1: "Ton dernier trajet ne décroche qu’une étoile sur cinq: le service a du travail.",
-            2: "Ton dernier trajet obtient deux étoiles sur cinq: la marge de progression est généreuse.",
-            3: "Ton dernier trajet obtient trois étoiles sur cinq: correct, sans encore donner envie d’applaudir.",
-            4: "Ton dernier trajet récolte quatre étoiles sur cinq: ça roule plutôt bien.",
-            5: "Ton dernier trajet décroche cinq étoiles: cette fois, le bus a parfaitement joué son rôle.",
-        }
-    else:
-        debuts = {
-            "quotidien": "Der Bus gehört klar zu deinem Alltag.",
-            "hebdo": "Du und der Bus, ihr trefft euch jede Woche.",
-            "mensuel": "Du und der Bus, ihr seht euch ein paar Mal pro Monat.",
-            "rare": "Du und der Bus, das ist noch eine gelegentliche Beziehung.",
-            "jamais": "Du und der Bus, diese Beziehung muss erst noch entstehen.",
-            "inconnu": "Du und der Bus, ihr habt schon einige Kilometer gemeinsam.",
-        }
-        suites = {
-            1: "Die letzte Fahrt erhält nur einen von fünf Sternen: da wartet noch Arbeit.",
-            2: "Die letzte Fahrt bekommt zwei von fünf Sternen: Luft nach oben gibt es reichlich.",
-            3: "Die letzte Fahrt bekommt drei von fünf Sternen: ordentlich, aber noch ohne Applaus.",
-            4: "Die letzte Fahrt sammelt vier von fünf Sternen: das läuft schon ziemlich gut.",
-            5: "Die letzte Fahrt verdient fünf Sterne: diesmal hat der Bus seinen Job perfekt gemacht.",
-        }
-    if etoiles:
-        return f"{debuts[profil]} {suites[etoiles]}"
-    confiance = _entier(d, "confiance", 0, 10)
-    if confiance is not None:
-        return (f"{debuts[profil]} Pour un rendez-vous important, ta confiance atteint {confiance} sur 10."
-                if fr else
-                f"{debuts[profil]} Für einen wichtigen Termin liegt dein Vertrauen bei {confiance} von 10.")
-    return debuts[profil]
+
+def _phrase_plaisir(lang: str, d: dict) -> str:
+    profil = _profil_frequence(str(d.get("frequence") or ""), lang)
+    pool = _PLAISIR_FR if lang != "de" else _PLAISIR_DE
+    return _choix_sans_repetition(f"plaisir:{lang}:{profil}", pool[profil])
 
 
 def _theme_irritant(d: dict) -> str:
@@ -584,10 +658,11 @@ def _theme_irritant(d: dict) -> str:
     return "defaut"
 
 
-def _idee_verbatim(verbatim: str, lang: str) -> tuple[str | None, str | None]:
-    """Transforme seulement les idées reconnues; un verbatim maladroit reste invisible."""
+def _theme_idee_verbatim(verbatim: str) -> str | None:
+    """Un thème plus précis que l'irritant déclaré, détecté dans la réponse
+    vocale libre — reconnu seulement sur des mots-clés explicites, jamais
+    déduit d'un verbatim maladroit."""
     v = _nettoyer_fragment(verbatim, 300).lower()
-    fr = lang != "de"
     correspondances = [
         ("telephone", ("usb", "batterie", "recharger", "akku", "laden", "steckdose")),
         ("panorama", ("panorama", "tout devant", "ganz vorne", "fenêtre", "fenster")),
@@ -598,262 +673,343 @@ def _idee_verbatim(verbatim: str, lang: str) -> tuple[str | None, str | None]:
         # ce thème générique ne doit gagner qu'en l'absence d'une idée précise.
         ("frequence", ("plus souvent", "plus fréquent", "häufiger", "öfter")),
     ]
-    theme = next((cle for cle, mots in correspondances if any(m in v for m in mots)), None)
-    if not theme:
-        return None, None
-    phrases_fr = {
-        "telephone": "Et quelques prises USB éviteraient que ton téléphone ne descende avant toi.",
-        "panorama": "Une place avec vue panoramique rendrait aussi le voyage nettement plus agréable.",
-        "frequence": "Des départs plus fréquents rendraient le bus beaucoup plus facile à choisir.",
-        "ponctualite": "Des horaires plus ponctuels transformeraient cette confiance en vraie habitude.",
-        "billet": "Un billet simple et automatique retirerait un casse-tête avant même le départ.",
-        "attente": "Un arrêt abrité, éclairé et équipé d’une vraie assise améliorerait déjà le voyage.",
-    }
-    phrases_de = {
-        "telephone": "Ein paar USB-Anschlüsse würden verhindern, dass dein Handy vor dir aussteigt.",
-        "panorama": "Ein Platz mit Panoramablick würde die Fahrt ebenfalls deutlich angenehmer machen.",
-        "frequence": "Häufigere Abfahrten würden den Bus viel leichter zur ersten Wahl machen.",
-        "ponctualite": "Mehr Pünktlichkeit würde aus Vertrauen eine echte Gewohnheit machen.",
-        "billet": "Ein einfaches automatisches Billett würde schon vor der Abfahrt ein Rätsel beseitigen.",
-        "attente": "Eine geschützte, beleuchtete Haltestelle mit richtigem Sitzplatz würde die Reise sofort verbessern.",
-    }
-    return theme, (phrases_fr if fr else phrases_de)[theme]
+    return next((cle for cle, mots in correspondances if any(m in v for m in mots)), None)
 
 
-# Plusieurs formulations pour relier le point de friction à l'innovation
-# préférée du participant: une seule phrase fixe («va donc dans la bonne
-# direction: moins d'incertitude, plus de tranquillité») revenait à
-# l'identique dans tous les rapports dès qu'aucune idée précise n'émergeait
-# du verbatim — ça sonnait comme un copier-coller plutôt qu'un profil
-# personnel, même si le nom du concept, lui, changeait bien à chaque fois.
-_GABARITS_IDEE_CONCEPT = {
-    "fr": [
-        "L’idée «{concept}» va justement dans cette direction: moins d’incertitude, plus de tranquillité.",
-        "Et «{concept}» tombe plutôt bien: exactement le genre de coup de pouce qui change un trajet.",
-        "«{concept}» a d’ailleurs tout pour plaire ici: une réponse concrète, sans complication ajoutée.",
-        "Bonne nouvelle: «{concept}» répond justement à ce point-là, sans en rajouter.",
-        "«{concept}» arrive au bon moment: le genre d’idée qui simplifie sans se faire remarquer.",
-        "Et si «{concept}» voyait le jour, ce serait un pas de plus vers un trajet plus tranquille.",
-    ],
-    "de": [
-        "Die Idee «{concept}» geht genau in diese Richtung: weniger Unsicherheit, mehr Ruhe.",
-        "Und «{concept}» kommt gerade richtig: genau der Schub, der eine Fahrt verändert.",
-        "«{concept}» hat hier eigentlich alles: eine konkrete Antwort, ganz ohne zusätzlichen Aufwand.",
-        "Gute Nachricht: «{concept}» beantwortet genau diesen Punkt, ganz ohne Umwege.",
-        "«{concept}» kommt zur rechten Zeit: die Art Idee, die vieles einfacher macht, ohne aufzufallen.",
-        "Und würde «{concept}» Realität, wäre das ein Schritt zu einer entspannteren Fahrt.",
-    ],
+# Thème détecté (irritant déclaré ou, si plus précis, sujet de la réponse
+# vocale) -> catégorie visuelle limitée à la bibliothèque locale d'icônes.
+_CATEGORIE_VISUELLE_PAR_THEME = {
+    "correspondance": "correspondance",
+    "retard": "information",
+    "billet": "prix",
+    "foule": "affluence",
+    "attente": "confort",
+    "telephone": "confort",
+    "panorama": "panorama",
+    "frequence": "generique",
+    "ponctualite": "ponctualite",
+    "aucun": "generique",
+    "defaut": "generique",
 }
 
-# Le "verdict" final se voulait drôle ou surprenant mais restait un peu
-# plat (un seul intitulé fixe par thème, toujours le même). Plusieurs
-# variantes par thème, tirées au sort sans répétition immédiate, avec un
-# clin d'œil à une fable, un proverbe ou un grand nom — jamais une citation
-# de personnage sous droits d'auteur (Disney etc.), toujours du domaine
-# public ou de la sagesse populaire générique.
-_CONCLUSIONS_FR = {
+# friction: le point de friction seul (15-28 mots), sans la solution — les
+# deux sont désormais deux champs séparés du ticket plutôt qu'un paragraphe
+# combiné.
+_FRICTION_FR = {
     "correspondance": [
-        "Ton verdict: la Fontaine l’a dit — mieux vaut partir à point.",
-        "Ton verdict: même Ulysse planifiait mieux ses correspondances.",
+        "Le vrai point de tension, c’est la correspondance ratée: quelques minutes suffisent pour transformer un trajet tranquille en sprint improvisé.",
+        "Ce qui use ta patience, c’est la correspondance qui file sous ton nez alors que tu cours déjà pour l’attraper.",
     ],
     "retard": [
-        "Ton verdict: l’incertitude, c’est bon pour les romans, pas pour un bus.",
-        "Ton verdict: même une horloge arrêtée informe mieux que ce silence.",
+        "Ce qui gâche le voyage, c’est le retard sans aucune information: le bus est annoncé, mais semble avoir quitté le scénario.",
+        "Le vrai problème n’est pas le retard lui-même, c’est de ne jamais savoir pourquoi ni combien de temps il durera.",
     ],
     "billet": [
-        "Ton verdict: le meilleur calcul est celui qu’on n’a pas à faire.",
-        "Ton verdict: Confucius lui-même aurait détesté deviner le prix du billet.",
+        "Le moment critique, c’est le billet: dès qu’il faut deviner le bon tarif, un trajet tout simple devient un petit escape game.",
+        "Ce qui te freine, c’est le prix du billet: jamais clair avant de monter, toujours source d’un petit doute inutile.",
     ],
     "foule": [
-        "Ton verdict: les sardines ont un abonnement, pas envie de le partager.",
-        "Ton verdict: l’union fait la force, pas l’entassement le confort.",
+        "Le bus bondé reste ton principal frein: quand le trajet ressemble à une partie de Tetris, le confort descend au prochain arrêt.",
+        "Ce qui te refroidit, c’est la cohue: entre les sacs et les coudes, il ne reste plus vraiment de place pour toi.",
     ],
     "attente": [
-        "Ton verdict: même le loup de la fable cherchait un toit.",
-        "Ton verdict: un banc et un abri changent toute la morale de l’histoire.",
+        "Attendre dans le froid ou dans le noir reste le point faible: avant même de monter, le voyage a déjà perdu des points.",
+        "Ce qui pèse, c’est l’attente sans abri ni lumière: le trajet commence mal bien avant que le bus n’arrive.",
     ],
     "telephone": [
-        "Ton verdict: ton téléphone mérite d’arriver aussi frais que toi.",
-        "Ton verdict: la panique du 1 % de batterie, ce n’est pas une légende.",
-    ],
-    "panorama": [
-        "Ton verdict: les meilleures idées naissent en regardant par la fenêtre.",
-        "Ton verdict: un trajet avec vue n’a jamais nui à personne.",
+        "Ce qui inquiète, c’est la batterie du téléphone: elle descend plus vite que le trajet n’avance, et ça se voit sur ton visage.",
+        "Ton vrai souci, c’est un téléphone à bout de souffle avant même d’arriver à destination, sans aucune prise pour le sauver.",
     ],
     "frequence": [
-        "Ton verdict: patienter avec sagesse, oui — patienter pour rien, non merci.",
-        "Ton verdict: le bus idéal est celui qu’on n’a jamais à guetter.",
+        "Ce qui te refroidit, c’est l’attente entre deux bus: quand les départs se font rares, le trajet perd toute sa spontanéité.",
+        "Le vrai frein, c’est la fréquence: quand il faut consulter l’horaire trois fois avant de sortir, l’envie retombe vite.",
     ],
     "ponctualite": [
-        "Ton verdict: un horaire qui tient parole vaut toutes les promesses du monde.",
-        "Ton verdict: même les sages apprécient un rendez-vous respecté.",
+        "Ce qui te refroidit, c’est l’incertitude sur l’heure d’arrivée: un horaire qui varie chaque jour retire toute confiance au service.",
+        "Le vrai problème, c’est de ne jamais savoir si le bus tiendra l’heure annoncée, jour après jour, sans jamais te le dire.",
     ],
     "aucun": [
-        "Ton verdict: pas besoin de morale compliquée quand tout va déjà bien.",
-        "Ton verdict: la meilleure fable est parfois celle qui n’a pas de problème à résoudre.",
+        "Bonne nouvelle: aucun irritant majeur ne prend toute la place dans ton trajet, ce qui n’est déjà pas si fréquent.",
+        "Rien ne vient vraiment gâcher le voyage: le principal point de friction, ici, c’est surtout qu’il n’y en a pas.",
     ],
     "defaut": [
-        "Ton verdict: le mieux est souvent l’ennemi du simple.",
-        "Ton verdict: une bonne histoire commence toujours par un trajet sans accroc.",
+        "Le principal enjeu reste simple: retirer les petites frictions du quotidien qui compliquent un trajet qui pourrait rester évident.",
+        "Ce qui te refroidit n’a rien de spectaculaire: ce sont surtout les petits détails jamais réglés qui finissent par peser.",
     ],
 }
-_CONCLUSIONS_DE = {
+_FRICTION_DE = {
     "correspondance": [
-        "Dein Fazit: schon der Hase aus der Fabel hätte besseres Timing gebraucht.",
-        "Dein Fazit: gute Verbindungen schlagen jeden Sprint.",
+        "Der heikle Punkt ist der Anschluss: Ein paar Minuten reichen, um aus einer ruhigen Fahrt einen spontanen Sprint zu machen.",
+        "Was an deiner Geduld nagt, ist der Anschluss, der dir vor der Nase wegfährt, während du schon rennst, um ihn zu erreichen.",
     ],
     "retard": [
-        "Dein Fazit: Unsicherheit passt zu Romanen, nicht zum Busfahrplan.",
-        "Dein Fazit: selbst eine stehengebliebene Uhr informiert besser als dieses Schweigen.",
+        "Was die Fahrt trübt, ist eine Verspätung ganz ohne Information: Der Bus ist angekündigt, aber offenbar aus der Handlung verschwunden.",
+        "Das eigentliche Problem ist nicht die Verspätung selbst, sondern nie zu wissen, warum und wie lange sie dauern wird.",
     ],
     "billet": [
-        "Dein Fazit: die beste Rechnung ist die, die man nicht selbst machen muss.",
-        "Dein Fazit: schon Konfuzius hätte den Billettpreis nicht gern erraten.",
+        "Der kritische Moment ist das Billett: Sobald der richtige Tarif erraten werden muss, wird eine einfache Fahrt zum kleinen Escape Game.",
+        "Was dich bremst, ist der Billettpreis: Vor dem Einsteigen nie ganz klar, immer eine kleine unnötige Unsicherheit.",
     ],
     "foule": [
-        "Dein Fazit: Sardinen haben ein Abo, aber keine Lust, es zu teilen.",
-        "Dein Fazit: Zusammenhalt macht stark, Gedränge macht nur müde.",
+        "Der überfüllte Bus bleibt dein grösster Bremsklotz: Wird die Fahrt zu Tetris, steigt der Komfort schon an der nächsten Haltestelle aus.",
+        "Was dich abkühlt, ist das Gedränge: Zwischen Taschen und Ellbogen bleibt für dich eigentlich kein richtiger Platz mehr übrig.",
     ],
     "attente": [
-        "Dein Fazit: selbst der Wolf aus der Fabel suchte ein Dach.",
-        "Dein Fazit: eine Bank und ein Dach ändern die ganze Geschichte.",
+        "Warten in Kälte oder Dunkelheit bleibt die Schwachstelle: Noch vor dem Einsteigen hat die Reise bereits Punkte verloren.",
+        "Was schwer wiegt, ist das Warten ohne Dach und Licht: Die Fahrt beginnt schon schlecht, lange bevor der Bus ankommt.",
     ],
     "telephone": [
-        "Dein Fazit: dein Handy verdient es, genauso frisch anzukommen wie du.",
-        "Dein Fazit: die Ein-Prozent-Panik ist keine Legende.",
-    ],
-    "panorama": [
-        "Dein Fazit: die besten Ideen entstehen beim Blick aus dem Fenster.",
-        "Dein Fazit: eine Fahrt mit Aussicht hat noch niemandem geschadet.",
+        "Was dich beunruhigt, ist der Akkustand: Er sinkt schneller als die Fahrt vorankommt, und man sieht es dir richtig an.",
+        "Deine echte Sorge ist ein Handy, das vor dem Ziel schon fast leer ist, ganz ohne Steckdose, die es retten könnte.",
     ],
     "frequence": [
-        "Dein Fazit: geduldig warten ja, sinnlos warten nein danke.",
-        "Dein Fazit: der ideale Bus ist der, auf den man nie starren muss.",
+        "Was dich abkühlt, ist die Wartezeit zwischen zwei Bussen: Sind die Abfahrten selten, verliert die Fahrt jede Spontaneität.",
+        "Der eigentliche Bremsklotz ist der Takt: Muss man dreimal auf den Fahrplan schauen, bevor man losgeht, sinkt die Lust schnell.",
     ],
     "ponctualite": [
-        "Dein Fazit: ein Fahrplan, der Wort hält, schlägt jedes Versprechen.",
-        "Dein Fazit: sogar Weise schätzen einen eingehaltenen Termin.",
+        "Was dich abkühlt, ist die Unsicherheit bei der Ankunftszeit: Ein Fahrplan, der jeden Tag anders ausfällt, kostet echtes Vertrauen.",
+        "Das eigentliche Problem ist, nie zu wissen, ob der Bus die angekündigte Zeit hält, Tag für Tag, ohne es dir je zu sagen.",
     ],
     "aucun": [
-        "Dein Fazit: manchmal braucht es keine komplizierte Moral, wenn schon alles passt.",
-        "Dein Fazit: die beste Fabel ist manchmal die ohne Problem.",
+        "Gute Nachricht: Kein grosser Störfaktor nimmt auf deiner Fahrt den ganzen Raum ein, was gar nicht so häufig vorkommt.",
+        "Nichts trübt die Fahrt wirklich: Der grösste Störfaktor ist hier vor allem, dass es keinen gibt.",
     ],
     "defaut": [
-        "Dein Fazit: das Bessere ist oft der Feind des Einfachen.",
-        "Dein Fazit: jede gute Geschichte beginnt mit einer Fahrt ohne Umweg.",
+        "Das wichtigste Ziel bleibt einfach: kleine alltägliche Reibungen entfernen, die eine eigentlich klare Fahrt unnötig komplizieren.",
+        "Was dich abkühlt, ist nichts Spektakuläres: Es sind vor allem die kleinen, nie gelösten Details, die am Ende ins Gewicht fallen.",
     ],
 }
 
-_COMPLEMENTS_FR = [
-    " L’objectif n’est pas d’en faire plus, mais de rendre chaque étape plus évidente.",
-    " Rien de spectaculaire à prévoir: juste un service qui tient ses promesses, trajet après trajet.",
-    " Ce genre de détail change peu de choses en apparence, mais beaucoup une fois répété chaque jour.",
-]
-_COMPLEMENTS_DE = [
-    " Das Ziel ist nicht mehr Aufwand, sondern ein klarerer Ablauf bei jedem Schritt.",
-    " Nichts Spektakuläres nötig: nur ein Service, der Fahrt für Fahrt sein Versprechen hält.",
-    " Das klingt nach wenig, macht aber jeden Tag aufs Neue einen Unterschied.",
-]
+# idee_a_tester: une solution concrète et testable par CarPostal (10-20
+# mots), classée par le même thème que friction/verdict — plus « panorama »,
+# qui ne peut venir que de la réponse vocale libre, jamais de l'irritant
+# déclaré (voir _theme_idee_verbatim).
+_IDEE_FR = {
+    "correspondance": [
+        "Une vraie garantie de correspondance, avec un bus qui attend ou une alternative annoncée aussitôt.",
+        "Un compte à rebours visible à la correspondance, pour savoir en un coup d’œil s’il faut courir.",
+    ],
+    "retard": [
+        "Une information en temps réel sur le retard, avec la vraie raison, pas juste un chiffre.",
+        "Un message automatique dès qu’un retard est détecté, envoyé avant que tu ne l’attendes en vain.",
+    ],
+    "billet": [
+        "Un billet automatique et sans réflexion, calculé tout seul selon le trajet réellement effectué.",
+        "Un tarif affiché clairement avant de monter, sans calcul ni hésitation au moment de payer.",
+    ],
+    "foule": [
+        "Un indicateur d’affluence en temps réel, pour choisir le bus suivant plutôt que se comprimer.",
+        "Plus de bus aux heures de pointe, pour que chaque trajet garde un peu d’air.",
+    ],
+    "attente": [
+        "Un arrêt abrité, éclairé et équipé d’une vraie assise, pour que l’attente pèse enfin moins.",
+        "Un abribus chauffé et lumineux, pour que les minutes d’attente ne se sentent plus autant.",
+    ],
+    "telephone": [
+        "Quelques prises USB à bord, pour que le téléphone tienne au moins jusqu’au terminus.",
+        "Une prise de recharge par siège, simple et discrète, pour voyager sans compter le pourcentage.",
+    ],
+    "frequence": [
+        "Des départs plus fréquents aux heures utiles, pour que le bus devienne un vrai réflexe.",
+        "Un bus toutes les dix minutes plutôt qu’une attente à deviner, pour choisir sans calculer.",
+    ],
+    "ponctualite": [
+        "Des horaires réellement tenus, jour après jour, pour transformer la confiance en habitude durable.",
+        "Un suivi public de la ponctualité par ligne, pour que tenir l’heure devienne la norme.",
+    ],
+    "panorama": [
+        "Une place vitrée bien placée, mise en avant sur les trajets qui valent vraiment le coup d’œil.",
+        "Un itinéraire pensé aussi pour la vue, pas seulement pour la vitesse du trajet.",
+    ],
+    "aucun": [
+        "Continuer simplement sur cette lancée, sans rien complexifier qui n’a pas besoin de l’être.",
+        "Garder ce qui fonctionne déjà bien, sans ajouter de complexité inutile au quotidien.",
+    ],
+    "defaut": [
+        "Un service clair, fiable et facile à utiliser, sans besoin d’en faire plus que ça.",
+        "De petits ajustements simples et concrets, plutôt qu’une grande réforme qui complique tout.",
+    ],
+}
+_IDEE_DE = {
+    "correspondance": [
+        "Eine echte Anschlussgarantie, mit wartendem Bus oder sofort angezeigter Alternative.",
+        "Ein sichtbarer Countdown beim Anschluss, um auf einen Blick zu wissen, ob Rennen nötig ist.",
+    ],
+    "retard": [
+        "Echtzeit-Information zur Verspätung, mit dem wirklichen Grund statt nur einer Zahl.",
+        "Eine automatische Meldung, sobald eine Verspätung erkannt wird, statt vergeblichem Warten.",
+    ],
+    "billet": [
+        "Ein automatisches Billett ganz ohne Nachdenken, berechnet nach der tatsächlich gefahrenen Strecke.",
+        "Ein klar angezeigter Tarif vor dem Einsteigen, ohne Rechnen oder Zögern beim Bezahlen.",
+    ],
+    "foule": [
+        "Eine Echtzeit-Auslastungsanzeige, um lieber den nächsten Bus zu nehmen statt sich zu quetschen.",
+        "Mehr Busse zu den Stosszeiten, damit jede Fahrt ein bisschen Luft behält.",
+    ],
+    "attente": [
+        "Eine geschützte, beleuchtete Haltestelle mit richtigem Sitzplatz, damit das Warten endlich weniger wiegt.",
+        "Ein beheiztes, helles Wartehäuschen, damit die Wartezeit sich nicht mehr so lang anfühlt.",
+    ],
+    "telephone": [
+        "Ein paar USB-Anschlüsse an Bord, damit das Handy wenigstens bis zur Endstation durchhält.",
+        "Eine Steckdose pro Sitzplatz, einfach und diskret, um zu fahren, ohne den Akku zu zählen.",
+    ],
+    "frequence": [
+        "Häufigere Abfahrten zu den Stosszeiten, damit der Bus zum echten Reflex wird.",
+        "Ein Bus alle zehn Minuten statt einer Wartezeit zum Raten, um ohne Rechnen loszufahren.",
+    ],
+    "ponctualite": [
+        "Fahrpläne, die wirklich eingehalten werden, Tag für Tag, bis daraus echtes Vertrauen wird.",
+        "Eine öffentliche Pünktlichkeitsanzeige pro Linie, damit Pünktlichkeit zur Norm wird.",
+    ],
+    "panorama": [
+        "Ein gut platzierter Fensterplatz, gezielt hervorgehoben auf Strecken, die einen Blick wirklich wert sind.",
+        "Eine Route, die auch an die Aussicht denkt, nicht nur an die schnellste Verbindung.",
+    ],
+    "aucun": [
+        "Einfach so weitermachen, ohne etwas zu verkomplizieren, das es gar nicht nötig hat.",
+        "Behalten, was schon gut funktioniert, ohne unnötige Komplexität im Alltag hinzuzufügen.",
+    ],
+    "defaut": [
+        "Ein klarer, zuverlässiger und einfach nutzbarer Service, ohne mehr als nötig zu tun.",
+        "Kleine, konkrete Anpassungen statt einer grossen Reform, die am Ende alles komplizierter macht.",
+    ],
+}
+
+# verdict: la punchline finale (12-25 mots). Réécrite pour le nouveau
+# contrat: plus aucune personnalité nommée (fable, personnage historique...)
+# — seulement une image concrète, éventuellement un clin d'œil suisse léger.
+_VERDICT_FR = {
+    "correspondance": [
+        "Tu ne demandes pas la lune, juste deux minutes de plus pour ne pas sprinter comme si le bus était en feu.",
+        "Ton verdict tient en une phrase: rater sa correspondance ne devrait jamais dépendre de la vitesse de tes jambes.",
+    ],
+    "retard": [
+        "Tu ne demandes pas la précision d’une horloge suisse. Juste qu’on te dise pourquoi elle retarde, au lieu de te laisser deviner.",
+        "Le silence, tu peux vivre avec. C’est l’absence totale d’explication qui transforme un simple retard en petit mystère irritant.",
+    ],
+    "billet": [
+        "Payer, tu veux bien. Deviner combien avant de monter, nettement moins: le bus n’a pas besoin d’un examen de maths.",
+        "Un billet ne devrait jamais demander plus de réflexion que le trajet lui-même. Le tien, visiblement, mérite un peu de simplicité.",
+    ],
+    "foule": [
+        "Tu aimes bien la compagnie, jusqu’à un certain point: celui où ton coude devient l’otage d’un sac à dos.",
+        "Un bus bondé, ce n’est pas de la convivialité, c’est juste un jeu de Tetris que personne n’a envie de jouer.",
+    ],
+    "attente": [
+        "Attendre, tu sais faire. Attendre dans le noir sans banc ni toit, un peu moins: même un arrêt de bus mérite un minimum d’égards.",
+        "Ton verdict est sans appel: un abri et un peu de lumière suffiraient à transformer l’attente en simple pause plutôt qu’en épreuve.",
+    ],
+    "telephone": [
+        "Ton téléphone finit le trajet plus fatigué que toi, et ce n’est vraiment pas normal pour un simple passage en bus.",
+        "Une prise USB, ce n’est pas un luxe: c’est juste la différence entre arriver joignable et arriver en mode avion malgré toi.",
+    ],
+    "frequence": [
+        "Tu n’as rien contre attendre un peu. C’est attendre sans savoir combien de temps qui finit par user la patience.",
+        "Un bus plus fréquent ne changerait pas ta vie, juste ton humeur à chaque arrêt, ce qui n’est déjà pas rien.",
+    ],
+    "ponctualite": [
+        "Tu ne demandes pas des miracles, juste qu’un horaire annoncé ressemble, de temps en temps, à l’heure réelle d’arrivée.",
+        "La ponctualité n’est pas un exploit suisse réservé aux trains: un bus qui tient parole devrait être la norme, pas l’exception.",
+    ],
+    "panorama": [
+        "Tu n’as pas besoin d’un guide touristique. Juste d’une fenêtre bien placée et d’un trajet qui ne va pas trop vite.",
+        "Ton verdict est limpide: les meilleures idées naissent en regardant par la fenêtre, pas en fixant un écran de téléphone.",
+    ],
+    "aucun": [
+        "Quand tout va déjà bien, le seul vrai défi devient de ne pas tout compliquer pour le plaisir de changer quelque chose.",
+        "Ton verdict est presque décevant à écrire: rien à corriger, juste à préserver ce qui fonctionne déjà très bien.",
+    ],
+    "defaut": [
+        "Tu ne demandes pas un bus parfait, juste un bus qui n’ajoute pas ses propres complications à ta journée déjà chargée.",
+        "Le mieux, parfois, c’est simplement d’arrêter de compliquer ce qui pourrait rester évident depuis le premier arrêt.",
+    ],
+}
+_VERDICT_DE = {
+    "correspondance": [
+        "Du willst nicht den Mond. Nur zwei Minuten mehr, um nicht zu rennen, als würde der Bus gleich in Flammen aufgehen.",
+        "Dein Fazit passt in einen Satz: Einen Anschluss zu verpassen, sollte nie von der Geschwindigkeit deiner Beine abhängen.",
+    ],
+    "retard": [
+        "Du willst nicht die Präzision einer Schweizer Uhr. Nur, dass man dir sagt, warum sie nachgeht, statt dich raten zu lassen.",
+        "Die Stille erträgst du. Es ist das völlige Fehlen einer Erklärung, das aus einer Verspätung ein kleines, nerviges Rätsel macht.",
+    ],
+    "billet": [
+        "Zahlen, das machst du gern. Vorher raten müssen, wie viel, eher weniger: der Bus braucht keine Matheprüfung vor der Abfahrt.",
+        "Ein Billett sollte nie mehr Nachdenken verlangen als die Fahrt selbst. Deins, offensichtlich, hätte etwas mehr Einfachheit verdient.",
+    ],
+    "foule": [
+        "Gesellschaft magst du, bis zu einem gewissen Punkt: dort, wo dein Ellbogen zur Geisel eines Rucksacks wird.",
+        "Ein überfüllter Bus ist keine Gemütlichkeit, sondern einfach ein Tetris-Spiel, auf das eigentlich niemand Lust hat.",
+    ],
+    "attente": [
+        "Warten kannst du. Warten im Dunkeln ohne Bank oder Dach, etwas weniger: selbst eine Haltestelle verdient ein Minimum an Respekt.",
+        "Dein Fazit ist eindeutig: Ein Dach und etwas Licht würden reichen, um aus dem Warten eine Pause statt eine Prüfung zu machen.",
+    ],
+    "telephone": [
+        "Dein Handy beendet die Fahrt müder als du selbst, und das ist für eine simple Busfahrt eigentlich nicht normal.",
+        "Eine USB-Steckdose ist kein Luxus: Sie ist einfach der Unterschied zwischen erreichbar ankommen und ungewollt im Flugmodus landen.",
+    ],
+    "frequence": [
+        "Etwas Warten macht dir nichts aus. Warten, ohne zu wissen wie lange, das ist es, was am Ende die Geduld aufbraucht.",
+        "Ein häufigerer Bus würde dein Leben nicht verändern, nur deine Laune an jeder Haltestelle, und das ist schon einiges wert.",
+    ],
+    "ponctualite": [
+        "Du willst keine Wunder, nur dass ein angekündigter Fahrplan hin und wieder der tatsächlichen Ankunftszeit ähnelt.",
+        "Pünktlichkeit ist keine Schweizer Spezialität, die nur Zügen vorbehalten ist: Ein Bus, der Wort hält, sollte die Regel sein, nicht die Ausnahme.",
+    ],
+    "panorama": [
+        "Du brauchst keinen Reiseführer. Nur einen gut platzierten Fensterplatz und eine Fahrt, die nicht zu schnell vorbeirauscht.",
+        "Dein Fazit ist klar: Die besten Ideen entstehen beim Blick aus dem Fenster, nicht beim Starren aufs Handy.",
+    ],
+    "aucun": [
+        "Wenn schon alles gut läuft, besteht die einzige echte Herausforderung darin, nicht alles nur um der Veränderung willen zu verkomplizieren.",
+        "Dein Fazit ist fast enttäuschend kurz: nichts zu korrigieren, nur zu bewahren, was schon sehr gut funktioniert.",
+    ],
+    "defaut": [
+        "Du willst keinen perfekten Bus, nur einen, der deinem ohnehin vollen Tag nicht noch eigene Komplikationen hinzufügt.",
+        "Das Beste ist manchmal einfach, aufzuhören, das zu komplizieren, was seit der ersten Haltestelle klar sein könnte.",
+    ],
+}
 
 
-def _phrase_irritant_solution(lang: str, d: dict) -> tuple[str, str]:
-    fr = lang != "de"
-    theme = _theme_irritant(d)
-    problemes_fr = {
-        "correspondance": "Le vrai point de tension, c’est la correspondance ratée: quelques minutes suffisent pour transformer le trajet en sprint.",
-        "retard": "Ce qui gâche le voyage, c’est le retard sans information: le bus est annoncé, mais semble avoir quitté le scénario.",
-        "billet": "Le moment critique, c’est le billet: dès qu’il faut deviner le bon tarif, le trajet devient un petit escape game.",
-        "foule": "Le bus bondé reste ton principal frein: quand le trajet ressemble à une partie de Tetris, le confort descend au prochain arrêt.",
-        "attente": "Attendre dans le froid ou le noir reste le point faible: avant même de monter, le voyage a déjà perdu des points.",
-        "aucun": "Bonne nouvelle: aucun irritant majeur ne prend toute la place dans ton trajet.",
-        "defaut": "Le principal enjeu reste simple: enlever les petites frictions qui compliquent le voyage sans raison.",
-    }
-    problemes_de = {
-        "correspondance": "Der heikle Punkt ist der verpasste Anschluss: Ein paar Minuten machen aus der Reise plötzlich einen Sprint.",
-        "retard": "Was die Fahrt trübt, ist eine Verspätung ohne Information: Der Bus ist angekündigt, aber aus der Handlung verschwunden.",
-        "billet": "Der kritische Moment ist das Billett: Sobald der richtige Tarif erraten werden muss, wird die Fahrt zum kleinen Escape Game.",
-        "foule": "Der überfüllte Bus bleibt dein grösster Bremsklotz: Wird die Fahrt zu Tetris, steigt der Komfort an der nächsten Haltestelle aus.",
-        "attente": "Warten in Kälte oder Dunkelheit bleibt die Schwachstelle: Noch vor dem Einsteigen hat die Reise bereits Punkte verloren.",
-        "aucun": "Gute Nachricht: Kein grosser Störfaktor nimmt auf deiner Fahrt den ganzen Raum ein.",
-        "defaut": "Das wichtigste Ziel ist einfach: kleine Reibungen entfernen, die die Reise unnötig kompliziert machen.",
-    }
+def _friction_idee_verdict(lang: str, d: dict) -> tuple[str, str, str, str]:
+    """Un seul thème pilote les trois champs pour rester cohérent: l'irritant
+    déclaré, ou — s'il est plus précis — le sujet détecté dans la réponse
+    vocale libre. Retourne (friction, idee_a_tester, verdict, categorie_visuelle)."""
+    theme_irritant = _theme_irritant(d)
+    theme_idee = _theme_idee_verbatim(str(d.get("verbatim") or ""))
+    theme = theme_idee or theme_irritant
 
-    idee_theme, idee = _idee_verbatim(str(d.get("verbatim") or ""), lang)
-    if not idee and d.get("concept"):
-        concept = _nettoyer_fragment(d.get("concept"), 120)
-        gabarit = _choix_sans_repetition(
-            f"concept_idee:{'de' if not fr else 'fr'}",
-            _GABARITS_IDEE_CONCEPT["de" if not fr else "fr"],
-        )
-        idee = gabarit.format(concept=concept)
-    if not idee and d.get("priorite_arbitrage"):
-        priorite = _nettoyer_fragment(d.get("priorite_arbitrage"), 120)
-        idee = (f"Deine Priorität ist klar: {priorite[:1].lower() + priorite[1:]} ." if not fr else
-                f"Ta priorité est claire: {priorite[:1].lower() + priorite[1:]}.")
-        idee = idee.replace(" .", ".")
-    if not idee and d.get("apprecie"):
-        place = _nettoyer_fragment(d.get("apprecie"), 120)
-        idee = (f"Und wenn möglich, gehört «{place}» ebenfalls zu einer gelungenen Fahrt."
-                if not fr else
-                f"Et tant qu’à faire, «{place}» fait aussi partie d’un trajet réussi.")
-    if not idee:
-        idee = ("Pas besoin d’en faire trop: le service doit surtout être clair, fiable et facile à utiliser."
-                if fr else
-                "Es braucht nicht viel: Der Service muss vor allem klar, zuverlässig und einfach nutzbar sein.")
+    friction_pool = _FRICTION_FR if lang != "de" else _FRICTION_DE
+    idee_pool = _IDEE_FR if lang != "de" else _IDEE_DE
+    verdict_pool = _VERDICT_FR if lang != "de" else _VERDICT_DE
 
-    conclusion_theme = idee_theme or theme
-    probleme = (problemes_fr if fr else problemes_de)[theme]
-    variantes = (_CONCLUSIONS_FR if fr else _CONCLUSIONS_DE).get(
-        conclusion_theme, (_CONCLUSIONS_FR if fr else _CONCLUSIONS_DE)["defaut"]
-    )
-    conclusion = _choix_sans_repetition(
-        f"conclusion:{'fr' if fr else 'de'}:{conclusion_theme}", variantes
-    )
-    return f"{probleme} {idee}", conclusion
+    friction = _choix_sans_repetition(
+        f"friction:{lang}:{theme_irritant}", friction_pool[theme_irritant])
+    idee = _choix_sans_repetition(f"idee:{lang}:{theme}", idee_pool[theme])
+    verdict = _choix_sans_repetition(f"verdict:{lang}:{theme}", verdict_pool[theme])
+    categorie = _CATEGORIE_VISUELLE_PAR_THEME[theme]
+    return friction, idee, verdict, categorie
 
 
 def _rapport_regles(lang: str, d: dict) -> dict:
-    """Rapport sans IA: naturel, compact et strictement fondé sur les réponses."""
+    """Rapport sans IA: naturel, compact et strictement fondé sur les
+    réponses. Chaque champ est construit à partir de bassins de phrases déjà
+    vérifiés dans les bornes de longueur du nouveau contrat — pas besoin de
+    compléter ni de tronquer après coup."""
     langue = "de" if lang == "de" else "fr"
-    titre = _choisir_titre(langue, d)
-    p1 = _phrase_relation(langue, d)
-    p2, conclusion = _phrase_irritant_solution(langue, d)
-
-    corps = "\n\n".join((p1, p2, conclusion))
-    if _mots(corps) < 60:
-        # Un seul complément fixe ne suffisait pas toujours (le déficit de
-        # mots varie selon les données disponibles et la variante de
-        # conclusion tirée au sort): on ajoute autant de compléments que
-        # nécessaire, dans l'ordre, jusqu'à atteindre le minimum.
-        confiance = _entier(d, "confiance", 0, 10)
-        complements = list(_COMPLEMENTS_FR if langue == "fr" else _COMPLEMENTS_DE)
-        if confiance is not None:
-            complements.insert(0,
-                (f" Avec {confiance} sur 10 de confiance pour arriver à l’heure, tu attends surtout que cette promesse devienne une habitude."
-                 if langue == "fr" else
-                 f" Mit {confiance} von 10 Punkten Vertrauen in die pünktliche Ankunft soll dieses Versprechen nun zur Gewohnheit werden."))
-        for ajout in complements:
-            if _mots(corps) >= 60:
-                break
-            p2 += ajout
-            corps = "\n\n".join((p1, p2, conclusion))
-
-    # Les modèles ci-dessus restent volontairement courts. Cette protection
-    # évite toutefois qu'une valeur administrateur anormalement longue déborde.
-    if _mots(corps) > 90:
-        p2 = re.sub(r"\s+", " ", p2)
-        mots = p2.split()
-        surplus = _mots(corps) - 88
-        if surplus > 0 and len(mots) > surplus + 8:
-            p2 = " ".join(mots[:-surplus]).rstrip(" ,;:") + "."
-        corps = "\n\n".join((p1, p2, conclusion))
-
+    titre_profil = _choisir_titre(langue, d)
+    plaisir = _phrase_plaisir(langue, d)
+    friction, idee_a_tester, verdict, categorie_visuelle = _friction_idee_verdict(langue, d)
     return {
-        "titre": titre,
-        "paragraphe_1": p1,
-        "paragraphe_2": p2,
-        "conclusion": conclusion,
-        "texte": corps,
+        "titre_profil": titre_profil,
+        "plaisir": plaisir,
+        "friction": friction,
+        "idee_a_tester": idee_a_tester,
+        "verdict": verdict,
+        "categorie_visuelle": categorie_visuelle,
     }
 
 

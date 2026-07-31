@@ -24,7 +24,7 @@ MEDIAS = DATA / "medias"        # musique, klaxon, images de concepts
 for d in (DATA, BACKUPS, AUDIO, VOIX, MEDIAS):
     d.mkdir(parents=True, exist_ok=True)
 
-VERSION_SCHEMA = 6
+VERSION_SCHEMA = 7
 
 
 def now() -> str:
@@ -237,7 +237,19 @@ def migrer() -> list[str]:
                         "ALTER TABLE sessions ADD COLUMN privacy_lang TEXT",
                         "ALTER TABLE sessions ADD COLUMN participant_code TEXT",
                         # v6: pictogramme de concept personnalisable dans l'admin
-                        "ALTER TABLE concepts ADD COLUMN icone TEXT DEFAULT ''"):
+                        "ALTER TABLE concepts ADD COLUMN icone TEXT DEFAULT ''",
+                        # v7: nouveau contrat de rapport (titre_profil/plaisir/
+                        # friction/idee_a_tester/verdict/categorie_visuelle) —
+                        # remplace l'ancien paragraphe_1/paragraphe_2/conclusion.
+                        # « titre » et « texte » sont conservés (compatibilité
+                        # des lignes déjà en base) mais plus utilisés pour de
+                        # nouveaux rapports: seules les nouvelles colonnes le
+                        # sont désormais.
+                        "ALTER TABLE rapports ADD COLUMN plaisir TEXT",
+                        "ALTER TABLE rapports ADD COLUMN friction TEXT",
+                        "ALTER TABLE rapports ADD COLUMN idee_a_tester TEXT",
+                        "ALTER TABLE rapports ADD COLUMN verdict TEXT",
+                        "ALTER TABLE rapports ADD COLUMN categorie_visuelle TEXT"):
                 try:
                     c.execute(alt)
                 except sqlite3.OperationalError:
