@@ -3,7 +3,7 @@
 Architecture commune pour quatre fournisseurs: none, ollama, gemini,
 anthropic. AI_PROVIDER=none est le défaut et produit déjà un rapport
 participant personnel et drôle grâce à des règles et modèles variés.
-Aucune bascule silencieuse: si le fournisseur configuré échoue, l'erreur
+Aucune bascule silencieuse: si le fournisseur configuré échoue, l’erreur
 est journalisée et le mode automatique prend le relais EN LE DISANT.
 Les fichiers audio bruts ne quittent jamais la machine, seuls des textes
 déjà transcrits localement peuvent être envoyés à un fournisseur externe
@@ -37,9 +37,9 @@ _RE_NOM = re.compile(
 
 
 def masquer_donnees_personnelles(texte: str) -> str:
-    """Masque au mieux les informations personnelles évidentes d'un texte
+    """Masque au mieux les informations personnelles évidentes d’un texte
     avant tout envoi à un fournisseur IA externe. Ne garantit pas
-    l'exhaustivité."""
+    l’exhaustivité."""
     if not isinstance(texte, str) or not texte:
         return texte
     t = _RE_NOM.sub("[information personnelle retirée]", texte)
@@ -62,7 +62,7 @@ def modele_actuel(provider: str) -> str:
 
 
 def _http_json(methode: str, url: str, **kw) -> dict:
-    """Point d'entrée réseau unique, remplacé par un mock dans les tests."""
+    """Point d’entrée réseau unique, remplacé par un mock dans les tests."""
     r = requests.request(methode, url, timeout=kw.pop("timeout", 60), **kw)
     r.raise_for_status()
     return r.json()
@@ -192,7 +192,7 @@ TITRES = {
             "Lumière allumée, attente apaisée",
             "Mission abribus vraiment accueillant",
             "Un siège avant même le voyage",
-            "L'arrêt où l'on se sent bien",
+            "L’arrêt où l’on se sent bien",
         ],
         "confort": [
             "Confort à bord, esprit léger",
@@ -206,36 +206,36 @@ TITRES = {
             "Billet clair, esprit léger",
             "Mission tarif sans casse-tête",
             "Monter plutôt que calculer",
-            "Le bon prix, sans mode d'emploi",
+            "Le bon prix, sans mode d’emploi",
             "Zéro question avant de voyager",
             "Trajet simple, billet compris",
         ],
         "foule": [
-            "Plus d'espace, moins de Tetris",
+            "Plus d’espace, moins de Tetris",
             "Mission bus sans compression",
             "Voyager sans jouer des coudes",
-            "Un peu d'air entre deux arrêts",
+            "Un peu d’air entre deux arrêts",
             "Le confort sans foule compacte",
             "Place personnelle en circulation",
         ],
         "frequence": [
-            "Plus de bus, moins d'attente",
+            "Plus de bus, moins d’attente",
             "Mission prochain départ bientôt",
             "Un horaire qui laisse le choix",
             "Le bus quand on en a besoin",
             "Cadence fluide, journée tranquille",
-            "Moins d'attente entre deux idées",
+            "Moins d’attente entre deux idées",
         ],
         "ponctualite": [
             "Ponctuel, le nouveau premium",
             "Mission neuf heures à neuf heures",
             "La minute juste au bon endroit",
             "Un bus qui tient parole",
-            "Cap sur l'arrivée à l'heure",
-            "L'horaire sans suspense final",
+            "Cap sur l’arrivée à l’heure",
+            "L’horaire sans suspense final",
         ],
         "telephone": [
-            "Batterie pleine jusqu'au terminus",
+            "Batterie pleine jusqu’au terminus",
             "USB contre la panique du 1 %",
             "Le trajet qui recharge aussi",
             "Mission téléphone encore vivant",
@@ -251,7 +251,7 @@ TITRES = {
             "Un trajet avec vue",
         ],
         "defaut": [
-            "Le bus avec moins de points d'interrogation",
+            "Le bus avec moins de points d’interrogation",
             "Prochain arrêt: plus simple",
             "Cinq minutes, une idée très claire",
             "Le bus de demain écoute déjà",
@@ -463,7 +463,7 @@ def _valider_rapport_ia(texte: str) -> dict | None:
 
 
 def rapport_cache_valide(titre: str, texte: str) -> bool:
-    """Écarte les anciens rapports afin qu'ils soient régénérés après mise à jour."""
+    """Écarte les anciens rapports afin qu’ils soient régénérés après mise à jour."""
     titre, texte = _nettoyer_fragment(titre, 180), (texte or "").strip()
     if not titre or not texte or _FORBIDDEN_REPORT_RE.search(titre + "\n" + texte):
         return False
@@ -504,14 +504,14 @@ def _phrase_relation(lang: str, d: dict) -> str:
             "quotidien": "Le bus fait clairement partie de ton quotidien.",
             "hebdo": "Le bus et toi, vous vous retrouvez chaque semaine.",
             "mensuel": "Le bus et toi, vous vous croisez quelques fois par mois.",
-            "rare": "Le bus et toi, c'est encore une relation occasionnelle.",
-            "jamais": "Le bus et toi, c'est encore une relation à construire.",
+            "rare": "Le bus et toi, c’est encore une relation occasionnelle.",
+            "jamais": "Le bus et toi, c’est encore une relation à construire.",
             "inconnu": "Le bus et toi, vous avez déjà quelques kilomètres en commun.",
         }
         suites = {
-            1: "Ton dernier trajet ne décroche qu'une étoile sur cinq: le service a du travail.",
+            1: "Ton dernier trajet ne décroche qu’une étoile sur cinq: le service a du travail.",
             2: "Ton dernier trajet obtient deux étoiles sur cinq: la marge de progression est généreuse.",
-            3: "Ton dernier trajet obtient trois étoiles sur cinq: correct, sans encore donner envie d'applaudir.",
+            3: "Ton dernier trajet obtient trois étoiles sur cinq: correct, sans encore donner envie d’applaudir.",
             4: "Ton dernier trajet récolte quatre étoiles sur cinq: ça roule plutôt bien.",
             5: "Ton dernier trajet décroche cinq étoiles: cette fois, le bus a parfaitement joué son rôle.",
         }
@@ -581,7 +581,7 @@ def _idee_verbatim(verbatim: str, lang: str) -> tuple[str | None, str | None]:
         "frequence": "Des départs plus fréquents rendraient le bus beaucoup plus facile à choisir.",
         "ponctualite": "Des horaires plus ponctuels transformeraient cette confiance en vraie habitude.",
         "billet": "Un billet simple et automatique retirerait un casse-tête avant même le départ.",
-        "attente": "Un arrêt abrité, éclairé et équipé d'une vraie assise améliorerait déjà le voyage.",
+        "attente": "Un arrêt abrité, éclairé et équipé d’une vraie assise améliorerait déjà le voyage.",
     }
     phrases_de = {
         "telephone": "Ein paar USB-Anschlüsse würden verhindern, dass dein Handy vor dir aussteigt.",
@@ -594,13 +594,39 @@ def _idee_verbatim(verbatim: str, lang: str) -> tuple[str | None, str | None]:
     return theme, (phrases_fr if fr else phrases_de)[theme]
 
 
+# Plusieurs formulations pour relier le point de friction à l'innovation
+# préférée du participant: une seule phrase fixe («va donc dans la bonne
+# direction: moins d'incertitude, plus de tranquillité») revenait à
+# l'identique dans tous les rapports dès qu'aucune idée précise n'émergeait
+# du verbatim — ça sonnait comme un copier-coller plutôt qu'un profil
+# personnel, même si le nom du concept, lui, changeait bien à chaque fois.
+_GABARITS_IDEE_CONCEPT = {
+    "fr": [
+        "L’idée «{concept}» va justement dans cette direction: moins d’incertitude, plus de tranquillité.",
+        "Et «{concept}» tombe plutôt bien: exactement le genre de coup de pouce qui change un trajet.",
+        "«{concept}» a d’ailleurs tout pour plaire ici: une réponse concrète, sans complication ajoutée.",
+        "Bonne nouvelle: «{concept}» répond justement à ce point-là, sans en rajouter.",
+        "«{concept}» arrive au bon moment: le genre d’idée qui simplifie sans se faire remarquer.",
+        "Et si «{concept}» voyait le jour, ce serait un pas de plus vers un trajet plus tranquille.",
+    ],
+    "de": [
+        "Die Idee «{concept}» geht genau in diese Richtung: weniger Unsicherheit, mehr Ruhe.",
+        "Und «{concept}» kommt gerade richtig: genau der Schub, der eine Fahrt verändert.",
+        "«{concept}» hat hier eigentlich alles: eine konkrete Antwort, ganz ohne zusätzlichen Aufwand.",
+        "Gute Nachricht: «{concept}» beantwortet genau diesen Punkt, ganz ohne Umwege.",
+        "«{concept}» kommt zur rechten Zeit: die Art Idee, die vieles einfacher macht, ohne aufzufallen.",
+        "Und würde «{concept}» Realität, wäre das ein Schritt zu einer entspannteren Fahrt.",
+    ],
+}
+
+
 def _phrase_irritant_solution(lang: str, d: dict) -> tuple[str, str]:
     fr = lang != "de"
     theme = _theme_irritant(d)
     problemes_fr = {
-        "correspondance": "Le vrai point de tension, c'est la correspondance ratée: quelques minutes suffisent pour transformer le trajet en sprint.",
-        "retard": "Ce qui gâche le voyage, c'est le retard sans information: le bus est annoncé, mais semble avoir quitté le scénario.",
-        "billet": "Le moment critique, c'est le billet: dès qu'il faut deviner le bon tarif, le trajet devient un petit escape game.",
+        "correspondance": "Le vrai point de tension, c’est la correspondance ratée: quelques minutes suffisent pour transformer le trajet en sprint.",
+        "retard": "Ce qui gâche le voyage, c’est le retard sans information: le bus est annoncé, mais semble avoir quitté le scénario.",
+        "billet": "Le moment critique, c’est le billet: dès qu’il faut deviner le bon tarif, le trajet devient un petit escape game.",
         "foule": "Le bus bondé reste ton principal frein: quand le trajet ressemble à une partie de Tetris, le confort descend au prochain arrêt.",
         "attente": "Attendre dans le froid ou le noir reste le point faible: avant même de monter, le voyage a déjà perdu des points.",
         "aucun": "Bonne nouvelle: aucun irritant majeur ne prend toute la place dans ton trajet.",
@@ -619,9 +645,11 @@ def _phrase_irritant_solution(lang: str, d: dict) -> tuple[str, str]:
     idee_theme, idee = _idee_verbatim(str(d.get("verbatim") or ""), lang)
     if not idee and d.get("concept"):
         concept = _nettoyer_fragment(d.get("concept"), 120)
-        idee = (f"Die Idee «{concept}» geht deshalb in die richtige Richtung: weniger Unsicherheit, mehr Ruhe."
-                if not fr else
-                f"L'idée «{concept}» va donc dans la bonne direction: moins d'incertitude, plus de tranquillité.")
+        gabarit = _choix_sans_repetition(
+            f"concept_idee:{'de' if not fr else 'fr'}",
+            _GABARITS_IDEE_CONCEPT["de" if not fr else "fr"],
+        )
+        idee = gabarit.format(concept=concept)
     if not idee and d.get("priorite_arbitrage"):
         priorite = _nettoyer_fragment(d.get("priorite_arbitrage"), 120)
         idee = (f"Deine Priorität ist klar: {priorite[:1].lower() + priorite[1:]} ." if not fr else
@@ -631,22 +659,22 @@ def _phrase_irritant_solution(lang: str, d: dict) -> tuple[str, str]:
         place = _nettoyer_fragment(d.get("apprecie"), 120)
         idee = (f"Und wenn möglich, gehört «{place}» ebenfalls zu einer gelungenen Fahrt."
                 if not fr else
-                f"Et tant qu'à faire, «{place}» fait aussi partie d'un trajet réussi.")
+                f"Et tant qu’à faire, «{place}» fait aussi partie d’un trajet réussi.")
     if not idee:
-        idee = ("Pas besoin d'en faire trop: le service doit surtout être clair, fiable et facile à utiliser."
+        idee = ("Pas besoin d’en faire trop: le service doit surtout être clair, fiable et facile à utiliser."
                 if fr else
                 "Es braucht nicht viel: Der Service muss vor allem klar, zuverlässig und einfach nutzbar sein.")
 
     conclusion_theme = idee_theme or theme
     conclusions_fr = {
         "correspondance": "Ton verdict: moins de sprint, plus de connexion.",
-        "retard": "Ton verdict: de l'info avant les mauvaises surprises.",
+        "retard": "Ton verdict: de l’info avant les mauvaises surprises.",
         "billet": "Ton verdict: monter, voyager, ne pas calculer.",
-        "foule": "Ton verdict: plus d'espace, moins de Tetris.",
+        "foule": "Ton verdict: plus d’espace, moins de Tetris.",
         "attente": "Ton verdict: attendre au sec, partir sereinement.",
-        "telephone": "Ton verdict: batterie pleine jusqu'au terminus.",
+        "telephone": "Ton verdict: batterie pleine jusqu’au terminus.",
         "panorama": "Ton verdict: un trajet simple, avec vue.",
-        "frequence": "Ton verdict: moins d'attente, plus de choix.",
+        "frequence": "Ton verdict: moins d’attente, plus de choix.",
         "ponctualite": "Ton verdict: un horaire qui tient parole.",
         "aucun": "Ton verdict: garder le bon, simplifier le reste.",
         "defaut": "Ton verdict: simple à comprendre, agréable à vivre.",
@@ -683,11 +711,11 @@ def _rapport_regles(lang: str, d: dict) -> dict:
         confiance = _entier(d, "confiance", 0, 10)
         ajout = ""
         if confiance is not None:
-            ajout = (f" Avec {confiance} sur 10 de confiance pour arriver à l'heure, tu attends surtout que cette promesse devienne une habitude."
+            ajout = (f" Avec {confiance} sur 10 de confiance pour arriver à l’heure, tu attends surtout que cette promesse devienne une habitude."
                      if langue == "fr" else
                      f" Mit {confiance} von 10 Punkten Vertrauen in die pünktliche Ankunft soll dieses Versprechen nun zur Gewohnheit werden.")
         else:
-            ajout = (" L'objectif n'est pas d'en faire plus, mais de rendre chaque étape plus évidente."
+            ajout = (" L’objectif n’est pas d’en faire plus, mais de rendre chaque étape plus évidente."
                      if langue == "fr" else
                      " Das Ziel ist nicht mehr Aufwand, sondern ein klarerer Ablauf bei jedem Schritt.")
         p2 += ajout
@@ -719,7 +747,7 @@ def _label_rapport(lang: str, ia: bool) -> str:
 
 
 def rapport_participant(lang: str, donnees: dict, ton: str = "complice") -> dict:
-    """Retourne un rapport toujours valide; l'IA invalide bascule vers les règles."""
+    """Retourne un rapport toujours valide; l’IA invalide bascule vers les règles."""
     langue = "de" if lang == "de" else "fr"
     provider = provider_actuel()
     erreur = None
