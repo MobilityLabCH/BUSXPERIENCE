@@ -1210,18 +1210,21 @@ def test_echelle_reduite_a_quelques_paliers(client):
     assert m and "currentScalePaliers[currentScale]" in m.group(1)
 
 
-def test_echelle_utilise_des_emojis_plutot_que_des_chiffres(client):
+def test_echelle_utilise_des_barres_de_niveau_plutot_que_des_chiffres(client):
     """Les chiffres bruts (0, 3, 5, 8, 10) sur les boutons d'échelle
-    n'étaient pas compris intuitivement par les participants. Chaque
-    palier doit maintenant afficher un visage expressif (échelle de
-    smileys), la valeur numérique réelle restant envoyée au backend et
-    exposée uniquement via aria-label pour l'accessibilité."""
+    n'étaient pas compris intuitivement par les participants. Un premier
+    essai avec des émojis faisait doublon avec l'écran de réaction
+    (concept-impact) qui utilise déjà des émojis juste avant dans le
+    parcours. Chaque palier doit donc afficher une barre de niveau
+    ascendante (sans émoji ni chiffre visible), la valeur numérique réelle
+    restant envoyée au backend et exposée via aria-label pour
+    l'accessibilité."""
     h = client.get("/cabine/").text
-    assert "EMOJIS_ECHELLE" in h
+    assert "EMOJIS_ECHELLE" not in h
     debut = h.index("function showScale(q){")
     fin = h.index("function refreshScale", debut)
     corps = h[debut:fin]
-    assert "emojiPourPalier" in corps and "aria-label" in corps
+    assert "scale-bar" in corps and "aria-label" in corps and "--h" in corps
 
 
 def test_voix_compact_ios_moins_prioritaire(client):

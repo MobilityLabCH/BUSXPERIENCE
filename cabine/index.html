@@ -119,8 +119,10 @@ button{font:inherit}
 /* Échelle sans curseur */
 .scale-wrap{width:min(960px,84vw);display:flex;flex-direction:column;gap:16px}
 .scale-values{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:clamp(4px,.6vw,9px)}
-.scale-value{height:clamp(42px,6.4vw,74px);display:grid;place-items:center;border:2px solid var(--line);border-radius:11px;background:#17181c;color:var(--paper);font-size:clamp(22px,3vw,38px);line-height:1;transition:.14s}
-.scale-value.selected{background:var(--yellow);border-color:var(--yellow);color:var(--ink);transform:translateY(-7px)}
+.scale-value{height:clamp(42px,6.4vw,74px);display:flex;align-items:flex-end;justify-content:center;border:2px solid var(--line);border-radius:11px;background:#17181c;padding-bottom:7px;transition:.14s}
+.scale-bar{width:34%;height:var(--h,20%);background:var(--line);border-radius:5px 5px 0 0;transition:.14s}
+.scale-value.selected{background:var(--yellow);border-color:var(--yellow);transform:translateY(-7px)}
+.scale-value.selected .scale-bar{background:var(--ink)}
 .scale-labels{display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:clamp(12px,1.15vw,16px);font-weight:750}
 .scale-labels span{max-width:18ch}
 .scale-labels span:last-child{text-align:right}
@@ -688,9 +690,7 @@ async function validateStars(){state="sending";soundOk();if(currentQuestion.conc
    On garde la plage 0-max envoyée au format actuel des réponses, mais on
    ne propose plus que quelques paliers bien répartis à faire défiler. */
 let currentScalePaliers=[];
-const EMOJIS_ECHELLE=["😞","🙁","😐","🙂","😄"];
-function emojiPourPalier(i,total){if(total<=1)return EMOJIS_ECHELLE[Math.floor(EMOJIS_ECHELLE.length/2)];const t=i/(total-1);return EMOJIS_ECHELLE[Math.round(t*(EMOJIS_ECHELLE.length-1))]}
-function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;const n=5;currentScalePaliers=max<=n?Array.from({length:max+1},(_,i)=>i):Array.from({length:n},(_,i)=>Math.round(i*max/(n-1)));currentScale=Math.floor(currentScalePaliers.length/2);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();currentScalePaliers.forEach((v,i)=>{const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.textContent=emojiPourPalier(i,currentScalePaliers.length);b.setAttribute("aria-label",String(v));zone.appendChild(b)});const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
+function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;const n=5;currentScalePaliers=max<=n?Array.from({length:max+1},(_,i)=>i):Array.from({length:n},(_,i)=>Math.round(i*max/(n-1)));currentScale=Math.floor(currentScalePaliers.length/2);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();currentScalePaliers.forEach((v,i)=>{const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.style.setProperty("--h",Math.round((i+1)/currentScalePaliers.length*100)+"%");const bar=document.createElement("span");bar.className="scale-bar";b.appendChild(bar);b.setAttribute("aria-label",String(v));zone.appendChild(b)});const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
 function refreshScale(){document.querySelectorAll("#scale-values .scale-value").forEach((b,i)=>b.classList.toggle("selected",i===currentScale))}
 function nextScale(){const max=document.querySelectorAll("#scale-values .scale-value").length-1;currentScale=currentScale>=max?0:currentScale+1;refreshScale();soundMove()}
 async function validateScale(){state="sending";soundOk();const valeur=String(currentScalePaliers[currentScale]);if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur});else{localAnswers["q"+currentQuestion.id]=valeur;await send({question_id:currentQuestion.id,cle:"reponse",valeur})}later(260,()=>showStep())}
