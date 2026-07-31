@@ -260,6 +260,15 @@ def test_rapport_final_presente_un_billet_personnalise(client):
     assert "lieuNom" in h and "cfg.lieu" in h
 
 
+def test_billet_integre_le_logo_carpostal(client):
+    """Le logo CarPostal doit être intégré discrètement à la souche du
+    billet final (à côté des champs buzzer/date/code), servi depuis
+    /medias/ comme les autres médias par défaut."""
+    h = client.get("/cabine/").text
+    assert 'src="/medias/logo-postauto.png"' in h
+    assert (RACINE / "medias-defaut" / "logo-postauto.png").exists()
+
+
 def test_billet_indique_le_buzzer_lheure_exacte_et_un_mot_de_remerciement(client):
     """Le billet final doit dire où se trouve le buzzer utilisé (nom du
     lieu de la campagne), la date et l'heure exactes de la session, et se
