@@ -284,6 +284,20 @@ def test_billet_indique_le_buzzer_lheure_exacte_et_un_mot_de_remerciement(client
     assert "Danke für diesen Moment mit uns" in h
 
 
+def test_illustration_du_concept_visible_sur_mobile(client):
+    """Bug réel constaté sur téléphone: en dessous de 900px de large,
+    .concept-visual (qui contient à la fois la photo et le picto de repli)
+    était complètement masqué (display:none), donc ni la photo ajoutée par
+    l'admin ni le picto ne s'affichaient jamais sur mobile. L'illustration
+    doit rester visible, juste en plus petit."""
+    h = client.get("/cabine/").text
+    m = re.search(r"@media \(max-width:900px\)\{(.*?)\n\}", h, re.S)
+    assert m, "media query max-width:900px introuvable"
+    bloc = m.group(1)
+    assert ".concept-visual{display:none}" not in bloc
+    assert ".concept-visual" in bloc
+
+
 def test_pictogramme_admin_prioritaire_sur_la_detection_auto(client):
     """Si l'admin a défini un picto manuel sur le concept (c.icone), il doit
     être utilisé de préférence au picto détecté automatiquement par mots-clés."""
@@ -354,7 +368,22 @@ def test_musique_coupee_pendant_enregistrement_micro(client):
     # musicNormal() n'annule jamais la coupure tant qu'elle est active
     # (sinon la lecture de la question la lèverait pendant l'enregistrement)
     mn = re.search(r"function musicNormal\(\)\{([^}]*)\}", h)
-    assert mn and "if(musicHardMuted)return" in mn.group(0)
+    assert mn and "if(musicHardMuted" in mn.group(0) and "return" in mn.group(0)
+
+
+def test_coupure_musique_repose_sur_pause_pas_seulement_le_volume(client):
+    """Bug réel constaté sur iPhone: iOS/Safari ignore complètement les
+    changements de volume appliqués par script sur un <audio> (seuls les
+    boutons physiques du téléphone contrôlent le volume) — tout le système
+    de fade n'avait donc aucun effet sur mobile, et la musique continuait à
+    plein volume pendant l'enregistrement. pause()/play() restent en
+    revanche toujours respectés, y compris sur iOS: la coupure "dure" doit
+    donc reposer dessus, pas seulement sur le fade du volume."""
+    h = client.get("/cabine/").text
+    mute = re.search(r"function musicMute\(\)\{([^}]*)\}", h)
+    assert mute and "background.pause()" in mute.group(0)
+    normal = re.search(r"function musicNormal\(\)\{([^}]*)\}", h)
+    assert normal and "background.play()" in normal.group(0)
 
 
 def test_fade_musique_ne_peut_pas_etre_ecrasee_par_une_rampe_perimee(client):

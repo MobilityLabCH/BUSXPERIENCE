@@ -225,7 +225,9 @@ button{font:inherit}
  .choices.two{grid-template-columns:1fr}
  .choices.many{grid-template-columns:repeat(2,minmax(0,1fr))}
  .duel{grid-template-columns:1fr 1fr}.duel-or{display:none}
- .concept-card{grid-template-columns:1fr}.concept-visual{display:none}
+ .concept-card{grid-template-columns:1fr}
+ .concept-visual{order:-1;max-height:150px}
+ .concept-card img,.concept-icon{max-height:150px;min-height:0}
  .report-card{grid-template-columns:1fr;max-height:none;overflow-y:auto}
  .report-main{overflow-y:visible}
  .report-stub{border-left:0;border-top:2px dashed rgba(17,18,22,.22);flex-direction:row;flex-wrap:wrap;align-items:center}
@@ -568,8 +570,16 @@ function musicDuck(){fade(musicHardMuted?0:backgroundTarget*.2,300)}
    ce verrou est actif, les duck/normal habituels de la lecture des questions
    n'y remettent pas du son par-dessus l'enregistrement. */
 let musicHardMuted=false;
-function musicNormal(){if(musicHardMuted)return;fade(backgroundTarget,650)}
-function musicMute(){fade(0,250)}
+function musicNormal(){if(musicHardMuted||!background)return;if(background.paused)background.play().catch(()=>{});fade(backgroundTarget,650)}
+/* iOS/Safari mobile ignore complètement les changements de background.volume
+   par script (limitation volontaire d'Apple: seuls les boutons physiques du
+   téléphone contrôlent le volume d'un <audio>) — tout le système de fade
+   ci-dessus n'a donc AUCUN effet sur iPhone, et la musique continuait de
+   jouer à plein volume pendant l'enregistrement. pause()/play() sont en
+   revanche toujours respectés partout: c'est le seul mécanisme de coupure
+   fiable sur mobile, donc la coupure "dure" repose dessus (en plus du fade,
+   qui reste utile sur desktop). */
+function musicMute(){fade(0,250);if(background)try{background.pause()}catch{}}
 function musicStop(){if(!background)return;fade(0,800);later(850,()=>{if(background){background.pause();background=null}})}
 function horn(){const s=cfg.sons||{};if(!s.klaxon_actif){tone([523,659,784],.12);return}if(!klaxonAudio)klaxonAudio=new Audio("/medias/klaxon.mp3");klaxonAudio.volume=s.klaxon_volume||.7;klaxonAudio.currentTime=0;klaxonAudio.play().catch(()=>tone([523,659,784],.12))}
 
