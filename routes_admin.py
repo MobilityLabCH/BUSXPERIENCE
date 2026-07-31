@@ -277,6 +277,7 @@ def concepts(request: Request):
 async def sauver_concept(request: Request, concept_id: int = Form(0),
                          nom_fr: str = Form(""), nom_de: str = Form(""),
                          desc_fr: str = Form(""), desc_de: str = Form(""),
+                         icone: str = Form(""),
                          campagne_id: int = Form(0), actif: int = Form(0),
                          supprimer: int = Form(0), nb_concepts: int = Form(0),
                          image: UploadFile | None = File(None)):
@@ -295,15 +296,15 @@ async def sauver_concept(request: Request, concept_id: int = Form(0),
             (db.MEDIAS / img).write_bytes(await image.read())
         if concept_id:
             c.execute(
-                """UPDATE concepts SET nom_fr=?,nom_de=?,desc_fr=?,desc_de=?,
+                """UPDATE concepts SET nom_fr=?,nom_de=?,desc_fr=?,desc_de=?,icone=?,
                    campagne_id=?,actif=?, image=COALESCE(?,image) WHERE id=?""",
-                (nom_fr, nom_de, desc_fr, desc_de, campagne_id or None, actif,
-                 img, concept_id))
+                (nom_fr, nom_de, desc_fr, desc_de, icone.strip(),
+                 campagne_id or None, actif, img, concept_id))
         else:
             c.execute(
-                """INSERT INTO concepts (nom_fr,nom_de,desc_fr,desc_de,campagne_id,
-                   image,actif) VALUES (?,?,?,?,?,?,1)""",
-                (nom_fr, nom_de, desc_fr, desc_de, campagne_id or None, img))
+                """INSERT INTO concepts (nom_fr,nom_de,desc_fr,desc_de,icone,campagne_id,
+                   image,actif) VALUES (?,?,?,?,?,?,?,1)""",
+                (nom_fr, nom_de, desc_fr, desc_de, icone.strip(), campagne_id or None, img))
     return RedirectResponse("/admin/concepts", status_code=303)
 
 

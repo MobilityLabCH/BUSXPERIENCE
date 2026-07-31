@@ -79,7 +79,7 @@ def _session(client, participants=1, mic_ok=1, lang="fr"):
 
 def test_health(client):
     d = client.get("/health").json()
-    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 5
+    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 6
     assert d["ai_provider"] == "none"
 
 
@@ -247,6 +247,43 @@ def test_concepts_titres_benefices_voyageurs(client):
     for interdit in ("Alerte retard immédiate", "Auslastungsanzeige",
                       "Anschlussgarantie", "idée à tester", "Idee zum Testen"):
         assert interdit not in noms
+
+
+def test_rapport_final_presente_un_billet_personnalise(client):
+    """La dernière page (le rapport) doit prendre la forme d'un billet de
+    voyage: souche avec le code de participation mis en avant (preuve
+    concrète de personnalisation), pictogramme, et le lieu affiché dans
+    l'accroche quand il est connu — pas juste un bloc de texte générique."""
+    h = client.get("/cabine/").text
+    assert 'class="report-main"' in h and 'class="report-stub"' in h
+    assert 'id="report-confetti"' in h or 'class="report-confetti"' in h
+    assert "lieuNom" in h and "cfg.lieu" in h
+
+
+def test_pictogramme_admin_prioritaire_sur_la_detection_auto(client):
+    """Si l'admin a défini un picto manuel sur le concept (c.icone), il doit
+    être utilisé de préférence au picto détecté automatiquement par mots-clés."""
+    h = client.get("/cabine/").text
+    assert '(c.icone&&c.icone.trim())||conceptIcone(c)' in h
+
+
+def test_admin_peut_definir_le_picto_dun_concept(client):
+    """L'admin peut fixer un pictogramme (emoji) manuel pour un concept,
+    qui doit ensuite être proposé dans /api/config et repris tel quel."""
+    _login(client)
+    import db as module_db
+    with module_db.conn() as c:
+        row = c.execute("SELECT id, nom_fr, nom_de FROM concepts ORDER BY id LIMIT 1").fetchone()
+        concept_id, nom_fr, nom_de = row["id"], row["nom_fr"], row["nom_de"]
+    r = client.post("/admin/concepts", data={
+        "concept_id": concept_id, "nom_fr": nom_fr, "nom_de": nom_de,
+        "desc_fr": "", "desc_de": "",
+        "icone": "🚀🎉", "campagne_id": 0, "actif": 1,
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    with module_db.conn() as c:
+        icone = c.execute("SELECT icone FROM concepts WHERE id=?", (concept_id,)).fetchone()["icone"]
+    assert icone == "🚀🎉"
 
 
 def test_musique_coupee_pendant_enregistrement_micro(client):
