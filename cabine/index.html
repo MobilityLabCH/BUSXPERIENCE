@@ -55,6 +55,7 @@ button{font:inherit}
 .question{font-size:clamp(30px,3.6vw,52px);line-height:1.04;letter-spacing:-.03em;font-weight:900;max-width:18ch;text-wrap:balance}
 .question.compact{font-size:clamp(25px,3vw,42px);max-width:24ch}
 .lead{font-size:clamp(19px,1.9vw,28px);line-height:1.25;font-weight:700;max-width:58ch;text-wrap:balance}
+.ios-tip{margin-top:14px;font-size:clamp(13px,1.1vw,16px);font-weight:700;color:var(--muted)}
 .muted{color:var(--muted)}
 
 /* Transition */
@@ -290,6 +291,7 @@ button{font:inherit}
   <p class="eyebrow brand"><img src="/medias/Logo_Lockup_01_MobilityLab_White_Red.png" alt="MobilityLab">BUS XPERIENCE</p>
   <h1 class="headline" id="intro-title"></h1>
   <p class="lead" id="intro-subtitle"></p>
+  <p class="ios-tip" id="intro-ios-tip" hidden></p>
  </div>
 </section>
 
@@ -437,6 +439,7 @@ const TXT={
   tutorialTitle:"Essaie le buzzer !",
   tutorialHint:"Un petit coup pour changer, un gros coup qui dure pour valider !",
   tutorialItems:["🚪 Ouvrir les portes","🚪 Fermer les portes","❄️ Climatisation","↩️ Clignotant","📯 Klaxon"],
+  iosMuteTip:"📵 Astuce iPhone: désactive le mode silencieux pour entendre les questions.",
   introTitle:"TU MONTES À BORD. À PARTIR DE MAINTENANT, C’EST TON EXPÉRIENCE QUI COMPTE.",
   introSub:"5 minutes pour améliorer le bus.",consentKicker:"Avant de commencer",
   consentTitle:"À toi de décider.",
@@ -471,6 +474,7 @@ const TXT={
   tutorialTitle:"Probier den Buzzer aus!",
   tutorialHint:"Kurz antippen zum Wechseln, lange draufbleiben zum Bestätigen!",
   tutorialItems:["🚪 Türen öffnen","🚪 Türen schliessen","❄️ Klimaanlage","↩️ Blinker","📯 Hupe"],
+  iosMuteTip:"📵 iPhone-Tipp: Stummschalter ausschalten, um die Fragen zu hören.",
   introTitle:"DU STEIGST EIN. AB JETZT GEHT ES UM DEIN ERLEBNIS.",
   introSub:"5 Minuten für ein besseres Bus-Erlebnis.",consentKicker:"Bevor es losgeht",
   consentTitle:"Du entscheidest.",
@@ -557,6 +561,12 @@ let selection=0,currentItems=[],currentQuestion=null,currentStars=1,currentCompa
 let timers=[],idleTimer=null;
 const $=s=>document.querySelector(s);
 const text=()=>TXT[lang];
+/* iOS coupe speechSynthesis quand le bouton silencieux physique est activé
+   (contrairement à un <audio> classique comme la musique de fond, qui reste
+   audible) — limitation Apple/WebKit sans contournement possible en JS. On
+   prévient donc une seule fois, tôt dans le parcours, plutôt que de laisser
+   croire à un bug quand les questions restent silencieuses. */
+const isIOS=/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 const later=(ms,fn)=>{const id=setTimeout(fn,ms);timers.push(id);return id};
 function clearTimers(){timers.forEach(clearTimeout);timers=[]}
 
@@ -673,7 +683,7 @@ function confirmSelection(selector=".choice"){const nodes=[...document.querySele
 
 /* Démarrage */
 function start(){clearTimers();stopSpeech();state="language";selection=0;hideChrome();renderChoices($("#language-choices"),["Français","Deutsch"],0);show("e-language");setHelpChoose()}
-function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?priv.text_de:priv.text_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-title").textContent=text().privacyCardTitle;$("#consent-privacy-desc").textContent=text().privacyCardDesc;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyCardTitle;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");showTutorial()}
+function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#intro-ios-tip").textContent=isIOS?text().iosMuteTip:"";$("#intro-ios-tip").hidden=!isIOS;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?priv.text_de:priv.text_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-title").textContent=text().privacyCardTitle;$("#consent-privacy-desc").textContent=text().privacyCardDesc;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyCardTitle;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");showTutorial()}
 /* Petit jeu d'entraînement au buzzer avant l'intro: apprend les deux
    gestes utilisés pour tout le parcours (pression courte = changer,
    pression longue = valider) sur un choix ludique sans enjeu, avant de

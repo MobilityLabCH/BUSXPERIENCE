@@ -261,6 +261,22 @@ def test_tutoriel_buzzer_avant_le_consentement(client):
     assert "horn()" in m.group(1) and "choisi.includes" in m.group(1)
 
 
+def test_avertissement_mode_silencieux_ios(client):
+    """iOS coupe speechSynthesis quand le bouton silencieux physique est
+    activé, contrairement à un <audio> classique (la musique de fond reste
+    audible) — confirmé en usage réel. Aucun contournement JS n'existe pour
+    cette limitation Apple/WebKit, donc on prévient l'utilisateur tôt dans
+    le parcours (écran d'intro) plutôt que de laisser croire à un bug."""
+    h = client.get("/cabine/").text
+    assert 'id="intro-ios-tip"' in h and "hidden" in h[h.index('id="intro-ios-tip"') - 5:h.index('id="intro-ios-tip"') + 40]
+    assert "iosMuteTip" in h
+    assert "const isIOS=" in h
+    debut = h.index("function chooseLanguage(){")
+    fin = h.index("function showTutorial(){", debut)
+    corps = h[debut:fin]
+    assert "intro-ios-tip" in corps and "isIOS" in corps
+
+
 def test_lecture_vocale_ne_cancel_speak_pas_dans_le_meme_tick_ios(client):
     """Bug WebKit connu sur iPhone: enchaîner speechSynthesis.cancel() puis
     .speak() dans le même tick fait parfois disparaître silencieusement le
