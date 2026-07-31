@@ -167,17 +167,23 @@ button{font:inherit}
    la preuve la plus concrète du caractère personnalisé du profil). */
 #e-report{background:var(--yellow);color:var(--ink)}
 #report-loading{font-size:clamp(28px,3.5vw,54px);font-weight:900;text-align:center;max-width:30ch}
-.report-card{width:min(1040px,88vw);max-height:86vh;background:var(--paper);border-radius:20px;box-shadow:16px 16px 0 var(--ink);text-align:left;opacity:0;transform:translateY(40px) scale(.96);display:grid;grid-template-columns:1fr minmax(170px,210px);overflow:hidden;position:relative}
+.report-card{width:min(1040px,88vw);max-height:86vh;background:#fff;border-radius:20px;box-shadow:16px 16px 0 var(--ink);text-align:left;opacity:0;transform:translateY(40px) scale(.96);display:grid;grid-template-columns:1fr minmax(170px,210px);overflow:hidden;position:relative}
 .report-card.reveal{animation:reveal .55s cubic-bezier(.2,1.2,.25,1) forwards}
 @keyframes reveal{to{opacity:1;transform:none}}
 .report-main{position:relative;z-index:1;min-width:0;padding:clamp(20px,3.2vh,36px) clamp(18px,2.6vw,26px) clamp(20px,3.2vh,36px) clamp(20px,3.4vh,36px);overflow-y:auto}
 .report-kicker{font-size:clamp(11px,1.1vw,15px);letter-spacing:.22em;text-transform:uppercase;color:#74736d;font-weight:900}
 .report-title{margin-top:8px;font-size:clamp(28px,3.8vw,50px);line-height:1;letter-spacing:-.035em;text-transform:uppercase;font-weight:900;max-width:17ch}
-.report-body{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,2.6vw,34px);margin-top:clamp(12px,2vh,20px);font-size:clamp(13.5px,1.3vw,17px);line-height:1.32;font-weight:600}
-.report-conclusion{position:relative;display:inline-block;margin-top:clamp(12px,2vh,20px);padding:10px 16px 10px 32px;background:var(--ink);color:var(--yellow);border-radius:9px;font-size:clamp(13.5px,1.35vw,18px);line-height:1.24;font-weight:900}
-.report-conclusion:before{content:"\201C";position:absolute;left:10px;top:.02em;font-size:1.5em;font-weight:900;opacity:.5;line-height:1}
+.report-blocks{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,1.8vw,22px);margin-top:clamp(14px,2.2vh,22px)}
+.report-block-label{display:flex;align-items:center;gap:7px;width:fit-content;background:var(--yellow);color:var(--ink);border-radius:8px;padding:5px 10px;font-size:clamp(10px,.92vw,12px);font-weight:900;letter-spacing:.02em;text-transform:uppercase;line-height:1.2}
+.report-block-icon{width:14px;height:14px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8}
+.report-block-text{margin-top:8px;font-size:clamp(12.5px,1.2vw,15.5px);line-height:1.32;font-weight:600;color:var(--ink)}
+.report-verdict{position:relative;margin-top:clamp(14px,2.2vh,22px);padding:clamp(14px,2vh,20px) clamp(52px,5vw,68px) clamp(14px,2vh,20px) clamp(38px,3.4vw,50px);background:var(--ink);border-radius:11px}
+.report-verdict:before{content:"\201C";position:absolute;left:11px;top:0;font-size:2.3em;font-weight:900;color:var(--yellow);opacity:.5;line-height:1}
+.report-verdict-label{font-size:clamp(10px,.92vw,12px);font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--yellow);margin-bottom:5px}
+.report-verdict-text{font-size:clamp(14.5px,1.5vw,19px);line-height:1.3;font-weight:800;color:#fff}
+.report-verdict-icon{position:absolute;right:clamp(10px,1.4vw,18px);top:50%;transform:translateY(-50%);width:clamp(26px,3.2vw,40px);height:clamp(26px,3.2vw,40px);stroke:var(--yellow);fill:none;stroke-width:1.5;opacity:.85}
 .report-thanks{margin-top:clamp(10px,1.6vh,16px);color:#5f5d57;font-size:clamp(11.5px,1.05vw,14px);font-weight:650;font-style:italic;max-width:52ch}
-.report-stub{position:relative;z-index:1;background:#efe8d6;border-left:2px dashed rgba(17,18,22,.22);padding:clamp(18px,3vh,32px) clamp(16px,2vw,24px);display:flex;flex-direction:column;gap:14px}
+.report-stub{position:relative;z-index:1;background:#f7f7f5;border-left:2px dashed rgba(17,18,22,.22);padding:clamp(18px,3vh,32px) clamp(16px,2vw,24px);display:flex;flex-direction:column;gap:14px}
 .report-stub-icon{width:38px;height:38px;border-radius:10px;overflow:hidden;flex:0 0 auto;background:var(--yellow)}
 .report-stub-icon img{width:100%;height:100%;object-fit:cover;display:block}
 .report-stub-fields{display:flex;flex-direction:column;gap:11px;flex:1}
@@ -224,7 +230,7 @@ button{font:inherit}
  .report-card{max-height:90vh}
  .report-main{padding:20px 18px 20px 22px}
  .report-stub{padding:18px 18px}
- .report-body{font-size:clamp(13px,1.2vw,16px)}
+ .report-blocks{font-size:clamp(13px,1.2vw,16px)}
 }
 @media (max-width:900px){
  .choices.two{grid-template-columns:1fr}
@@ -235,9 +241,16 @@ button{font:inherit}
  .concept-card img,.concept-icon{max-height:150px;min-height:0}
  .report-card{grid-template-columns:1fr;max-height:none;overflow-y:auto}
  .report-main{overflow-y:visible}
+ /* Le billet peut devenir plus haut que l'écran (profil long en allemand,
+    par exemple): .screen a overflow:hidden par défaut pour les transitions,
+    ce qui couperait alors le bas du billet sans aucun moyen d'y accéder.
+    Seul l'écran du rapport doit pouvoir défiler verticalement. */
+ #e-report{overflow-y:auto}
  .report-stub{border-left:0;border-top:2px dashed rgba(17,18,22,.22);flex-direction:row;flex-wrap:wrap;align-items:center}
  .report-barcode{flex:1 1 140px;min-width:140px}
- .report-body{grid-template-columns:1fr;gap:12px}
+ .report-blocks{grid-template-columns:1fr;gap:12px}
+ .report-verdict{padding-right:clamp(38px,3.4vw,50px)}
+ .report-verdict-icon{width:22px;height:22px}
  /* 5 réactions avec flex:1 1 0 se répartissaient de façon inégale en
     largeur étroite (ex: 4 sur une ligne + 1 tout seul, comme "oublié").
     Largeur fixe à 3 par ligne: deux lignes propres et centrées (3 puis 2). */
@@ -246,6 +259,74 @@ button{font:inherit}
 </style>
 </head>
 <body>
+<!-- Bibliothèque locale d'icônes du ticket final: aucun appel externe, un
+     seul jeu de pictogrammes simples (traits fins) réutilisés par
+     catégorie visuelle ou pour les trois blocs plaisir/friction/idée. Pas
+     d'illustration complexe: si aucune catégorie ne correspond vraiment
+     (categorie_visuelle="generique"), le ticket reste volontairement
+     typographique (voir renderRapport côté JS). -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+ <defs>
+  <symbol id="icon-plaisir" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <circle cx="12" cy="12" r="9"/>
+   <path d="M8 14c1.2 1.4 2.6 2 4 2s2.8-.6 4-2" stroke-linecap="round"/>
+   <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/>
+   <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="icon-friction" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M13 3 5 14h6l-1 7 8-11h-6l1-7z" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-idee" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M9 18h6M10 21h4" stroke-linecap="round"/>
+   <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-panorama" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <circle cx="17.5" cy="6.5" r="2"/>
+   <path d="M3 18l5.5-8 4 5 2-2.5L20 18z" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-ponctualite" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <circle cx="12" cy="12" r="9"/>
+   <path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-information" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <circle cx="12" cy="12" r="9"/>
+   <path d="M12 11v5" stroke-linecap="round"/>
+   <circle cx="12" cy="8" r="1" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="icon-confort" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M6 20v-6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v6" stroke-linecap="round" stroke-linejoin="round"/>
+   <path d="M6 20h12M8 11V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-affluence" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <circle cx="8.5" cy="8" r="2.6"/>
+   <circle cx="17" cy="9.5" r="2.2"/>
+   <path d="M3.5 19c.5-3 2.4-4.7 5-4.7s4.5 1.7 5 4.7" stroke-linecap="round" stroke-linejoin="round"/>
+   <path d="M13.5 19c.4-2.4 1.8-3.8 3.8-3.8s3.4 1.4 3.8 3.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-securite" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z" stroke-linecap="round" stroke-linejoin="round"/>
+   <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-prix" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M11 3h6a2 2 0 0 1 2 2v6l-9 9-8-8z" stroke-linecap="round" stroke-linejoin="round"/>
+   <circle cx="15" cy="7" r="1.3" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="icon-correspondance" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M4 8h13M13 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/>
+   <path d="M20 16H7M11 12l-4 4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-dernier_kilometre" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z" stroke-linecap="round" stroke-linejoin="round"/>
+   <circle cx="12" cy="9" r="2.4"/>
+  </symbol>
+  <symbol id="icon-generique" viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+   <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10H4z" stroke-linejoin="round"/>
+   <path d="M4 12h16M8 16v2M16 16v2" stroke-linecap="round"/>
+   <circle cx="8" cy="18.5" r="1.3" fill="currentColor" stroke="none"/>
+   <circle cx="16" cy="18.5" r="1.3" fill="currentColor" stroke="none"/>
+  </symbol>
+ </defs>
+</svg>
 <div id="wipe"></div>
 <div id="progress">
  <div id="progress-line"><span id="progress-step"></span><span id="progress-count"></span></div>
@@ -399,8 +480,25 @@ button{font:inherit}
   <div class="report-main">
    <p class="report-kicker" id="report-kicker"></p>
    <h2 class="report-title" id="report-title"></h2>
-   <div class="report-body" id="report-body"></div>
-   <p class="report-conclusion" id="report-conclusion"></p>
+   <div class="report-blocks">
+    <div class="report-block">
+     <p class="report-block-label"><svg class="report-block-icon" aria-hidden="true"><use href="#icon-plaisir"></use></svg><span id="report-label-plaisir"></span></p>
+     <p class="report-block-text" id="report-plaisir"></p>
+    </div>
+    <div class="report-block">
+     <p class="report-block-label"><svg class="report-block-icon" aria-hidden="true"><use href="#icon-friction"></use></svg><span id="report-label-friction"></span></p>
+     <p class="report-block-text" id="report-friction"></p>
+    </div>
+    <div class="report-block">
+     <p class="report-block-label"><svg class="report-block-icon" aria-hidden="true"><use href="#icon-idee"></use></svg><span id="report-label-idee"></span></p>
+     <p class="report-block-text" id="report-idee"></p>
+    </div>
+   </div>
+   <div class="report-verdict">
+    <p class="report-verdict-label" id="report-label-verdict"></p>
+    <p class="report-verdict-text" id="report-verdict"></p>
+    <svg class="report-verdict-icon" id="report-verdict-icon" aria-hidden="true" hidden><use id="report-verdict-icon-use"></use></svg>
+   </div>
    <p class="report-thanks" id="report-thanks"></p>
   </div>
   <div class="report-stub">
@@ -461,6 +559,8 @@ const TXT={
   listen:"Réécouter",redo:"Recommencer",save:"Valider",
   calc:["On rassemble l’essentiel…","On repère ce qui compte vraiment…","On prépare ton profil de voyage…"],
   reportKicker:"TON PROFIL DE VOYAGE",
+  reportLabelPlaisir:"Ton plaisir",reportLabelFriction:"Ce qui te refroidit",
+  reportLabelIdee:"L’idée qui te ferait remonter à bord",reportLabelVerdict:"Ton verdict",
   reportBuzzerLabel:"Buzzer",reportDateLabel:"Le",
   reportThanks:"Merci pour ce moment passé avec nous. À très bientôt, pour de vrai, sur nos lignes !"
  },
@@ -496,6 +596,8 @@ const TXT={
   listen:"Anhören",redo:"Neu aufnehmen",save:"Bestätigen",
   calc:["Wir sammeln das Wesentliche…","Wir erkennen, was wirklich zählt…","Wir erstellen dein Reiseprofil…"],
   reportKicker:"DEIN REISEPROFIL",
+  reportLabelPlaisir:"Deine Freude",reportLabelFriction:"Was dich abkühlt",
+  reportLabelIdee:"Deine Comeback-Idee",reportLabelVerdict:"Dein Fazit",
   reportBuzzerLabel:"Buzzer",reportDateLabel:"Am",
   reportThanks:"Danke für diesen Moment mit uns. Bis bald – ganz real – auf unseren Linien!"
  }
@@ -801,7 +903,47 @@ async function stopRecording(){if(state!=="voice-recording")return;state="voice-
 function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObjectURL(lastBlob)).play();return}if(selection===1){state="voice-intro";$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;setHelp(text().press);return}saveVoice()}
 async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
-/* Rapport */
+/* Rapport: le backend (ai.py, via Gemini ou le moteur de règles) renvoie
+   toujours ces six champs — jamais de paragraphe brut à découper côté
+   client. categorie_visuelle pilote une icône optionnelle sur le bandeau
+   verdict, tirée de la petite bibliothèque locale du <svg> en tête de
+   page; "generique" (ou une valeur inconnue) n'affiche aucune icône, le
+   ticket reste alors volontairement typographique. */
+const REPORT_ICON_CATEGORIES=new Set(["panorama","ponctualite","information",
+ "confort","affluence","securite","prix","correspondance","dernier_kilometre"]);
+function renderRapport(doc){
+ const lieuNom=cfg.lieu&&cfg.lieu.nom;
+ $("#report-kicker").textContent=text().reportKicker;
+ $("#report-title").textContent=doc.titre_profil||"";
+ $("#report-title").dataset.animated="0";
+ $("#report-label-plaisir").textContent=text().reportLabelPlaisir;
+ $("#report-label-friction").textContent=text().reportLabelFriction;
+ $("#report-label-idee").textContent=text().reportLabelIdee;
+ $("#report-label-verdict").textContent=text().reportLabelVerdict;
+ $("#report-plaisir").textContent=doc.plaisir||"";
+ $("#report-friction").textContent=doc.friction||"";
+ $("#report-idee").textContent=doc.idee_a_tester||"";
+ $("#report-verdict").textContent=doc.verdict||"";
+ /* SVGElement.hidden n'est pas fiable sur toutes les versions de WebKit
+    (l'attribut "hidden" n'est alors pas reflété, contrairement aux
+    éléments HTML classiques): on bascule l'attribut explicitement plutôt
+    que de dépendre de la propriété .hidden. */
+ const icon=$("#report-verdict-icon");
+ if(REPORT_ICON_CATEGORIES.has(doc.categorie_visuelle)){
+  $("#report-verdict-icon-use").setAttribute("href","#icon-"+doc.categorie_visuelle);
+  icon.removeAttribute("hidden");
+ }else icon.setAttribute("hidden","");
+ $("#report-label").textContent=doc.label||"";
+ const codeLine=$("#participant-code-line");
+ if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}
+ else codeLine.hidden=true;
+ const lieuEl=$("#report-stub-lieu");
+ if(lieuNom){lieuEl.innerHTML=`${text().reportBuzzerLabel}<b>${lieuNom}</b>`;lieuEl.hidden=false}
+ else lieuEl.hidden=true;
+ const finLocale=lang==="de"?"de-CH":"fr-CH",now=new Date();
+ $("#report-stub-datetime").innerHTML=`${text().reportDateLabel}<b>${now.toLocaleDateString(finLocale,{day:"2-digit",month:"2-digit",year:"numeric"})} · ${now.toLocaleTimeString(finLocale,{hour:"2-digit",minute:"2-digit"})}</b>`;
+ $("#report-thanks").textContent=text().reportThanks;
+}
 async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;
 /* Le délai minimum d'affichage tourne EN PARALLÈLE de la génération réelle
    (Promise.all), pas en plus: sinon un fournisseur IA plus lent que
@@ -811,7 +953,7 @@ async function finish(){state="report";clearTimers();stopSpeech();hideChrome();i
    prêt plus vite. */
 if(demo){
  const attente=new Promise(r=>setTimeout(r,1300));
- doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};
+ doc=lang==="de"?{titre_profil:"Der Bus-Optimist",plaisir:"Im Demo-Modus fährst du ohne gespeicherte Antworten mit, einfach um zu sehen, wie sich der ganze Ablauf anfühlt.",friction:"Ohne echte Antworten bleibt ein Punkt offen: Wir kennen deine wirkliche Reibung noch nicht.",idee_a_tester:"Einmal alle Fragen ehrlich beantworten, für ein Profil, das wirklich zu dir passt.",verdict:"Der beste Bus ist der, der mitdenkt. Der zweitbeste ist dieser Demo-Modus.",categorie_visuelle:"generique",label:"Demo · nichts gespeichert"}:{titre_profil:"L’optimiste du bus",plaisir:"En mode démo, tu voyages sans réponse enregistrée, histoire de voir à quoi ressemble tout le parcours.",friction:"Sans vraies réponses, un point reste flou: on ne connaît pas encore ta vraie friction.",idee_a_tester:"Répondre une fois pour de vrai, pour un profil qui te ressemble vraiment.",verdict:"Le meilleur bus est celui qui pense au voyageur. Le second, c’est ce mode démo.",categorie_visuelle:"generique",label:"Démo · rien d’enregistré"};
  await attente;
 }else{
  const fd=new FormData();fd.set("lang",lang);
@@ -821,7 +963,10 @@ if(demo){
  ]);
  doc=resultat;
 }
-clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};const lieuNom=cfg.lieu&&cfg.lieu.nom;$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;const lieuEl=$("#report-stub-lieu");if(lieuNom){lieuEl.innerHTML=`${text().reportBuzzerLabel}<b>${lieuNom}</b>`;lieuEl.hidden=false}else lieuEl.hidden=true;const finLocale=lang==="de"?"de-CH":"fr-CH",now=new Date();$("#report-stub-datetime").innerHTML=`${text().reportDateLabel}<b>${now.toLocaleDateString(finLocale,{day:"2-digit",month:"2-digit",year:"numeric"})} · ${now.toLocaleTimeString(finLocale,{hour:"2-digit",minute:"2-digit"})}</b>`;$("#report-thanks").textContent=text().reportThanks;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
+clearInterval(rot);$("#report-loading").textContent="";
+if(!doc)doc=lang==="de"?{titre_profil:"BUS XPERIENCE",plaisir:"Danke, dass du bei dieser BUS XPERIENCE mitgemacht hast.",friction:"Dein Profil konnte diesmal nicht erstellt werden — vermutlich ein Verbindungsproblem.",idee_a_tester:"Versuch es beim nächsten Mal noch einmal, für dein vollständiges Profil.",verdict:text().noThanks,categorie_visuelle:"generique",label:""}:{titre_profil:"BUS XPERIENCE",plaisir:"Merci d’avoir participé à cette BUS XPERIENCE.",friction:"Ton profil n’a pas pu être généré cette fois — sûrement un souci de connexion.",idee_a_tester:"Retente l’expérience une prochaine fois pour découvrir ton profil complet.",verdict:text().noThanks,categorie_visuelle:"generique",label:""};
+renderRapport(doc);
+$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
 function returnWaiting(){clearTimers();stopSpeech();musicHardMuted=false;musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
 
 /* ================================================================

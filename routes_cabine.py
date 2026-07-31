@@ -201,15 +201,22 @@ def _transcrire_local(chemin) -> str | None:
 def rapport(sid: str, lang: str = Form("fr")):
     with db.conn() as c:
         deja = c.execute("SELECT * FROM rapports WHERE session=?", (sid,)).fetchone()
-        if deja and ai.rapport_cache_valide(deja["titre"], deja["texte"]):
+        # La colonne « titre » (héritée du schéma précédent) porte désormais
+        # le titre_profil du nouveau contrat.
+        deja_doc = ({"titre_profil": deja["titre"], "plaisir": deja["plaisir"],
+                     "friction": deja["friction"], "idee_a_tester": deja["idee_a_tester"],
+                     "verdict": deja["verdict"], "categorie_visuelle": deja["categorie_visuelle"]}
+                    if deja else None)
+        if deja_doc and ai.rapport_cache_valide(deja_doc):
             ia_utilisee = deja["fournisseur"] != "none"
             label = ("Mit KI personalisiert" if ia_utilisee else "Automatisch personalisiert")
             if lang != "de":
                 label = "Personnalisé par IA" if ia_utilisee else "Personnalisé automatiquement"
-            return {"titre": deja["titre"], "texte": deja["texte"], "label": label}
+            return {**deja_doc, "label": label}
         if deja:
-            # Les rapports de l'ancienne version (« Acte 1 », notes brutes, etc.)
-            # sont supprimés puis régénérés avec le nouveau moteur.
+            # Les rapports d'un ancien format (paragraphe_1/2, conclusion...)
+            # ou incomplets sont supprimés puis régénérés avec le nouveau
+            # contrat de sortie.
             c.execute("DELETE FROM rapports WHERE session=?", (sid,))
         camp = c.execute(
             """SELECT ca.ton FROM sessions s LEFT JOIN campagnes ca
@@ -221,6 +228,11 @@ def rapport(sid: str, lang: str = Form("fr")):
                WHERE r.session=? ORDER BY r.id""", (sid,)).fetchall()
 
     donnees: dict = {}
+    # Une innovation évaluée par ligne: son nom, la réaction à chaud
+    # (impact, 1-5) et le potentiel d'adoption exprimé (0-10) — envoyés à
+    # l'IA pour qu'elle dispose du contexte complet, pas seulement du
+    # concept le mieux noté.
+    innovations: dict[int, dict] = {}
     meilleur_concept, meilleure_note = None, -1
     for r in rows:
         params_q = db.parse_json(r["params"]) if r["params"] else {}
@@ -239,6 +251,10 @@ def rapport(sid: str, lang: str = Form("fr")):
             donnees["apprecie"] = r["valeur"]
         if r["q_type"] == "compare" and r["valeur"]:
             donnees["priorite_arbitrage"] = r["valeur"]
+        if r["cle"] in ("impact", "adoption") and r["valeur"] and r["concept_id"]:
+            nom = r["nom_de"] if lang == "de" else r["nom_fr"]
+            entree = innovations.setdefault(r["concept_id"], {"nom": nom})
+            entree[r["cle"]] = r["valeur"]
         if r["cle"] == "adoption" and r["valeur"]:
             note = float(r["valeur"])
             if note > meilleure_note:
@@ -254,17 +270,28 @@ def rapport(sid: str, lang: str = Form("fr")):
                                   (transcript, r["id"]))
             if transcript:
                 donnees["verbatim"] = transcript
+    if innovations:
+        donnees["innovations_evaluees"] = list(innovations.values())
     if meilleur_concept:
         # La note sert uniquement à sélectionner l'idée favorite; elle ne doit
-        # jamais apparaître dans le rapport participant ni être envoyée à l'IA.
+        # jamais apparaître dans le rapport participant ni être envoyée telle
+        # quelle à l'IA (seul le nom du concept l'est, via innovations_evaluees).
         donnees["concept"] = meilleur_concept
 
     doc = ai.rapport_participant(lang, donnees, ton=(camp["ton"] if camp else "complice"))
     with db.conn() as c:
         c.execute(
-            "INSERT OR REPLACE INTO rapports VALUES (?,?,?,?,?,?,?)",
-            (sid, lang, doc["texte"], doc["titre"], doc["fournisseur"],
-             doc.get("erreur"), db.now()))
+            """INSERT OR REPLACE INTO rapports
+               (session, lang, titre, texte, plaisir, friction, idee_a_tester,
+                verdict, categorie_visuelle, fournisseur, erreur, cree_le)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (sid, lang, doc["titre_profil"],
+             "\n\n".join((doc["plaisir"], doc["friction"], doc["idee_a_tester"], doc["verdict"])),
+             doc["plaisir"], doc["friction"], doc["idee_a_tester"], doc["verdict"],
+             doc["categorie_visuelle"], doc["fournisseur"], doc.get("erreur"), db.now()))
         if doc.get("erreur"):
             db.journaliser(c, "ia_erreur", f"rapport {sid}: {doc['erreur']}")
-    return {"titre": doc["titre"], "texte": doc["texte"], "label": doc["label"]}
+    return {"titre_profil": doc["titre_profil"], "plaisir": doc["plaisir"],
+            "friction": doc["friction"], "idee_a_tester": doc["idee_a_tester"],
+            "verdict": doc["verdict"], "categorie_visuelle": doc["categorie_visuelle"],
+            "label": doc["label"]}

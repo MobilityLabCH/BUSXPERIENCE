@@ -79,7 +79,7 @@ def _session(client, participants=1, mic_ok=1, lang="fr"):
 
 def test_health(client):
     d = client.get("/health").json()
-    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 6
+    assert d["ok"] and d["app"] == "BUS XPERIENCE" and d["schema"] == 7
     assert d["ai_provider"] == "none"
 
 
@@ -743,6 +743,7 @@ def test_abandon_supprime_tout(client):
 
 
 def test_rapport_participant_sans_ia(client):
+    import ai
     d = client.get("/api/config").json()
     qs = {q["type"]: q for q in d["questions"]}
     q_friction = next(q for q in d["questions"]
@@ -757,18 +758,20 @@ def test_rapport_participant_sans_ia(client):
     client.post(f"/api/sessions/{sid}/reponses",
                 data={"question_id": qs["echelle"]["id"], "cle": "reponse", "valeur": "6"})
     client.post(f"/api/sessions/{sid}/reponses",
+                data={"concept_id": co["id"], "cle": "impact", "valeur": "4"})
+    client.post(f"/api/sessions/{sid}/reponses",
                 data={"concept_id": co["id"], "cle": "adoption", "valeur": "9"})
     client.post(f"/api/sessions/{sid}/terminer")
     rep = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
-    assert rep["titre"] and rep["label"] == "Personnalisé automatiquement"
-    assert "quatre étoiles" in rep["texte"]
-    assert co["nom_fr"] in rep["texte"]
-    assert rep["texte"].count("\n\n") == 2
-    assert 60 <= len(rep["texte"].split()) <= 90
-    assert "Acte" not in rep["texte"] and "note" not in rep["texte"].lower()
+    assert rep["titre_profil"] and rep["label"] == "Personnalisé automatiquement"
+    for cle, (mini, maxi) in ai._LONGUEURS_CHAMPS.items():
+        assert mini <= ai._mots(rep[cle]) <= maxi, (cle, rep[cle])
+    assert rep["categorie_visuelle"] == "information"  # thème "retard"
+    assert "retard" in rep["friction"].lower()
+    assert "Acte" not in rep["verdict"] and "note" not in rep["verdict"].lower()
     # idempotent
     rep2 = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
-    assert rep2["texte"] == rep["texte"]
+    assert rep2 == rep
 
 
 # ------------------------------------------------------------- admin
@@ -884,24 +887,25 @@ def test_providers_mocks(client, monkeypatch):
     monkeypatch.setenv("AI_PROVIDER", "anthropic")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "cle-de-test")
     rapport_json = json.dumps({
-        "titre": "Billet clair, esprit léger",
-        "paragraphe_1": (
-            "Le bus fait partie de ton quotidien et ton dernier trajet obtient quatre "
-            "étoiles sur cinq. La relation roule donc plutôt bien, sans être parfaite."
+        "titre_profil": "Billet clair, esprit léger",
+        "plaisir": (
+            "Le bus fait partie de ton quotidien et ton dernier trajet se déroule bien, "
+            "sans accroc particulier, ce qui n'est déjà pas si mal en soi."
         ),
-        "paragraphe_2": (
+        "friction": (
             "Le vrai point de tension reste le billet: dès qu'il faut deviner le bon "
-            "tarif, le voyage devient un petit escape game. Un billet automatique "
-            "retirerait ce casse-tête avant même le départ."
+            "tarif, le voyage devient un petit escape game avant même de monter à bord."
         ),
-        "conclusion": "Ton verdict: monter, voyager, ne pas calculer.",
+        "idee_a_tester": "Un billet automatique qui retire ce casse-tête avant même le départ du bus.",
+        "verdict": "Monter, voyager, ne pas calculer: le seul vrai luxe d'un trajet réussi.",
+        "categorie_visuelle": "prix",
     }, ensure_ascii=False)
     monkeypatch.setattr(ai, "_http_json", lambda m, u, **k: {
         "content": [{"text": rapport_json}]})
     doc = ai.rapport_participant("fr", {"etoiles": "5"})
-    assert doc["fournisseur"] == "anthropic" and doc["titre"] == "Billet clair, esprit léger"
+    assert doc["fournisseur"] == "anthropic" and doc["titre_profil"] == "Billet clair, esprit léger"
     assert doc["label"] == "Personnalisé par IA"
-    assert doc["texte"].count("\n\n") == 2
+    assert doc["categorie_visuelle"] == "prix"
     # gemini simulé avec le même contrat JSON
     monkeypatch.setenv("AI_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "cle-de-test")
@@ -952,65 +956,73 @@ def test_rapport_nouveau_format_dix_combinaisons(monkeypatch):
     ]
     for lang, donnees in cas:
         doc = ai.rapport_participant(lang, donnees)
-        assert doc["titre"]
-        assert doc["texte"].count("\n\n") == 2
-        assert 60 <= ai._mots(doc["texte"]) <= 90
-        assert not ai._FORBIDDEN_REPORT_RE.search(doc["titre"] + "\n" + doc["texte"])
-        assert "concept_note" not in doc["texte"]
+        assert doc["titre_profil"]
+        assert doc["categorie_visuelle"] in ai.CATEGORIES_VISUELLES
+        tout = " ".join(doc[cle] for cle in
+                        ("titre_profil", "plaisir", "friction", "idee_a_tester", "verdict"))
+        for cle, (mini, maxi) in ai._LONGUEURS_CHAMPS.items():
+            assert mini <= ai._mots(doc[cle]) <= maxi, (lang, cle, doc[cle])
+        assert not ai._FORBIDDEN_REPORT_RE.search(tout)
+        assert "concept_note" not in tout
 
 
-def test_rapport_regles_varie_la_phrase_qui_relie_au_concept_prefere(monkeypatch):
-    """Constaté en usage: dès qu'aucune idée précise ne ressort du verbatim,
-    la phrase qui relie le point de friction au concept préféré du
-    participant était toujours exactement la même («... va donc dans la
-    bonne direction: moins d'incertitude, plus de tranquillité»), quel que
-    soit le concept — ça donnait l'impression d'un rapport copié-collé
-    plutôt que personnel. Elle doit maintenant varier d'une génération à
-    l'autre."""
+def test_rapport_regles_varie_idee_a_tester_et_ignore_le_nom_du_concept(monkeypatch):
+    """Le nom du concept préféré (texte libre configuré par l'admin, donc de
+    longueur imprévisible) n'est plus inséré directement dans idee_a_tester
+    — l'insérer risquait de dépasser la fenêtre stricte de 10-20 mots. Le
+    thème détecté suffit à choisir une idée déjà calibrée, tirée au sort
+    parmi plusieurs variantes pour ne pas donner une impression de
+    copier-coller."""
     import ai
     monkeypatch.setenv("AI_PROVIDER", "none")
     donnees = {"frequence": "Chaque semaine", "etoiles": "3",
-               "concept": "Un concept quelconque"}
-    variantes = {ai._rapport_regles("fr", donnees)["paragraphe_2"] for _ in range(25)}
-    assert len(variantes) > 1, "la phrase reliant le concept ne varie jamais"
-    assert not any("va donc dans la bonne direction" in v for v in variantes)
+               "concept": "Un concept quelconque avec un nom vraiment très long et bavard"}
+    variantes = {ai._rapport_regles("fr", donnees)["idee_a_tester"] for _ in range(25)}
+    assert len(variantes) > 1, "idee_a_tester ne varie jamais"
+    assert not any("concept quelconque" in v.lower() for v in variantes)
+    for v in variantes:
+        assert 10 <= ai._mots(v) <= 20
 
 
-def test_prompt_ia_demande_une_conclusion_citation_de_bonne_humeur():
-    """Quand un vrai fournisseur IA est configuré (Gemini etc.), le
-    "verdict" doit être généré par lui, façon citation qui donne le
-    sourire — sans jamais reproduire mot pour mot une réplique protégée
-    par le droit d'auteur (Disney et autres)."""
+def test_prompt_ia_demande_le_nouveau_contrat_json_a_six_cles():
+    """Le prompt Gemini doit demander exactement le nouveau contrat de
+    sortie (titre_profil/plaisir/friction/idee_a_tester/verdict/
+    categorie_visuelle), avec un verdict punchy mais jamais une fausse
+    citation ni la mention d'une personnalité (Einstein ou autre)."""
     import ai
-    assert "citation" in ai.PROMPT_PARTICIPANT and "sourire" in ai.PROMPT_PARTICIPANT
-    assert "droit d’auteur" in ai.PROMPT_PARTICIPANT or "droit d'auteur" in ai.PROMPT_PARTICIPANT
-    # le prompt doit fournir des exemples concrets de style et interdire
-    # explicitement les conclusions vagues/interchangeables observées en
-    # production (ex: "de l'info avant les mauvaises surprises")
-    assert "Exemples" in ai.PROMPT_PARTICIPANT
-    assert "vague" in ai.PROMPT_PARTICIPANT and "interchangeable" in ai.PROMPT_PARTICIPANT
-    # la conclusion doit rester en langage simple et imagé, avec une
-    # ouverture (non systématique) sur des métaphores du quotidien suisse
-    assert "métaphore" in ai.PROMPT_PARTICIPANT
-    assert "suisse" in ai.PROMPT_PARTICIPANT.lower()
+    p = ai.PROMPT_PARTICIPANT
+    for cle in ("titre_profil", "plaisir", "friction", "idee_a_tester",
+                "verdict", "categorie_visuelle"):
+        assert f'"{cle}"' in p, cle
+    assert "droit d’auteur" in p or "droit d'auteur" in p
+    assert "Einstein" in p
+    assert "citation" in p
+    assert "impertinente" in p
+    # un seul clin d'œil suisse maximum, jamais artificiel
+    assert "suisse" in p.lower() and "maximum" in p.lower()
+    # les valeurs ne doivent pas répéter l'intitulé de leur propre rubrique
+    assert "Ton verdict" in p and "Ton plaisir" in p
+    # les catégories visuelles autorisées sont explicitement listées
+    for categorie in ai.CATEGORIES_VISUELLES:
+        assert categorie in p, categorie
 
 
 def test_verdict_du_ticket_varie_et_reste_dans_le_budget_de_mots(monkeypatch):
     """Le "verdict" final restait plat: un seul intitulé fixe par thème,
     toujours identique. Il doit maintenant varier d'une génération à
-    l'autre (clin d'œil à une fable/un proverbe, jamais une citation de
-    personnage sous droits d'auteur), tout en restant dans le budget de
-    mots existant (60-90 mots au total) même dans les cas les plus courts
-    (peu de champs renseignés)."""
+    l'autre, sans jamais nommer de personnalité (fable, personnage
+    historique...), tout en restant dans la fenêtre de 12 à 25 mots — y
+    compris dans les cas les plus courts (peu de champs renseignés)."""
     import ai
     monkeypatch.setenv("AI_PROVIDER", "none")
     donnees = {"irritant": "bus bondé", "concept": "Un concept quelconque"}
-    variantes = {ai._rapport_regles("fr", donnees)["conclusion"] for _ in range(25)}
+    variantes = {ai._rapport_regles("fr", donnees)["verdict"] for _ in range(25)}
     assert len(variantes) > 1, "le verdict ne varie jamais"
     for lang in ("fr", "de"):
         for _ in range(20):
             r = ai._rapport_regles(lang, {"irritant": "rien"})
-            assert 60 <= ai._mots(r["texte"]) <= 90, r["texte"]
+            assert 12 <= ai._mots(r["verdict"]) <= 25, r["verdict"]
+            assert not ai._FORBIDDEN_REPORT_RE.search(r["verdict"])
 
 
 def test_reponse_ia_invalide_ne_saffiche_jamais(monkeypatch):
@@ -1022,16 +1034,141 @@ def test_reponse_ia_invalide_ne_saffiche_jamais(monkeypatch):
             "Acte 1: texte cassé. Note pour le concept préféré: 3"}]}}]})
     doc = ai.rapport_participant("fr", {"etoiles": "3"})
     assert doc["fournisseur"] == "none"
-    assert "Acte" not in doc["texte"]
+    assert "Acte" not in doc["verdict"] and "Acte" not in doc["titre_profil"]
     assert doc["erreur"]
 
 
 def test_ancien_rapport_est_regenere():
+    """Une ligne d'un ancien format (colonnes plaisir/friction/... absentes
+    ou vides, comme les rapports créés avant le nouveau contrat) doit être
+    considérée invalide et donc régénérée, tout comme un contenu de
+    l'ancien format "Acte 1/2/3"."""
     import ai
-    assert not ai.rapport_cache_valide(
-        "Rapport BUS XPERIENCE",
-        "Acte 1: ancien texte.\n\nActe 2: suite.\n\nActe 3: fin.",
+    assert not ai.rapport_cache_valide({"titre_profil": "Rapport BUS XPERIENCE"})
+    assert not ai.rapport_cache_valide({
+        "titre_profil": "Rapport BUS XPERIENCE", "plaisir": "Acte 1: ancien texte.",
+        "friction": "Acte 2: suite.", "idee_a_tester": "Acte 3: fin.",
+        "verdict": "fin", "categorie_visuelle": "generique",
+    })
+
+
+def test_validation_json_gemini_champs_et_longueurs(monkeypatch):
+    """Vérifie strictement le contrat JSON attendu de Gemini: les six clés,
+    les fenêtres de longueur par champ, et le nettoyage des préfixes de
+    rubrique et des guillemets englobants que Gemini ajoute parfois malgré
+    la consigne."""
+    import ai, json as jsonlib
+
+    def doc_valide(**overrides):
+        base = {"titre_profil": "Le guetteur du premier rang",
+                "plaisir": "Tu montes rarement dans le bus, mais quand tu le fais, tu choisis la fenêtre et tu regardes le monde passer.",
+                "friction": "Tu acceptes qu'un trajet prenne du retard. Beaucoup moins que personne ne te dise pourquoi.",
+                "idee_a_tester": "Une information immédiate en cas de retard, avec une alternative claire.",
+                "verdict": "Tu n'exiges pas la précision d'une montre suisse. Juste qu'on te dise pourquoi elle retarde.",
+                "categorie_visuelle": "panorama"}
+        base.update(overrides)
+        return base
+
+    # cas nominal: accepté tel quel
+    ok = ai._valider_rapport_ia(jsonlib.dumps(doc_valide(), ensure_ascii=False))
+    assert ok == doc_valide()
+
+    # une clé manquante -> rejeté entièrement (pas de génération partielle)
+    incomplet = doc_valide()
+    del incomplet["verdict"]
+    assert ai._valider_rapport_ia(jsonlib.dumps(incomplet, ensure_ascii=False)) is None
+
+    # titre_profil hors fenêtre (3-7 mots) -> rejeté
+    trop_court = doc_valide(titre_profil="Le bus")
+    assert ai._valider_rapport_ia(jsonlib.dumps(trop_court, ensure_ascii=False)) is None
+    trop_long = doc_valide(titre_profil=" ".join(["mot"] * 12))
+    assert ai._valider_rapport_ia(jsonlib.dumps(trop_long, ensure_ascii=False)) is None
+
+    # JSON non extractible -> rejeté proprement, pas d'exception
+    assert ai._valider_rapport_ia("réponse sans JSON du tout") is None
+    assert ai._valider_rapport_ia("") is None
+    assert ai._valider_rapport_ia(None) is None
+
+
+def test_categories_visuelles_autorisees(monkeypatch):
+    """categorie_visuelle doit être strictement limitée à la bibliothèque
+    locale d'icônes; toute valeur hors de cette liste est ramenée à
+    "generique" plutôt que de rejeter tout le rapport pour un simple détail
+    cosmétique."""
+    import ai, json as jsonlib
+    assert ai.CATEGORIES_VISUELLES == (
+        "panorama", "ponctualite", "information", "confort", "affluence",
+        "securite", "prix", "correspondance", "dernier_kilometre", "generique",
     )
+    doc = {"titre_profil": "Le guetteur du premier rang",
+           "plaisir": "Tu montes rarement dans le bus, mais quand tu le fais, tu choisis la fenêtre et tu regardes le monde passer.",
+           "friction": "Tu acceptes qu'un trajet prenne du retard. Beaucoup moins que personne ne te dise pourquoi.",
+           "idee_a_tester": "Une information immédiate en cas de retard, avec une alternative claire.",
+           "verdict": "Tu n'exiges pas la précision d'une montre suisse. Juste qu'on te dise pourquoi elle retarde.",
+           "categorie_visuelle": "illustration-fantaisiste-inventee"}
+    r = ai._valider_rapport_ia(jsonlib.dumps(doc, ensure_ascii=False))
+    assert r is not None and r["categorie_visuelle"] == "generique"
+    doc["categorie_visuelle"] = None
+    r2 = ai._valider_rapport_ia(jsonlib.dumps(doc, ensure_ascii=False))
+    assert r2 is not None and r2["categorie_visuelle"] == "generique"
+    # le moteur de règles ne choisit jamais une catégorie hors de la liste
+    monkeypatch.setenv("AI_PROVIDER", "none")
+    for lang in ("fr", "de"):
+        for irritant in ("correspondance", "retard", "billet", "foule",
+                         "attente", "rien", "autre chose"):
+            r3 = ai.rapport_participant(lang, {"irritant": irritant})
+            assert r3["categorie_visuelle"] in ai.CATEGORIES_VISUELLES
+
+
+def test_ticket_final_structure_desktop_et_mobile(client):
+    """Le ticket final doit reprendre la structure demandée: titre "Ton
+    profil de voyage", nom de profil, trois blocs (plaisir/friction/idée),
+    un bandeau verdict, et la souche existante (lieu, date, code, RGPD,
+    code-barres). La mise en page doit rester la même identité entre
+    desktop (billet horizontal, souche à droite) et mobile (souche sous une
+    ligne de perforation, media query existante)."""
+    h = client.get("/cabine/").text
+    assert 'class="report-blocks"' in h and 'class="report-verdict"' in h
+    for id_ in ("report-plaisir", "report-friction", "report-idee",
+                "report-verdict", "report-label-plaisir", "report-label-friction",
+                "report-label-idee", "report-label-verdict"):
+        assert f'id="{id_}"' in h, id_
+    # la bibliothèque locale d'icônes couvre bien les dix catégories visuelles
+    import ai
+    for categorie in ai.CATEGORIES_VISUELLES:
+        assert f'id="icon-{categorie}"' in h, categorie
+    # les trois blocs utilisent des icônes SVG locales, jamais un emoji
+    debut = h.index('class="report-blocks"')
+    fin = h.index("</div>", h.index('class="report-verdict"'))
+    zone = h[debut:fin]
+    assert "<svg" in zone and "<use" in zone
+    # souche existante conservée à l'identique (lieu, date, code, RGPD, code-barres)
+    assert 'id="report-stub-lieu"' in h and 'id="report-stub-datetime"' in h
+    assert 'id="participant-code-line"' in h and 'class="report-barcode"' in h
+    # mobile: la même media query qui gère déjà la souche sous perforation
+    # doit aussi rendre les blocs sur une seule colonne
+    debut_media = h.index("@media (max-width:900px)")
+    fin_media = h.index("\n}", debut_media)
+    media = h[debut_media:fin_media]
+    assert "report-blocks" in media and "grid-template-columns:1fr" in media
+
+
+def test_rendu_rapport_gere_categorie_generique_sans_icone(client):
+    """Quand aucune catégorie visuelle adaptée n'existe (generique, ou une
+    valeur imprévue), le ticket doit rester purement typographique — pas
+    d'icône affichée plutôt qu'une icône par défaut inadaptée."""
+    h = client.get("/cabine/").text
+    debut = h.index("const REPORT_ICON_CATEGORIES=new Set(")
+    fin = h.index(");", debut)
+    liste = h[debut:fin]
+    assert '"generique"' not in liste, "generique ne doit jamais afficher d'icône"
+    debut_fn = h.index("function renderRapport(doc){")
+    fin_fn = h.index("\n}", debut_fn)
+    corps = h[debut_fn:fin_fn]
+    assert "REPORT_ICON_CATEGORIES" in corps
+    # SVGElement.hidden n'est pas fiable sur toutes les versions de WebKit:
+    # l'attribut doit être basculé explicitement, pas via la propriété .hidden
+    assert "removeAttribute(\"hidden\")" in corps and "setAttribute(\"hidden\"" in corps
 
 
 # --------------------------------------------------- protection des données
@@ -1187,7 +1324,9 @@ def test_rapport_storytelling_utilise_frequence_et_moment(client):
                 data={"question_id": q_moment["id"], "cle": "reponse",
                       "valeur": "La correspondance"})
     rep = client.post(f"/api/sessions/{sid}/rapport", data={"lang": "fr"}).json()
-    assert "correspondance" in rep["texte"].lower() or "correspondance" in rep["titre"].lower()
+    assert rep["categorie_visuelle"] == "correspondance"
+    assert ("correspondance" in rep["friction"].lower()
+            or "correspondance" in rep["titre_profil"].lower())
 
 
 # ------------------------------------------------------------- suppression
