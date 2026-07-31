@@ -166,15 +166,17 @@ def test_tout_l_ecran_est_le_buzzer_sur_tactile(client):
 
 
 def test_tap_direct_sur_une_carte_la_selectionne(client):
-    """Sur tactile, toucher directement une réponse/étoile/valeur/duel la
+    """Sur tactile, toucher directement une réponse/étoile/duel la
     sélectionne tout de suite (plus naturel au doigt), sans pour autant
     court-circuiter le modèle buzzer: un tap court dessus sélectionne sans
-    valider, un tap maintenu dessus sélectionne ET valide."""
+    valider, un tap maintenu dessus sélectionne ET valide. L'échelle n'a
+    plus de cartes individuelles (c'est une jauge continue tenue/relâchée),
+    donc elle n'a plus besoin de ce cas particulier."""
     h = client.get("/cabine/").text
     assert "function directTapSelect(target)" in h
     assert 'target.closest(".choice")' in h
     assert 'target.closest(".star")' in h
-    assert 'target.closest(".scale-value")' in h
+    assert 'target.closest(".scale-value")' not in h
     assert 'target.closest("#compare-a")' in h and 'target.closest("#compare-b")' in h
     # câblé dans le geste global: pointerdown sélectionne, pointerup ne
     # fait PAS aussi défiler vers l'option suivante quand c'était un tap direct
@@ -925,6 +927,10 @@ def test_prompt_ia_demande_une_conclusion_citation_de_bonne_humeur():
     # production (ex: "de l'info avant les mauvaises surprises")
     assert "Exemples" in ai.PROMPT_PARTICIPANT
     assert "vague" in ai.PROMPT_PARTICIPANT and "interchangeable" in ai.PROMPT_PARTICIPANT
+    # la conclusion doit rester en langage simple et imagé, avec une
+    # ouverture (non systématique) sur des métaphores du quotidien suisse
+    assert "métaphore" in ai.PROMPT_PARTICIPANT
+    assert "suisse" in ai.PROMPT_PARTICIPANT.lower()
 
 
 def test_verdict_du_ticket_varie_et_reste_dans_le_budget_de_mots(monkeypatch):
@@ -1199,32 +1205,35 @@ def test_consigne_ecran_vocal_juste_sous_la_question(client):
     assert hf and "surEcranVocal" in hf.group(1)
 
 
-def test_echelle_reduite_a_quelques_paliers(client):
-    """Une échelle 0-10 complète demandait jusqu'à 10 pressions courtes
-    pour atteindre la valeur voulue avec un seul buzzer, jugée trop longue.
-    Le nombre de paliers proposés doit être réduit tout en gardant la
-    plage 0-max envoyée au format actuel des réponses."""
+def test_echelle_est_une_jauge_a_maintenir(client):
+    """L'échelle par boutons (chiffres puis émojis puis barres de niveau
+    cliquables) demandait toujours plusieurs pressions courtes pour
+    atteindre la valeur voulue, et un essai avec des émojis faisait
+    doublon avec l'écran de réaction (concept-impact) qui en affiche déjà
+    juste avant dans le parcours. L'échelle est maintenant une jauge
+    unique: maintenir le buzzer la remplit progressivement, la relâcher
+    fige et envoie directement la valeur atteinte — un seul geste, sans
+    étape de sélection puis confirmation séparée."""
     h = client.get("/cabine/").text
-    assert "currentScalePaliers" in h
-    m = re.search(r"function validateScale\(\)\{([^}]*)\}", h)
-    assert m and "currentScalePaliers[currentScale]" in m.group(1)
+    assert "EMOJIS_ECHELLE" not in h and "scale-value" not in h
+    assert "SCALE_FILL_MS" in h and "scale-fill" in h
+    m = re.search(r"function releaseScale\(duration\)\{([^}]*)\}", h)
+    assert m and "validateScale" in m.group(1) and "SCALE_FILL_MS" in m.group(1)
+    # pressUp doit court-circuiter le cycle court-presse/long-presse habituel
+    # pour l'échelle: le relâchement seul détermine et envoie la réponse
+    pu = re.search(r"function pressUp\(directTap\)\{(.*?)\n\}", h, re.S)
+    assert pu and "releaseScale(duration)" in pu.group(1)
 
 
-def test_echelle_utilise_des_barres_de_niveau_plutot_que_des_chiffres(client):
-    """Les chiffres bruts (0, 3, 5, 8, 10) sur les boutons d'échelle
-    n'étaient pas compris intuitivement par les participants. Un premier
-    essai avec des émojis faisait doublon avec l'écran de réaction
-    (concept-impact) qui utilise déjà des émojis juste avant dans le
-    parcours. Chaque palier doit donc afficher une barre de niveau
-    ascendante (sans émoji ni chiffre visible), la valeur numérique réelle
-    restant envoyée au backend et exposée via aria-label pour
-    l'accessibilité."""
+def test_echelle_a_sa_propre_consigne_de_maintien(client):
+    """Le geste de l'échelle (maintenir pour monter, relâcher pour valider)
+    diffère du reste du parcours (pression courte = suivant, longue =
+    valider); l'instruction affichée doit donc l'expliquer spécifiquement
+    plutôt que reprendre le texte générique "Appuie pour changer"."""
     h = client.get("/cabine/").text
-    assert "EMOJIS_ECHELLE" not in h
-    debut = h.index("function showScale(q){")
-    fin = h.index("function refreshScale", debut)
-    corps = h[debut:fin]
-    assert "scale-bar" in corps and "aria-label" in corps and "--h" in corps
+    assert "scaleHelp" in h and "firstScaleHint" in h
+    m = re.search(r"function setHelpChoose\(\)\{([^}]*)\}", h)
+    assert m and 'state==="scale"' in m.group(1)
 
 
 def test_voix_compact_ios_moins_prioritaire(client):
