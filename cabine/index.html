@@ -585,10 +585,24 @@ function unlockSpeech(){
  speechUnlocked=true;
  try{const u=new SpeechSynthesisUtterance("");u.volume=0;speechSynthesis.speak(u)}catch{}
 }
-function voiceScore(v){const n=v.name.toLowerCase();return (n.includes("natural")?8:0)+(n.includes("online")?5:0)+(n.includes("neural")?5:0)+(n.includes("google")?3:0)+(!v.localService?2:0)}
+/* Sur iPhone, aucune voix ne contient "natural/online/neural/google" (ce
+   sont des marqueurs Chrome/Android): tous les scores tombaient à égalité
+   et le tri retenait alors la première voix "Compact" venue — la moins
+   bonne qualité disponible sur iOS, d'où une voix perçue comme "bizarre".
+   Les voix "Enhanced/Premium" (téléchargées par l'utilisateur) ou "Siri"
+   sont nettement meilleures et doivent être préférées quand disponibles. */
+function voiceScore(v){const n=v.name.toLowerCase();return (n.includes("natural")?8:0)+(n.includes("online")?5:0)+(n.includes("neural")?5:0)+(n.includes("google")?3:0)+(n.includes("siri")?7:0)+(n.includes("enhanced")?6:0)+(n.includes("premium")?6:0)+(!v.localService?2:0)}
 function browserVoice(){if(voiceCache[lang])return voiceCache[lang];const list=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(lang));if(!list.length)return null;const pref=(cfg.tts&&cfg.tts["voix_"+lang])||"auto";voiceCache[lang]=(pref!=="auto"&&list.find(v=>v.name===pref))||list.sort((a,b)=>voiceScore(b)-voiceScore(a))[0];return voiceCache[lang]}
 if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>voiceCache={fr:null,de:null};
-function speak(value,done){if(!value){done&&done();return}try{const u=new SpeechSynthesisUtterance(value);u.lang=lang==="de"?"de-CH":"fr-CH";const v=browserVoice();if(v)u.voice=v;u.rate=(cfg.tts&&cfg.tts.vitesse)||.97;u.pitch=(cfg.tts&&cfg.tts.tonalite)||1.03;let finished=false;const end=()=>{if(finished)return;finished=true;musicNormal();done&&done()};u.onend=end;u.onerror=end;speechSynthesis.cancel();musicDuck();speechSynthesis.speak(u);setTimeout(end,1300+value.length*85)}catch{musicNormal();done&&done()}}
+/* iOS/Safari a un bug WebKit connu: enchaîner cancel() puis speak() dans le
+   même tick fait parfois disparaître silencieusement le nouvel énoncé (ni
+   onstart, ni onend, ni erreur — juste rien ne se dit), ce qui explique
+   des questions "sautées" sans schéma évident. On ne cancel() que si une
+   lecture est vraiment en cours, et on laisse un court délai avant de
+   relancer speak() pour laisser le moteur vocal se réinitialiser. resume()
+   avant chaque lecture récupère aussi les cas où Safari met la synthèse en
+   pause toute seule après un moment d'inactivité. */
+function speak(value,done){if(!value){done&&done();return}try{const u=new SpeechSynthesisUtterance(value);u.lang=lang==="de"?"de-CH":"fr-CH";const v=browserVoice();if(v)u.voice=v;u.rate=(cfg.tts&&cfg.tts.vitesse)||.97;u.pitch=(cfg.tts&&cfg.tts.tonalite)||1.03;let finished=false;const end=()=>{if(finished)return;finished=true;musicNormal();done&&done()};u.onend=end;u.onerror=end;const lancer=()=>{try{speechSynthesis.resume()}catch{}musicDuck();speechSynthesis.speak(u)};if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();setTimeout(lancer,30)}else lancer();setTimeout(end,1300+value.length*85)}catch{musicNormal();done&&done()}}
 function stopSpeech(){try{speechSynthesis.cancel()}catch{}if(questionAudio){questionAudio.pause();questionAudio=null}}
 function speakQuestion(q,done){stopSpeech();const spoken=(q["parle_"+lang]||"").trim()||(q.displayText||q[lang]||q.fr||"");const file=q["audio_"+lang];if(file){musicDuck();questionAudio=new Audio("/voix/"+file);questionAudio.onended=()=>{musicNormal();done&&done()};questionAudio.play().catch(()=>speak(spoken,done))}else speak(spoken,done)}
 
@@ -700,8 +714,15 @@ async function validateReaction(){state="sending";soundOk();await send({concept_
    Il n'existe aucun autre chemin possible: si l'accès échoue ici, la
    session est supprimée et le message "microphone indisponible" s'affiche. */
 let recorder=null,chunks=[],lastBlob=null,voiceStream=null,voiceContext=null,voiceDeadline=0,voiceQuestion=null;
-function showVoice(q){voiceQuestion=q;state="voice-intro";musicHardMuted=true;musicMute();fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
-async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{await abandonnerSession();return showMicUnavailable()}voiceStream=stream;chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
+/* La coupure "dure" de la musique (musicHardMuted+pause) ne démarre qu'à
+   startRecording(), pas ici: le micro n'est pas encore actif tant qu'on
+   n'a pas appuyé, la lecture de la question reste seulement "duckée" comme
+   avant (musicDuck() normal, déjà fiable partout). Coupler pause()/play()
+   de la musique de fond avec speechSynthesis.speak() au même instant s'est
+   avéré source d'échecs silencieux de la lecture vocale sur iPhone (bug
+   connu de WebKit: les deux se disputent la même session audio système). */
+function showVoice(q){voiceQuestion=q;state="voice-intro";fitQuestion($("#voice-question"),q.displayText);$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-review").hidden=true;$("#voice-status").textContent=text().recordStart;show("e-voice");setHelp(text().press);speakQuestion(q)}
+async function startRecording(){stopSpeech();let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{await abandonnerSession();return showMicUnavailable()}voiceStream=stream;musicHardMuted=true;musicMute();chunks=[];lastBlob=null;try{recorder=new MediaRecorder(stream,{mimeType:"audio/webm"})}catch{recorder=new MediaRecorder(stream)}recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.start();state="voice-recording";voiceDeadline=Date.now()+(((voiceQuestion.params||{}).duree_voix)||45)*1000;$("#voice-meter").hidden=false;$("#voice-timer").hidden=false;$("#voice-status").textContent=text().recording;setHelp(text().press);startMeter(stream);updateTimer()}
 function updateTimer(){if(state!=="voice-recording")return;const seconds=Math.max(0,Math.ceil((voiceDeadline-Date.now())/1000));$("#voice-timer").textContent=`0:${String(seconds).padStart(2,"0")}`;if(seconds<=0)return stopRecording();later(250,updateTimer)}
 function startMeter(stream){try{voiceContext=new (window.AudioContext||window.webkitAudioContext)();const analyser=voiceContext.createAnalyser();voiceContext.createMediaStreamSource(stream).connect(analyser);analyser.fftSize=128;const data=new Uint8Array(analyser.frequencyBinCount),bars=[...document.querySelectorAll("#voice-meter i")];(function loop(){if(state!=="voice-recording"){voiceContext&&voiceContext.close();return}analyser.getByteFrequencyData(data);bars.forEach((b,i)=>b.style.height=Math.max(14,(data[i*3]||0)/255*100)+"%");requestAnimationFrame(loop)})()}catch{}}
 async function stopRecording(){if(state!=="voice-recording")return;state="voice-review";clearTimers();if(recorder&&recorder.state!=="inactive")await new Promise(resolve=>{recorder.onstop=resolve;recorder.stop()});voiceStream&&voiceStream.getTracks().forEach(t=>t.stop());musicHardMuted=false;musicNormal();lastBlob=new Blob(chunks,{type:"audio/webm"});$("#voice-meter").hidden=true;$("#voice-timer").hidden=true;$("#voice-status").textContent=text().review;$("#voice-listen").textContent=text().listen;$("#voice-redo").textContent=text().redo;$("#voice-save").textContent=text().save;$("#voice-review").hidden=false;selection=2;refreshSelection("#voice-review .choice");setHelpChoose()}

@@ -198,6 +198,35 @@ def test_lecture_vocale_debloquee_des_le_premier_appui_ios(client):
     assert m and "unlockSpeech()" in m.group(1)
 
 
+def test_lecture_vocale_ne_cancel_speak_pas_dans_le_meme_tick_ios(client):
+    """Bug WebKit connu sur iPhone: enchaîner speechSynthesis.cancel() puis
+    .speak() dans le même tick fait parfois disparaître silencieusement le
+    nouvel énoncé (ni erreur ni son), ce qui explique des questions
+    "sautées" sans schéma évident. On ne cancel() que si une lecture est
+    déjà en cours, et on laisse un court délai avant de relancer speak()."""
+    h = client.get("/cabine/").text
+    m = re.search(r"function speak\(value,done\)\{.*?\}\}", h)
+    assert m, "fonction speak() introuvable"
+    corps = m.group(0)
+    assert "speechSynthesis.speaking||speechSynthesis.pending" in corps
+    assert "setTimeout(lancer,30)" in corps
+    assert "speechSynthesis.resume()" in corps
+
+
+def test_voix_ios_de_meilleure_qualite_preferee(client):
+    """Sur iPhone, aucune voix système ne contient les marqueurs
+    Chrome/Android (natural/online/neural/google): le score tombait à
+    égalité et le tri retenait la première voix "Compact" venue, perçue
+    comme une "voix bizarre". Les voix Enhanced/Premium/Siri, nettement
+    meilleures et disponibles sur iOS, doivent être préférées."""
+    h = client.get("/cabine/").text
+    m = re.search(r"function voiceScore\(v\)\{([^}]*)\}", h)
+    assert m
+    corps = m.group(1)
+    for marqueur in ("siri", "enhanced", "premium"):
+        assert f'"{marqueur}"' in corps or f"'{marqueur}'" in corps
+
+
 def test_admin_protege(client):
     assert "Mot de passe" in client.get("/admin").text
     r = _login(client)
@@ -358,15 +387,22 @@ def test_concept_illustre_par_une_photo_toujours_tire_en_priorite(client):
 
 
 def test_musique_coupee_pendant_enregistrement_micro(client):
-    """La musique de fond doit être totalement coupée avant et pendant
+    """La musique de fond doit être totalement coupée pendant
     l'enregistrement d'une réponse vocale (le micro capte aussi le son
-    ambiant de la pièce, pas seulement la voix), pas seulement baissée."""
+    ambiant de la pièce, pas seulement la voix), pas seulement baissée.
+    La coupure démarre à startRecording() (le micro est vraiment actif),
+    pas dès l'affichage de la question: coupler la coupure "dure" (pause()
+    de la musique) avec la lecture de la question elle-même s'est avéré
+    faire échouer silencieusement speechSynthesis sur iPhone (bug WebKit
+    de session audio partagée)."""
     h = client.get("/cabine/").text
     assert "function musicMute()" in h
     assert "musicHardMuted" in h
-    # coupée dès l'affichage de la question vocale (avant même l'enregistrement)
-    m = re.search(r"function showVoice\(q\)\{([^}]*)\}", h)
-    assert m and "musicHardMuted=true" in m.group(1) and "musicMute()" in m.group(1)
+    assert "voiceStream=stream;musicHardMuted=true;musicMute();" in h
+    # la question elle-même (avant que le micro soit actif) ne coupe pas la
+    # musique, seulement le duck habituel des lectures de questions
+    sv = re.search(r"function showVoice\(q\)\{([^}]*)\}", h)
+    assert sv and "musicHardMuted=true" not in sv.group(1)
     # restaurée une fois l'enregistrement effectivement terminé
     assert "musicHardMuted=false;musicNormal()" in h
     # musicNormal() n'annule jamais la coupure tant qu'elle est active
