@@ -253,6 +253,12 @@ def test_tutoriel_buzzer_avant_le_consentement(client):
     assert '"#tutorial-choices .choice"' in h
     m = re.search(r"function validateTutorial\(\)\{([^}]*)\}", h)
     assert m and 'show("e-intro")' in m.group(1)
+    # les choix reprennent le tableau de bord d'un vrai chauffeur (portes,
+    # clim, clignotant, klaxon) plutôt que des emojis sans rapport; valider
+    # sur "Klaxon" doit vraiment klaxonner (horn()), pas juste le bip
+    # générique des autres choix
+    assert "📯" in h and "❄️" in h and ("Klaxon" in h or "Hupe" in h)
+    assert "horn()" in m.group(1) and "choisi.includes" in m.group(1)
 
 
 def test_lecture_vocale_ne_cancel_speak_pas_dans_le_meme_tick_ios(client):
