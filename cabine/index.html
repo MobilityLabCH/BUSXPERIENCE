@@ -135,6 +135,8 @@ button{font:inherit}
 .concept-subtitle{color:var(--paper);opacity:.8;font-size:clamp(14px,1.3vw,18px);font-weight:650;margin-top:-6px}
 .concept-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(220px,.75fr);gap:clamp(20px,3.4vw,46px);width:min(980px,84vw);max-height:52vh;padding:clamp(20px,3.4vh,36px);border-radius:22px;background:var(--paper);color:var(--ink);box-shadow:16px 16px 0 var(--yellow)}
 .concept-card.no-image{grid-template-columns:1fr}
+.concept-card.no-image h2{font-size:clamp(32px,4.4vw,58px);max-width:16ch}
+.concept-card.no-image p{max-width:52ch}
 .concept-card h2{font-size:clamp(28px,3.6vw,48px);line-height:1;letter-spacing:-.03em;font-weight:900;text-wrap:balance}
 .concept-card p{margin-top:14px;font-size:clamp(16px,1.6vw,21px);line-height:1.25;font-weight:650;max-width:48ch}
 .concept-visual{width:100%;height:100%;display:flex}
@@ -225,7 +227,9 @@ button{font:inherit}
  .choices.two{grid-template-columns:1fr}
  .choices.many{grid-template-columns:repeat(2,minmax(0,1fr))}
  .duel{grid-template-columns:1fr 1fr}.duel-or{display:none}
- .concept-card{grid-template-columns:1fr}.concept-visual{display:none}
+ .concept-card{grid-template-columns:1fr}
+ .concept-visual{order:-1;max-height:150px}
+ .concept-card img,.concept-icon{max-height:150px;min-height:0}
  .report-card{grid-template-columns:1fr;max-height:none;overflow-y:auto}
  .report-main{overflow-y:visible}
  .report-stub{border-left:0;border-top:2px dashed rgba(17,18,22,.22);flex-direction:row;flex-wrap:wrap;align-items:center}
@@ -482,22 +486,6 @@ function conceptCategorie(c){
  if(/billet|tarif|prix|itinéraire|route|kilomètre|départ|véhicule|chercher|billett|preis|kilometer|abfahrt|fahrzeug|abholen/.test(t))return"utilite";
  return"agreable";
 }
-function conceptIcone(c){
- const t=conceptTexte(c),table=[
-  [/correspondance|anschluss|umsteigen/,"🔄🚌"],
-  [/retard|verspät/,"⏱️🔔"],
-  [/itinéraire|route|perturbation|alternativ/,"🗺️➡️"],
-  [/occupation|bondé|überfüllt|auslastung|vide/,"👥📊"],
-  [/départ.*maison|losgeh|zuhause/,"🏠⏰"],
-  [/billet|tarif|prix|billett|preis/,"🎫✨"],
-  [/abri|éclairage|assoir|asseoir|sitz|licht|wohlf/,"🌦️💺"],
-  [/signal|problème|sécurité|meld|sicherheit/,"🚨📱"],
-  [/rabattement|véhicule|zubringer|abholen/,"🚐📍"],
-  [/dernier kilomètre|letzte meile|à pied|vélo|velo/,"🚶🚲"],
- ];
- for(const[re,icone]of table)if(re.test(t))return icone;
- return"💡🚍";
-}
 const REACTIONS={
  fr:{
   agreable:{question:"Cette idée rendrait-elle tes trajets plus agréables ?",
@@ -568,8 +556,16 @@ function musicDuck(){fade(musicHardMuted?0:backgroundTarget*.2,300)}
    ce verrou est actif, les duck/normal habituels de la lecture des questions
    n'y remettent pas du son par-dessus l'enregistrement. */
 let musicHardMuted=false;
-function musicNormal(){if(musicHardMuted)return;fade(backgroundTarget,650)}
-function musicMute(){fade(0,250)}
+function musicNormal(){if(musicHardMuted||!background)return;if(background.paused)background.play().catch(()=>{});fade(backgroundTarget,650)}
+/* iOS/Safari mobile ignore complètement les changements de background.volume
+   par script (limitation volontaire d'Apple: seuls les boutons physiques du
+   téléphone contrôlent le volume d'un <audio>) — tout le système de fade
+   ci-dessus n'a donc AUCUN effet sur iPhone, et la musique continuait de
+   jouer à plein volume pendant l'enregistrement. pause()/play() sont en
+   revanche toujours respectés partout: c'est le seul mécanisme de coupure
+   fiable sur mobile, donc la coupure "dure" repose dessus (en plus du fade,
+   qui reste utile sur desktop). */
+function musicMute(){fade(0,250);if(background)try{background.pause()}catch{}}
 function musicStop(){if(!background)return;fade(0,800);later(850,()=>{if(background){background.pause();background=null}})}
 function horn(){const s=cfg.sons||{};if(!s.klaxon_actif){tone([523,659,784],.12);return}if(!klaxonAudio)klaxonAudio=new Audio("/medias/klaxon.mp3");klaxonAudio.volume=s.klaxon_volume||.7;klaxonAudio.currentTime=0;klaxonAudio.play().catch(()=>tone([523,659,784],.12))}
 
@@ -664,7 +660,18 @@ function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCom
 function nextCompare(){currentCompare=currentCompare?0:1;refreshCompare();soundMove()}
 async function validateCompare(){state="sending";soundOk();const value=currentItems[currentCompare];localAnswers["q"+currentQuestion.id]=value;await send({question_id:currentQuestion.id,cle:"reponse",valeur:value});later(260,()=>showStep())}
 
-function showConcept(c){state="concept";const total=(cfg.concepts||[]).length,idx=(cfg.concepts||[]).indexOf(c)+1;$("#concept-kicker").textContent=text().innovation(idx||1,total||1);$("#concept-subtitle").textContent=text().conceptSubtitle;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),iconEl=$("#concept-icon"),card=$("#concept-card");card.classList.remove("no-image");const showIcon=()=>{img.hidden=true;iconEl.hidden=false;iconEl.textContent=(c.icone&&c.icone.trim())||conceptIcone(c)};if(c.image){img.onerror=showIcon;img.src="/medias/"+c.image;img.hidden=false;iconEl.hidden=true}else showIcon();show("e-concept");setHelp(text().press)}
+function showConcept(c){state="concept";const total=(cfg.concepts||[]).length,idx=(cfg.concepts||[]).indexOf(c)+1;$("#concept-kicker").textContent=text().innovation(idx||1,total||1);$("#concept-subtitle").textContent=text().conceptSubtitle;$("#concept-title").textContent=lang==="de"?c.nom_de:c.nom_fr;$("#concept-description").textContent=lang==="de"?c.desc_de:c.desc_fr;const img=$("#concept-image"),iconEl=$("#concept-icon"),card=$("#concept-card"),manuel=c.icone&&c.icone.trim();
+/* Pas de photo et pas de picto choisi par l'admin: on n'invente plus une
+   icône générique par mots-clés (deux emoji collés, ex: "🚨📱" — jamais
+   aussi net qu'une vraie photo, et hors de l'identité graphique réelle de
+   la marque, qui ne s'appuie que sur de la typo forte ou de vraies photos).
+   On passe alors la carte en pleine largeur, texte seul. */
+const showTexteSeul=()=>{card.classList.add("no-image");img.hidden=true;iconEl.hidden=true};
+const showIcone=(valeur)=>{card.classList.remove("no-image");img.hidden=true;iconEl.hidden=false;iconEl.textContent=valeur};
+if(c.image){card.classList.remove("no-image");img.onerror=()=>manuel?showIcone(manuel):showTexteSeul();img.src="/medias/"+c.image;img.hidden=false;iconEl.hidden=true}
+else if(manuel)showIcone(manuel);
+else showTexteSeul();
+show("e-concept");setHelp(text().press)}
 
 /* Réaction: remplace les étoiles pour "cette idée te plairait-elle ?". La
    question et l'échelle d'émoticônes s'adaptent au critère réel du concept
