@@ -801,6 +801,23 @@ def test_rapport_nouveau_format_dix_combinaisons(monkeypatch):
         assert "concept_note" not in doc["texte"]
 
 
+def test_rapport_regles_varie_la_phrase_qui_relie_au_concept_prefere(monkeypatch):
+    """Constaté en usage: dès qu'aucune idée précise ne ressort du verbatim,
+    la phrase qui relie le point de friction au concept préféré du
+    participant était toujours exactement la même («... va donc dans la
+    bonne direction: moins d'incertitude, plus de tranquillité»), quel que
+    soit le concept — ça donnait l'impression d'un rapport copié-collé
+    plutôt que personnel. Elle doit maintenant varier d'une génération à
+    l'autre."""
+    import ai
+    monkeypatch.setenv("AI_PROVIDER", "none")
+    donnees = {"frequence": "Chaque semaine", "etoiles": "3",
+               "concept": "Un concept quelconque"}
+    variantes = {ai._rapport_regles("fr", donnees)["paragraphe_2"] for _ in range(25)}
+    assert len(variantes) > 1, "la phrase reliant le concept ne varie jamais"
+    assert not any("va donc dans la bonne direction" in v for v in variantes)
+
+
 def test_reponse_ia_invalide_ne_saffiche_jamais(monkeypatch):
     import ai
     monkeypatch.setenv("AI_PROVIDER", "gemini")

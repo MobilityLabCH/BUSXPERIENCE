@@ -30,6 +30,11 @@ button{font:inherit}
 #progress-track{height:8px;margin-top:10px;border-radius:99px;background:#27282d;overflow:hidden}
 #progress-fill{display:block;height:100%;width:0;background:var(--yellow);transition:width .35s ease}
 #signature{position:fixed;right:clamp(24px,5vw,78px);bottom:15px;z-index:15;color:#5b5c61;font-size:clamp(11px,1.1vw,16px);font-weight:600}
+/* Scrim: garantit que le bandeau d'instruction du buzzer reste toujours
+   lisible et "propre" même quand le contenu de l'écran (beaucoup de choix,
+   question longue) s'approche du bas — sans ce fondu, les deux pouvaient se
+   toucher sans transition nette. */
+#chrome-scrim{position:fixed;left:0;right:0;bottom:0;height:clamp(90px,14vh,150px);background:linear-gradient(to top,var(--black) 0%,rgba(8,9,11,0) 100%);z-index:16;display:none;pointer-events:none}
 #interaction{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:18;display:none;flex-direction:column;align-items:center;gap:8px}
 #interaction-row{display:flex;align-items:center;gap:12px;color:var(--paper);font-size:clamp(12px,1.1vw,16px);font-weight:800;white-space:nowrap}
 #interaction-dot{width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 5px 0 #75050a;transition:transform .1s,box-shadow .1s}
@@ -39,7 +44,7 @@ button{font:inherit}
 #press-meter i{display:block;height:100%;width:0%;background:var(--yellow);border-radius:99px}
 #press-meter.ready i{background:var(--red)}
 
-.screen{position:absolute;inset:0;display:none;overflow:hidden;padding:clamp(86px,11vh,120px) clamp(28px,7vw,112px) clamp(54px,8vh,78px)}
+.screen{position:absolute;inset:0;display:none;overflow:hidden;padding:clamp(86px,11vh,120px) clamp(28px,7vw,112px) clamp(78px,12vh,112px)}
 .screen.active{display:flex}
 .screen.center{align-items:center;justify-content:center;text-align:center}
 .screen.question-layout{flex-direction:column;justify-content:center;align-items:center;gap:clamp(18px,3vh,34px)}
@@ -196,7 +201,7 @@ button{font:inherit}
 @keyframes rise{to{opacity:1;transform:none}}
 
 @media (max-height:780px){
- .screen{padding-top:78px;padding-bottom:48px}
+ .screen{padding-top:74px;padding-bottom:92px}
  .question-layout{gap:14px}
  .question{font-size:clamp(30px,3.6vw,48px)}
  .choice{min-height:52px;padding:9px 14px}
@@ -227,6 +232,7 @@ button{font:inherit}
  <div id="progress-line"><span id="progress-step"></span><span id="progress-count"></span></div>
  <div id="progress-track"><i id="progress-fill"></i></div>
 </div>
+<div id="chrome-scrim"></div>
 <div id="interaction">
  <div id="interaction-row"><span id="interaction-dot"></span><span id="interaction-text"></span></div>
  <div id="press-meter"><i></i></div>
@@ -584,7 +590,7 @@ function speakQuestion(q,done){stopSpeech();const spoken=(q["parle_"+lang]||"").
 /* Écrans */
 function animateWords(screen){screen.classList.remove("play");screen.querySelectorAll(".headline,.question,.language-title,.report-title").forEach(el=>{if(el.dataset.animated==="1")return;const words=el.textContent.trim().split(/\s+/);el.innerHTML=words.map((w,i)=>`<span class="word" style="animation-delay:${i*28}ms">${w}</span>`).join(" ");el.dataset.animated="1"});void screen.offsetWidth;screen.classList.add("play")}
 function show(id){resetPress();transitioning=true;const wipe=$("#wipe");wipe.classList.remove("go");void wipe.offsetWidth;wipe.classList.add("go");soundTransition();setTimeout(()=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));const screen=$("#"+id);screen.classList.add("active");animateWords(screen);transitioning=false},230)}
-function helpText(value){$("#interaction-text").textContent=value;$("#interaction").style.display=value?"flex":"none"}
+function helpText(value){$("#interaction-text").textContent=value;$("#interaction").style.display=value?"flex":"none";$("#chrome-scrim").style.display=value?"block":"none"}
 function setHelp(value){helpChooseMode=false;helpText(value)}
 function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(text().firstQuestionHint);pendingFirstHint=false}else{helpText(text().pressIdle)}}
 function hideChrome(){$("#progress").style.display="none";setHelp("")}
@@ -687,7 +693,26 @@ function reviewAction(){if(selection===0){if(lastBlob)new Audio(URL.createObject
 async function saveVoice(){if(!lastBlob)return soundError();state="sending";soundOk();await send({question_id:voiceQuestion.id,cle:"reponse",valeur:"[voix]",audio:lastBlob});later(260,()=>showStep())}
 
 /* Rapport */
-async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;if(demo){doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};await new Promise(r=>setTimeout(r,2600))}else{const fd=new FormData();fd.set("lang",lang);doc=await fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null);await new Promise(r=>setTimeout(r,2200))}clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};const lieuNom=cfg.lieu&&cfg.lieu.nom;$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;const lieuEl=$("#report-stub-lieu");if(lieuNom){lieuEl.innerHTML=`${text().reportBuzzerLabel}<b>${lieuNom}</b>`;lieuEl.hidden=false}else lieuEl.hidden=true;const finLocale=lang==="de"?"de-CH":"fr-CH",now=new Date();$("#report-stub-datetime").innerHTML=`${text().reportDateLabel}<b>${now.toLocaleDateString(finLocale,{day:"2-digit",month:"2-digit",year:"numeric"})} · ${now.toLocaleTimeString(finLocale,{hour:"2-digit",minute:"2-digit"})}</b>`;$("#report-thanks").textContent=text().reportThanks;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
+async function finish(){state="report";clearTimers();stopSpeech();hideChrome();if(!demo){try{await fetch(`/api/sessions/${session}/terminer`,{method:"POST"})}catch{}}$("#report-card").hidden=true;$("#report-card").classList.remove("reveal");show("e-report");const messages=text().calc;let i=0;$("#report-loading").textContent=messages[0];const rot=setInterval(()=>{$("#report-loading").textContent=messages[++i%messages.length]},1250);let doc;
+/* Le délai minimum d'affichage tourne EN PARALLÈLE de la génération réelle
+   (Promise.all), pas en plus: sinon un fournisseur IA plus lent que
+   d'habitude rendait l'écran final visiblement long à charger (délai fixe +
+   temps réseau réel, cumulés). Le minimum garde juste le temps que
+   l'animation des messages ait un sens, sans jamais ralentir un rapport déjà
+   prêt plus vite. */
+if(demo){
+ const attente=new Promise(r=>setTimeout(r,1300));
+ doc={titre:lang==="de"?"EINFACH EINSTEIGEN, BESSER ANKOMMEN":"MONTER SIMPLEMENT, ARRIVER MIEUX",texte:lang==="de"?"Der Bus und du: Die Beziehung hat Potenzial. Heute lief alles im Demo-Modus, ohne gespeicherte Antworten.\n\nKlar ist trotzdem: weniger Rätsel, verlässliche Informationen und ein Erlebnis, das sich von Anfang an einfach anfühlt.\n\nDein Fazit: Der beste Bus ist der, der mitdenkt.":"Le bus et toi, la relation a du potentiel. Aujourd’hui, tout s’est déroulé en mode démo, sans réponse enregistrée.\n\nUne chose reste claire : moins de mystère, des informations fiables et une expérience simple dès le départ.\n\nTon verdict : le meilleur bus est celui qui pense au voyageur.",label:lang==="de"?"Demo · nichts gespeichert":"Démo · rien d’enregistré"};
+ await attente;
+}else{
+ const fd=new FormData();fd.set("lang",lang);
+ const [resultat]=await Promise.all([
+  fetch(`/api/sessions/${session}/rapport`,{method:"POST",body:fd}).then(r=>r.json()).catch(()=>null),
+  new Promise(r=>setTimeout(r,1300))
+ ]);
+ doc=resultat;
+}
+clearInterval(rot);$("#report-loading").textContent="";if(!doc)doc={titre:"BUS XPERIENCE",texte:text().noThanks,label:""};const lieuNom=cfg.lieu&&cfg.lieu.nom;$("#report-kicker").textContent=text().reportKicker;$("#report-title").textContent=doc.titre||"";$("#report-title").dataset.animated="0";const parts=(doc.texte||"").split(/\n\s*\n/).map(v=>v.trim()).filter(Boolean),conclusion=parts.length>=3?parts.pop():"";const body=$("#report-body");body.replaceChildren();parts.slice(0,2).forEach(value=>{const p=document.createElement("p");p.textContent=value;body.appendChild(p)});$("#report-conclusion").textContent=conclusion;$("#report-conclusion").hidden=!conclusion;$("#report-label").textContent=doc.label||"";const codeLine=$("#participant-code-line");if(participantCode){codeLine.innerHTML=`${text().participantCodeLabel} <b>${participantCode}</b><br>${text().participantCodeHint}`;codeLine.hidden=false}else codeLine.hidden=true;const lieuEl=$("#report-stub-lieu");if(lieuNom){lieuEl.innerHTML=`${text().reportBuzzerLabel}<b>${lieuNom}</b>`;lieuEl.hidden=false}else lieuEl.hidden=true;const finLocale=lang==="de"?"de-CH":"fr-CH",now=new Date();$("#report-stub-datetime").innerHTML=`${text().reportDateLabel}<b>${now.toLocaleDateString(finLocale,{day:"2-digit",month:"2-digit",year:"numeric"})} · ${now.toLocaleTimeString(finLocale,{hour:"2-digit",minute:"2-digit"})}</b>`;$("#report-thanks").textContent=text().reportThanks;$("#report-card").hidden=false;void $("#report-card").offsetWidth;$("#report-card").classList.add("reveal");animateWords($("#e-report"));horn();musicStop();later(40000,returnWaiting)}
 function returnWaiting(){clearTimers();stopSpeech();musicHardMuted=false;musicStop();state="waiting";session=null;participantCode=null;hideChrome();show("e-waiting")}
 
 /* ================================================================
