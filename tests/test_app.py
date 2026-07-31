@@ -298,20 +298,24 @@ def test_illustration_du_concept_visible_sur_mobile(client):
     assert ".concept-visual" in bloc
 
 
-def test_pictogramme_admin_prioritaire_sur_la_detection_auto(client):
-    """Si l'admin a défini un picto manuel sur le concept (c.icone), il doit
-    être utilisé de préférence au picto détecté automatiquement par mots-clés."""
-    h = client.get("/cabine/").text
-    assert '(c.icone&&c.icone.trim())||conceptIcone(c)' in h
+def test_pictogramme_admin_prioritaire_sur_carte_texte_seul(client):
+    """Sans photo, la carte doit utiliser le picto choisi par l'admin s'il
+    existe (c.icone). Un picto deviné automatiquement par mots-clés (deux
+    emoji collés, jugé peu soigné et hors identité de marque) n'est plus
+    généré: sans image ni picto manuel, la carte passe en texte seul."""
+    h = re.sub(r"\s+", "", client.get("/cabine/").text)
+    assert "manuel=c.icone&&c.icone.trim()" in h
+    assert "elseif(manuel)showIcone(manuel)" in h
+    assert "elseshowTexteSeul()" in h
 
 
 def test_photo_de_concept_repli_sur_picto_si_le_fichier_echoue(client):
     """Si l'image d'un concept ne charge pas (fichier manquant, chemin
-    invalide), on doit basculer sur le pictogramme plutôt que de laisser un
-    cadre d'image cassé et vide."""
+    invalide), on doit basculer sur le pictogramme manuel s'il existe, sinon
+    sur la carte texte seul — jamais un cadre d'image cassé et vide."""
     h = client.get("/cabine/").text
     assert "function showConcept(c){" in h
-    assert "img.onerror=showIcon" in h
+    assert "img.onerror=()=>manuel?showIcone(manuel):showTexteSeul()" in h.replace(" ", "")
 
 
 def test_admin_peut_definir_le_picto_dun_concept(client):
@@ -432,8 +436,9 @@ def test_idee_a_tester_devient_innovation_dynamique(client):
         assert f'{critere}:{{question:' in h.replace(" ", ""), critere
     assert "Cette idée rendrait-elle tes trajets plus agréables ?" in h
     assert "Cette idée te ferait-elle sentir plus en sécurité ?" in h
-    # icône ou illustration liée au contenu quand aucune image n'est déposée
-    assert "function conceptIcone(c)" in h
+    # sans image ni picto manuel: carte texte seul, pas d'icône générique
+    # devinée par mots-clés (jugée peu soignée, hors identité de la marque)
+    assert "no-image" in h and "showTexteSeul" in h
 
 
 def test_json_privacy_texte_legal_reel(client):
