@@ -153,14 +153,15 @@ Exemples du niveau de qualité attendu pour la conclusion (uniquement pour le
 style, ne recopie jamais ces phrases telles quelles):
 - pour un irritant "correspondance ratée": «Ton verdict: la Fontaine l'a
   dit — mieux vaut partir à point.»
-- pour un irritant "retard sans info": «Ton verdict: même une horloge
-  arrêtée informe mieux que ce silence.»
-- pour un irritant "bus bondé": «Ton verdict: les sardines ont un
-  abonnement, pas envie de le partager.»
+- pour un irritant "retard sans info": «Ton verdict: même un coucou suisse
+  te préviendrait mieux avant de sonner.»
+- pour un irritant "bus bondé": «Ton verdict: on ne tasse pas les gens
+  comme une fondue à partager.»
 Chaque exemple nomme un décalage concret et inattendu avec l'irritant réel,
-au lieu d'une morale générique. Une conclusion comme «de l'info avant les
-mauvaises surprises» ou «la patience, ça paie» est un échec: c'est vague,
-interchangeable et sans surprise — à proscrire absolument.
+avec une image simple à visualiser, au lieu d'une morale générique ou
+abstraite. Une conclusion comme «de l'info avant les mauvaises surprises»
+ou «la patience, ça paie» est un échec: c'est vague, interchangeable et
+sans surprise — à proscrire absolument.
 
 Contraintes absolues:
 - ne reproduis jamais un nom de personne, numéro de téléphone, adresse
@@ -176,6 +177,11 @@ Contraintes absolues:
 - ne jamais écrire «le répondant a indiqué» ni son équivalent;
 - ne pas recopier une transcription maladroite: reformule-la sans en changer le sens;
 - une image légère est bienvenue, mais pas une plaisanterie dans chaque phrase;
+- vocabulaire simple et concret partout, y compris dans la conclusion:
+  une image ou métaphore facile à visualiser plutôt qu'une formule
+  abstraite; les images du quotidien suisse (montagnes, lacs, précision
+  horlogère, fondue, chocolat, cornet, etc.) sont bienvenues quand elles
+  collent naturellement au sujet, sans en forcer une à chaque fois;
 - la conclusion peut s'inspirer du ton ou de l'esprit d'une citation
   célèbre, d'une fable ou d'un proverbe, mais toujours reformulée avec tes
   propres mots: ne recopie jamais mot pour mot une réplique de film, de

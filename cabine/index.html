@@ -116,13 +116,12 @@ button{font:inherit}
 .star.on{color:var(--yellow);transform:translateY(-5px)}
 .value-badge{display:inline-flex;align-items:baseline;gap:10px;background:var(--yellow);color:var(--ink);border-radius:12px;padding:8px 15px;font-size:clamp(17px,2vw,27px);font-weight:900}
 
-/* Échelle sans curseur */
+/* Échelle: une seule barre qui se remplit tant qu'on maintient le buzzer,
+   se fige et se valide au relâchement — plus ludique et plus rapide qu'une
+   série de boutons à choisir un par un. */
 .scale-wrap{width:min(960px,84vw);display:flex;flex-direction:column;gap:16px}
-.scale-values{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:clamp(4px,.6vw,9px)}
-.scale-value{height:clamp(42px,6.4vw,74px);display:flex;align-items:flex-end;justify-content:center;border:2px solid var(--line);border-radius:11px;background:#17181c;padding-bottom:7px;transition:.14s}
-.scale-bar{width:34%;height:var(--h,20%);background:var(--line);border-radius:5px 5px 0 0;transition:.14s}
-.scale-value.selected{background:var(--yellow);border-color:var(--yellow);transform:translateY(-7px)}
-.scale-value.selected .scale-bar{background:var(--ink)}
+.scale-track{height:clamp(46px,7vw,84px);border:2px solid var(--line);border-radius:999px;background:#17181c;overflow:hidden}
+.scale-fill{height:100%;width:0%;background:linear-gradient(90deg,#ffcf33,var(--yellow));border-radius:999px}
 .scale-labels{display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:clamp(12px,1.15vw,16px);font-weight:750}
 .scale-labels span{max-width:18ch}
 .scale-labels span:last-child{text-align:right}
@@ -238,7 +237,6 @@ button{font:inherit}
  .report-stub{border-left:0;border-top:2px dashed rgba(17,18,22,.22);flex-direction:row;flex-wrap:wrap;align-items:center}
  .report-barcode{flex:1 1 140px;min-width:140px}
  .report-body{grid-template-columns:1fr;gap:12px}
- .scale-values{gap:4px}.scale-value{border-radius:8px}
  /* 5 réactions avec flex:1 1 0 se répartissaient de façon inégale en
     largeur étroite (ex: 4 sur une ligne + 1 tout seul, comme "oublié").
     Largeur fixe à 3 par ligne: deux lignes propres et centrées (3 puis 2). */
@@ -337,7 +335,7 @@ button{font:inherit}
 <section class="screen question-layout" id="e-scale">
  <h2 class="question" id="scale-question"></h2>
  <div class="scale-wrap">
-  <div class="scale-values" id="scale-values"></div>
+  <div class="scale-track"><div class="scale-fill" id="scale-fill"></div></div>
   <div class="scale-labels"><span id="scale-min"></span><span id="scale-max"></span></div>
  </div>
 </section>
@@ -426,6 +424,8 @@ const TXT={
   pressIdle:"Appuie pour changer",pressHolding:"Continue de maintenir…",
   pressReady:"Relâche pour valider",
   firstQuestionHint:"Une pression pour changer. Maintiens jusqu’au signal pour valider.",
+  scaleHelp:"Maintiens appuyé pour monter, relâche pour valider.",
+  firstScaleHint:"Maintiens le buzzer appuyé: plus tu tiens, plus le score monte. Relâche pour valider.",
   introTitle:"TU MONTES À BORD. À PARTIR DE MAINTENANT, C’EST TON EXPÉRIENCE QUI COMPTE.",
   introSub:"5 minutes pour améliorer le bus.",consentKicker:"Avant de commencer",
   consentTitle:"À toi de décider.",
@@ -455,6 +455,8 @@ const TXT={
   pressIdle:"Drücken zum Wechseln",pressHolding:"Weiter gedrückt halten…",
   pressReady:"Loslassen zum Bestätigen",
   firstQuestionHint:"Kurz drücken zum Wechseln. Bis zum Signal halten, um zu bestätigen.",
+  scaleHelp:"Gedrückt halten zum Erhöhen, loslassen zum Bestätigen.",
+  firstScaleHint:"Buzzer gedrückt halten: je länger, desto höher der Wert. Loslassen zum Bestätigen.",
   introTitle:"DU STEIGST EIN. AB JETZT GEHT ES UM DEIN ERLEBNIS.",
   introSub:"5 Minuten für ein besseres Bus-Erlebnis.",consentKicker:"Bevor es losgeht",
   consentTitle:"Du entscheidest.",
@@ -537,7 +539,7 @@ const DEMO={campagne:{nom:"Démo",musique:null,musique_active:0,musique_volume:.
 
 let cfg=DEMO,demo=true,lang="fr",session=null,participantCode=null;
 let state="waiting",sequence=[],stepIndex=0,localAnswers={};
-let selection=0,currentItems=[],currentQuestion=null,currentScale=5,currentStars=1,currentCompare=0;
+let selection=0,currentItems=[],currentQuestion=null,currentStars=1,currentCompare=0;
 let timers=[],idleTimer=null;
 const $=s=>document.querySelector(s);
 const text=()=>TXT[lang];
@@ -632,7 +634,7 @@ function show(id){resetPress();transitioning=true;const wipe=$("#wipe");wipe.cla
    avec elle, donc masqué sur cet écran précis. */
 function helpText(value){$("#interaction-text").textContent=value;const surEcranVocal=state==="voice-intro"||state==="voice-recording";$("#interaction").style.display=value&&!surEcranVocal?"flex":"none";$("#chrome-scrim").style.display=value&&!surEcranVocal?"block":"none"}
 function setHelp(value){helpChooseMode=false;helpText(value)}
-function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(text().firstQuestionHint);pendingFirstHint=false}else{helpText(text().pressIdle)}}
+function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(state==="scale"?text().firstScaleHint:text().firstQuestionHint);pendingFirstHint=false}else{helpText(state==="scale"?text().scaleHelp:text().pressIdle)}}
 function hideChrome(){$("#progress").style.display="none";setHelp("")}
 function resetAnimated(...ids){ids.forEach(id=>{const el=$(id);if(el)el.dataset.animated="0"})}
 
@@ -689,11 +691,16 @@ async function validateStars(){state="sending";soundOk();if(currentQuestion.conc
    atteindre la valeur voulue avec un seul buzzer — beaucoup trop long.
    On garde la plage 0-max envoyée au format actuel des réponses, mais on
    ne propose plus que quelques paliers bien répartis à faire défiler. */
-let currentScalePaliers=[];
-function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;const n=5;currentScalePaliers=max<=n?Array.from({length:max+1},(_,i)=>i):Array.from({length:n},(_,i)=>Math.round(i*max/(n-1)));currentScale=Math.floor(currentScalePaliers.length/2);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();currentScalePaliers.forEach((v,i)=>{const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.style.setProperty("--h",Math.round((i+1)/currentScalePaliers.length*100)+"%");const bar=document.createElement("span");bar.className="scale-bar";b.appendChild(bar);b.setAttribute("aria-label",String(v));zone.appendChild(b)});const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
-function refreshScale(){document.querySelectorAll("#scale-values .scale-value").forEach((b,i)=>b.classList.toggle("selected",i===currentScale))}
-function nextScale(){const max=document.querySelectorAll("#scale-values .scale-value").length-1;currentScale=currentScale>=max?0:currentScale+1;refreshScale();soundMove()}
-async function validateScale(){state="sending";soundOk();const valeur=String(currentScalePaliers[currentScale]);if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur});else{localAnswers["q"+currentQuestion.id]=valeur;await send({question_id:currentQuestion.id,cle:"reponse",valeur})}later(260,()=>showStep())}
+/* Échelle repensée en jauge continue: maintenir le buzzer remplit la barre
+   de 0 au maximum en SCALE_FILL_MS, relâcher fige et envoie la valeur
+   atteinte à cet instant — un seul geste, sans étape de confirmation
+   séparée (voir releaseScale, appelé depuis pressUp). */
+const SCALE_FILL_MS=1800;
+let currentScaleMax=10;
+function showScale(q){state="scale";currentQuestion=q;currentScaleMax=(q.params&&q.params.max)||10;fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);$("#scale-fill").style.width="0%";const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(currentScaleMax);show("e-scale");setHelpChoose();speakQuestion(q)}
+function updateScaleFill(t){const el=$("#scale-fill");if(el)el.style.width=Math.round(Math.max(0,Math.min(1,t))*100)+"%"}
+function releaseScale(duration){const t=Math.max(0,Math.min(1,duration/SCALE_FILL_MS));validateScale(Math.round(t*currentScaleMax))}
+async function validateScale(valeur){state="sending";soundOk();const v=String(valeur);if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur:v});else{localAnswers["q"+currentQuestion.id]=v;await send({question_id:currentQuestion.id,cle:"reponse",valeur:v})}later(260,()=>showStep())}
 
 function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();show("e-compare");setHelpChoose();speakQuestion(q)}
 function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCompare===0);$("#compare-b").classList.toggle("selected",currentCompare===1)}
@@ -813,9 +820,10 @@ function holdLoop(){
  setMeter(pct);
  const selectedFill=document.querySelector(".screen.active .choice.selected .hold-fill,.screen.active .reaction.selected .hold-fill");
  if(selectedFill)selectedFill.style.width=pct+"%";
+ if(state==="scale")updateScaleFill(elapsed/SCALE_FILL_MS);
  if(elapsed>=LONG_PRESS&&!thresholdReached){
   thresholdReached=true;$("#press-meter").classList.add("ready");soundReady();
-  if(helpChooseMode)helpText(text().pressReady);
+  if(helpChooseMode&&state!=="scale")helpText(text().pressReady);
  }
  holdRAF=requestAnimationFrame(holdLoop);
 }
@@ -836,10 +844,12 @@ function pressDown(){
 function pressUp(directTap){
  if(!pressHeld)return;
  const duration=Date.now()-pressStarted;
+ const wasScale=state==="scale";
  pressHeld=false;pressStarted=0;pressVisual(false);disarmVisuals();
  if(helpChooseMode)helpText(pendingFirstHint?text().firstQuestionHint:text().pressIdle);
  if(transitioning)return; // une transition d'écran est en cours: ignorer, jamais de double validation
  if(duration>=STOP_PRESS&&ABORTABLE.has(state))return openStopConfirm();
+ if(wasScale)return releaseScale(duration); // geste unique: la durée du maintien EST la réponse
  if(duration>=LONG_PRESS)return longPress();
  if(directTap)return;
  shortPress();
@@ -852,9 +862,9 @@ function resetPress(){
  if(helpChooseMode)helpText(text().pressIdle);
 }
 
-function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="reaction")return nextReaction();if(state==="scale")return nextScale();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
+function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="reaction")return nextReaction();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
 function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","mic-unavailable","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
-function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="reaction")return validateReaction();if(state==="scale")return validateScale();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
+function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="reaction")return validateReaction();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
 
 /* "Tu peux arrêter à tout moment": appui de 4 s pendant le parcours. */
 function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recorder&&recorder.state!=="inactive"&&recorder.stop()}catch{}voiceStream&&voiceStream.getTracks().forEach(t=>t.stop())}preAbortState=state;const active=document.querySelector(".screen.active");preAbortScreen=active?active.id:"e-waiting";state="stop-confirm";renderChoices($("#stop-confirm-choices"),[text().stopContinue,text().stopDelete],0);show("e-stop-confirm");setHelpChoose()}
@@ -884,12 +894,6 @@ function directTapSelect(target){
  if(star){
   const idx=[...star.parentElement.children].indexOf(star);
   if(idx>=0){currentStars=idx+1;refreshStars();soundMove()}
-  return true;
- }
- const scaleBtn=target.closest(".scale-value");
- if(scaleBtn){
-  const idx=[...scaleBtn.parentElement.children].indexOf(scaleBtn);
-  if(idx>=0){currentScale=idx;refreshScale();soundMove()}
   return true;
  }
  const reactionBtn=target.closest(".reaction");
