@@ -920,6 +920,11 @@ def test_prompt_ia_demande_une_conclusion_citation_de_bonne_humeur():
     import ai
     assert "citation" in ai.PROMPT_PARTICIPANT and "sourire" in ai.PROMPT_PARTICIPANT
     assert "droit d’auteur" in ai.PROMPT_PARTICIPANT or "droit d'auteur" in ai.PROMPT_PARTICIPANT
+    # le prompt doit fournir des exemples concrets de style et interdire
+    # explicitement les conclusions vagues/interchangeables observées en
+    # production (ex: "de l'info avant les mauvaises surprises")
+    assert "Exemples" in ai.PROMPT_PARTICIPANT
+    assert "vague" in ai.PROMPT_PARTICIPANT and "interchangeable" in ai.PROMPT_PARTICIPANT
 
 
 def test_verdict_du_ticket_varie_et_reste_dans_le_budget_de_mots(monkeypatch):
@@ -1203,6 +1208,23 @@ def test_echelle_reduite_a_quelques_paliers(client):
     assert "currentScalePaliers" in h
     m = re.search(r"function validateScale\(\)\{([^}]*)\}", h)
     assert m and "currentScalePaliers[currentScale]" in m.group(1)
+
+
+def test_echelle_utilise_des_barres_de_niveau_plutot_que_des_chiffres(client):
+    """Les chiffres bruts (0, 3, 5, 8, 10) sur les boutons d'échelle
+    n'étaient pas compris intuitivement par les participants. Un premier
+    essai avec des émojis faisait doublon avec l'écran de réaction
+    (concept-impact) qui utilise déjà des émojis juste avant dans le
+    parcours. Chaque palier doit donc afficher une barre de niveau
+    ascendante (sans émoji ni chiffre visible), la valeur numérique réelle
+    restant envoyée au backend et exposée via aria-label pour
+    l'accessibilité."""
+    h = client.get("/cabine/").text
+    assert "EMOJIS_ECHELLE" not in h
+    debut = h.index("function showScale(q){")
+    fin = h.index("function refreshScale", debut)
+    corps = h[debut:fin]
+    assert "scale-bar" in corps and "aria-label" in corps and "--h" in corps
 
 
 def test_voix_compact_ios_moins_prioritaire(client):
