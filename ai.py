@@ -149,6 +149,19 @@ Le résultat doit contenir exactement:
    connu), reliée avec humour au sujet réel de sa réponse — jamais une
    formule vague ou interchangeable d'un profil à l'autre.
 
+Exemples du niveau de qualité attendu pour la conclusion (uniquement pour le
+style, ne recopie jamais ces phrases telles quelles):
+- pour un irritant "correspondance ratée": «Ton verdict: la Fontaine l'a
+  dit — mieux vaut partir à point.»
+- pour un irritant "retard sans info": «Ton verdict: même une horloge
+  arrêtée informe mieux que ce silence.»
+- pour un irritant "bus bondé": «Ton verdict: les sardines ont un
+  abonnement, pas envie de le partager.»
+Chaque exemple nomme un décalage concret et inattendu avec l'irritant réel,
+au lieu d'une morale générique. Une conclusion comme «de l'info avant les
+mauvaises surprises» ou «la patience, ça paie» est un échec: c'est vague,
+interchangeable et sans surprise — à proscrire absolument.
+
 Contraintes absolues:
 - ne reproduis jamais un nom de personne, numéro de téléphone, adresse
   postale, e-mail ou autre information personnelle qui aurait pu être
