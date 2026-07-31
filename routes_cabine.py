@@ -44,6 +44,10 @@ def config():
                 "klaxon_present": (db.MEDIAS / "klaxon.mp3").exists()}
     concepts = [dict(r) for r in cos]
     random.shuffle(concepts)
+    # priorise les concepts illustrés par une photo (ajoutée par l'admin) —
+    # sinon ils peuvent ne jamais sortir dans le tirage aléatoire et donner
+    # l'impression que les photos ne s'affichent jamais
+    concepts.sort(key=lambda co: 0 if co.get("image") else 1)
     musique = camp["musique"] if camp and camp["musique"] else (
         "musique-voyage.mp3" if (db.MEDIAS / "musique-voyage.mp3").exists() else None)
     return {
