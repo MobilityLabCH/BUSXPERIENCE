@@ -198,6 +198,21 @@ def test_lecture_vocale_debloquee_des_le_premier_appui_ios(client):
     assert m and "unlockSpeech()" in m.group(1)
 
 
+def test_deverrouillage_vocal_rearme_a_chaque_pression(client):
+    """Constaté en usage: sur iPhone, les toutes premières questions
+    restaient parfois silencieuses malgré le déverrouillage initial — la
+    fenêtre d'activation accordée par le geste utilisateur peut expirer
+    après quelques secondes, largement dépassé par la séquence
+    consentement + attente de l'autorisation micro. unlockSpeech() ne doit
+    donc plus s'arrêter après le premier appel: il se réarme à chaque
+    pression."""
+    h = client.get("/cabine/").text
+    m = re.search(r"function unlockSpeech\(\)\{([^}]*)\}", h)
+    assert m, "fonction unlockSpeech() introuvable"
+    corps = m.group(1)
+    assert "if(speechUnlocked" not in corps.replace(" ", "")
+
+
 def test_lecture_vocale_ne_cancel_speak_pas_dans_le_meme_tick_ios(client):
     """Bug WebKit connu sur iPhone: enchaîner speechSynthesis.cancel() puis
     .speak() dans le même tick fait parfois disparaître silencieusement le
@@ -897,6 +912,34 @@ def test_rapport_regles_varie_la_phrase_qui_relie_au_concept_prefere(monkeypatch
     assert not any("va donc dans la bonne direction" in v for v in variantes)
 
 
+def test_prompt_ia_demande_une_conclusion_citation_de_bonne_humeur():
+    """Quand un vrai fournisseur IA est configuré (Gemini etc.), le
+    "verdict" doit être généré par lui, façon citation qui donne le
+    sourire — sans jamais reproduire mot pour mot une réplique protégée
+    par le droit d'auteur (Disney et autres)."""
+    import ai
+    assert "citation" in ai.PROMPT_PARTICIPANT and "sourire" in ai.PROMPT_PARTICIPANT
+    assert "droit d’auteur" in ai.PROMPT_PARTICIPANT or "droit d'auteur" in ai.PROMPT_PARTICIPANT
+
+
+def test_verdict_du_ticket_varie_et_reste_dans_le_budget_de_mots(monkeypatch):
+    """Le "verdict" final restait plat: un seul intitulé fixe par thème,
+    toujours identique. Il doit maintenant varier d'une génération à
+    l'autre (clin d'œil à une fable/un proverbe, jamais une citation de
+    personnage sous droits d'auteur), tout en restant dans le budget de
+    mots existant (60-90 mots au total) même dans les cas les plus courts
+    (peu de champs renseignés)."""
+    import ai
+    monkeypatch.setenv("AI_PROVIDER", "none")
+    donnees = {"irritant": "bus bondé", "concept": "Un concept quelconque"}
+    variantes = {ai._rapport_regles("fr", donnees)["conclusion"] for _ in range(25)}
+    assert len(variantes) > 1, "le verdict ne varie jamais"
+    for lang in ("fr", "de"):
+        for _ in range(20):
+            r = ai._rapport_regles(lang, {"irritant": "rien"})
+            assert 60 <= ai._mots(r["texte"]) <= 90, r["texte"]
+
+
 def test_reponse_ia_invalide_ne_saffiche_jamais(monkeypatch):
     import ai
     monkeypatch.setenv("AI_PROVIDER", "gemini")
@@ -1135,3 +1178,47 @@ def test_suppression_globale_avec_sauvegarde(client):
     import seed
     db.migrer(); seed.semer()
     assert _compte(client)["sessions"] == 0
+
+
+def test_consigne_ecran_vocal_juste_sous_la_question(client):
+    """Sur l'écran de la question vocale, la consigne (déjà affichée via
+    #voice-status: "Appuie pour répondre librement.", etc.) doit apparaître
+    juste sous la question, alignée au bloc principal (regroupée avec elle
+    dans .voice-heading) plutôt que dans le bandeau flottant tout en bas de
+    l'écran, déconnecté visuellement de la question sur grand écran — ce
+    bandeau générique redondant est donc masqué sur cet écran précis."""
+    h = client.get("/cabine/").text
+    m = re.search(r'<div class="voice-heading">(.*?)</div>', h, re.S)
+    assert m and 'id="voice-question"' in m.group(1) and 'id="voice-status"' in m.group(1)
+    hf = re.search(r"function helpText\(value\)\{([^}]*)\}", h)
+    assert hf and "surEcranVocal" in hf.group(1)
+
+
+def test_echelle_reduite_a_quelques_paliers(client):
+    """Une échelle 0-10 complète demandait jusqu'à 10 pressions courtes
+    pour atteindre la valeur voulue avec un seul buzzer, jugée trop longue.
+    Le nombre de paliers proposés doit être réduit tout en gardant la
+    plage 0-max envoyée au format actuel des réponses."""
+    h = client.get("/cabine/").text
+    assert "currentScalePaliers" in h
+    m = re.search(r"function validateScale\(\)\{([^}]*)\}", h)
+    assert m and "currentScalePaliers[currentScale]" in m.group(1)
+
+
+def test_voix_compact_ios_moins_prioritaire(client):
+    """Les voix "Compact" (qualité la plus basse disponible sur iOS,
+    perçue comme "robotique") doivent être évitées quand une meilleure
+    voix existe."""
+    h = client.get("/cabine/").text
+    m = re.search(r"function voiceScore\(v\)\{([^}]*)\}", h)
+    assert m and '"compact"' in m.group(1) and "-4" in m.group(1)
+
+
+def test_reactions_ne_se_repartissent_pas_de_facon_inegale_sur_mobile(client):
+    """5 réactions avec flex:1 1 0 se répartissaient de façon inégale sur
+    téléphone (ex: 4 sur une ligne puis 1 tout seul en dessous, comme
+    "oublié"). En dessous de 900px, une largeur fixe à 3 par ligne doit
+    donner deux lignes propres et centrées."""
+    h = client.get("/cabine/").text
+    m = re.search(r"@media \(max-width:900px\)\{(.*?)\n\}", h, re.S)
+    assert m and "width:calc(33.333% - 8px)" in m.group(1)

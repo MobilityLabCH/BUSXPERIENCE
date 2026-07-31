@@ -144,7 +144,10 @@ Le résultat doit contenir exactement:
 1. un titre personnalisé, court, mémorable et légèrement drôle;
 2. paragraphe_1: la relation de la personne au bus;
 3. paragraphe_2: son principal irritant et l'amélioration qui lui serait utile;
-4. une conclusion courte et mémorable.
+4. une conclusion qui donne le sourire: une phrase courte façon citation ou
+   pensée positive (style fable, proverbe, sagesse populaire ou grand nom
+   connu), reliée avec humour au sujet réel de sa réponse — jamais une
+   formule vague ou interchangeable d'un profil à l'autre.
 
 Contraintes absolues:
 - ne reproduis jamais un nom de personne, numéro de téléphone, adresse
@@ -160,6 +163,10 @@ Contraintes absolues:
 - ne jamais écrire «le répondant a indiqué» ni son équivalent;
 - ne pas recopier une transcription maladroite: reformule-la sans en changer le sens;
 - une image légère est bienvenue, mais pas une plaisanterie dans chaque phrase;
+- la conclusion peut s'inspirer du ton ou de l'esprit d'une citation
+  célèbre, d'une fable ou d'un proverbe, mais toujours reformulée avec tes
+  propres mots: ne recopie jamais mot pour mot une réplique de film, de
+  dessin animé ou de toute autre œuvre protégée par le droit d'auteur;
 - le titre ne dépasse pas 10 mots;
 - aucun markdown.
 
@@ -619,6 +626,116 @@ _GABARITS_IDEE_CONCEPT = {
     ],
 }
 
+# Le "verdict" final se voulait drôle ou surprenant mais restait un peu
+# plat (un seul intitulé fixe par thème, toujours le même). Plusieurs
+# variantes par thème, tirées au sort sans répétition immédiate, avec un
+# clin d'œil à une fable, un proverbe ou un grand nom — jamais une citation
+# de personnage sous droits d'auteur (Disney etc.), toujours du domaine
+# public ou de la sagesse populaire générique.
+_CONCLUSIONS_FR = {
+    "correspondance": [
+        "Ton verdict: la Fontaine l’a dit — mieux vaut partir à point.",
+        "Ton verdict: même Ulysse planifiait mieux ses correspondances.",
+    ],
+    "retard": [
+        "Ton verdict: l’incertitude, c’est bon pour les romans, pas pour un bus.",
+        "Ton verdict: même une horloge arrêtée informe mieux que ce silence.",
+    ],
+    "billet": [
+        "Ton verdict: le meilleur calcul est celui qu’on n’a pas à faire.",
+        "Ton verdict: Confucius lui-même aurait détesté deviner le prix du billet.",
+    ],
+    "foule": [
+        "Ton verdict: les sardines ont un abonnement, pas envie de le partager.",
+        "Ton verdict: l’union fait la force, pas l’entassement le confort.",
+    ],
+    "attente": [
+        "Ton verdict: même le loup de la fable cherchait un toit.",
+        "Ton verdict: un banc et un abri changent toute la morale de l’histoire.",
+    ],
+    "telephone": [
+        "Ton verdict: ton téléphone mérite d’arriver aussi frais que toi.",
+        "Ton verdict: la panique du 1 % de batterie, ce n’est pas une légende.",
+    ],
+    "panorama": [
+        "Ton verdict: les meilleures idées naissent en regardant par la fenêtre.",
+        "Ton verdict: un trajet avec vue n’a jamais nui à personne.",
+    ],
+    "frequence": [
+        "Ton verdict: patienter avec sagesse, oui — patienter pour rien, non merci.",
+        "Ton verdict: le bus idéal est celui qu’on n’a jamais à guetter.",
+    ],
+    "ponctualite": [
+        "Ton verdict: un horaire qui tient parole vaut toutes les promesses du monde.",
+        "Ton verdict: même les sages apprécient un rendez-vous respecté.",
+    ],
+    "aucun": [
+        "Ton verdict: pas besoin de morale compliquée quand tout va déjà bien.",
+        "Ton verdict: la meilleure fable est parfois celle qui n’a pas de problème à résoudre.",
+    ],
+    "defaut": [
+        "Ton verdict: le mieux est souvent l’ennemi du simple.",
+        "Ton verdict: une bonne histoire commence toujours par un trajet sans accroc.",
+    ],
+}
+_CONCLUSIONS_DE = {
+    "correspondance": [
+        "Dein Fazit: schon der Hase aus der Fabel hätte besseres Timing gebraucht.",
+        "Dein Fazit: gute Verbindungen schlagen jeden Sprint.",
+    ],
+    "retard": [
+        "Dein Fazit: Unsicherheit passt zu Romanen, nicht zum Busfahrplan.",
+        "Dein Fazit: selbst eine stehengebliebene Uhr informiert besser als dieses Schweigen.",
+    ],
+    "billet": [
+        "Dein Fazit: die beste Rechnung ist die, die man nicht selbst machen muss.",
+        "Dein Fazit: schon Konfuzius hätte den Billettpreis nicht gern erraten.",
+    ],
+    "foule": [
+        "Dein Fazit: Sardinen haben ein Abo, aber keine Lust, es zu teilen.",
+        "Dein Fazit: Zusammenhalt macht stark, Gedränge macht nur müde.",
+    ],
+    "attente": [
+        "Dein Fazit: selbst der Wolf aus der Fabel suchte ein Dach.",
+        "Dein Fazit: eine Bank und ein Dach ändern die ganze Geschichte.",
+    ],
+    "telephone": [
+        "Dein Fazit: dein Handy verdient es, genauso frisch anzukommen wie du.",
+        "Dein Fazit: die Ein-Prozent-Panik ist keine Legende.",
+    ],
+    "panorama": [
+        "Dein Fazit: die besten Ideen entstehen beim Blick aus dem Fenster.",
+        "Dein Fazit: eine Fahrt mit Aussicht hat noch niemandem geschadet.",
+    ],
+    "frequence": [
+        "Dein Fazit: geduldig warten ja, sinnlos warten nein danke.",
+        "Dein Fazit: der ideale Bus ist der, auf den man nie starren muss.",
+    ],
+    "ponctualite": [
+        "Dein Fazit: ein Fahrplan, der Wort hält, schlägt jedes Versprechen.",
+        "Dein Fazit: sogar Weise schätzen einen eingehaltenen Termin.",
+    ],
+    "aucun": [
+        "Dein Fazit: manchmal braucht es keine komplizierte Moral, wenn schon alles passt.",
+        "Dein Fazit: die beste Fabel ist manchmal die ohne Problem.",
+    ],
+    "defaut": [
+        "Dein Fazit: das Bessere ist oft der Feind des Einfachen.",
+        "Dein Fazit: jede gute Geschichte beginnt mit einer Fahrt ohne Umweg.",
+    ],
+}
+
+_COMPLEMENTS_FR = [
+    " L’objectif n’est pas d’en faire plus, mais de rendre chaque étape plus évidente.",
+    " Rien de spectaculaire à prévoir: juste un service qui tient ses promesses, trajet après trajet.",
+    " Ce genre de détail change peu de choses en apparence, mais beaucoup une fois répété chaque jour.",
+]
+_COMPLEMENTS_DE = [
+    " Das Ziel ist nicht mehr Aufwand, sondern ein klarerer Ablauf bei jedem Schritt.",
+    " Nichts Spektakuläres nötig: nur ein Service, der Fahrt für Fahrt sein Versprechen hält.",
+    " Das klingt nach wenig, macht aber jeden Tag aufs Neue einen Unterschied.",
+]
+
 
 def _phrase_irritant_solution(lang: str, d: dict) -> tuple[str, str]:
     fr = lang != "de"
@@ -666,35 +783,12 @@ def _phrase_irritant_solution(lang: str, d: dict) -> tuple[str, str]:
                 "Es braucht nicht viel: Der Service muss vor allem klar, zuverlässig und einfach nutzbar sein.")
 
     conclusion_theme = idee_theme or theme
-    conclusions_fr = {
-        "correspondance": "Ton verdict: moins de sprint, plus de connexion.",
-        "retard": "Ton verdict: de l’info avant les mauvaises surprises.",
-        "billet": "Ton verdict: monter, voyager, ne pas calculer.",
-        "foule": "Ton verdict: plus d’espace, moins de Tetris.",
-        "attente": "Ton verdict: attendre au sec, partir sereinement.",
-        "telephone": "Ton verdict: batterie pleine jusqu’au terminus.",
-        "panorama": "Ton verdict: un trajet simple, avec vue.",
-        "frequence": "Ton verdict: moins d’attente, plus de choix.",
-        "ponctualite": "Ton verdict: un horaire qui tient parole.",
-        "aucun": "Ton verdict: garder le bon, simplifier le reste.",
-        "defaut": "Ton verdict: simple à comprendre, agréable à vivre.",
-    }
-    conclusions_de = {
-        "correspondance": "Dein Fazit: weniger Sprint, mehr Anschluss.",
-        "retard": "Dein Fazit: Information vor bösen Überraschungen.",
-        "billet": "Dein Fazit: einsteigen, fahren, nicht rechnen.",
-        "foule": "Dein Fazit: mehr Platz, weniger Tetris.",
-        "attente": "Dein Fazit: trocken warten, entspannt starten.",
-        "telephone": "Dein Fazit: voller Akku bis zur Endstation.",
-        "panorama": "Dein Fazit: einfach fahren, Aussicht inklusive.",
-        "frequence": "Dein Fazit: weniger warten, mehr wählen.",
-        "ponctualite": "Dein Fazit: ein Fahrplan, der Wort hält.",
-        "aucun": "Dein Fazit: Gutes bewahren, den Rest vereinfachen.",
-        "defaut": "Dein Fazit: leicht verständlich, angenehm unterwegs.",
-    }
     probleme = (problemes_fr if fr else problemes_de)[theme]
-    conclusion = (conclusions_fr if fr else conclusions_de).get(
-        conclusion_theme, (conclusions_fr if fr else conclusions_de)["defaut"]
+    variantes = (_CONCLUSIONS_FR if fr else _CONCLUSIONS_DE).get(
+        conclusion_theme, (_CONCLUSIONS_FR if fr else _CONCLUSIONS_DE)["defaut"]
+    )
+    conclusion = _choix_sans_repetition(
+        f"conclusion:{'fr' if fr else 'de'}:{conclusion_theme}", variantes
     )
     return f"{probleme} {idee}", conclusion
 
@@ -708,18 +802,22 @@ def _rapport_regles(lang: str, d: dict) -> dict:
 
     corps = "\n\n".join((p1, p2, conclusion))
     if _mots(corps) < 60:
+        # Un seul complément fixe ne suffisait pas toujours (le déficit de
+        # mots varie selon les données disponibles et la variante de
+        # conclusion tirée au sort): on ajoute autant de compléments que
+        # nécessaire, dans l'ordre, jusqu'à atteindre le minimum.
         confiance = _entier(d, "confiance", 0, 10)
-        ajout = ""
+        complements = list(_COMPLEMENTS_FR if langue == "fr" else _COMPLEMENTS_DE)
         if confiance is not None:
-            ajout = (f" Avec {confiance} sur 10 de confiance pour arriver à l’heure, tu attends surtout que cette promesse devienne une habitude."
-                     if langue == "fr" else
-                     f" Mit {confiance} von 10 Punkten Vertrauen in die pünktliche Ankunft soll dieses Versprechen nun zur Gewohnheit werden.")
-        else:
-            ajout = (" L’objectif n’est pas d’en faire plus, mais de rendre chaque étape plus évidente."
-                     if langue == "fr" else
-                     " Das Ziel ist nicht mehr Aufwand, sondern ein klarerer Ablauf bei jedem Schritt.")
-        p2 += ajout
-        corps = "\n\n".join((p1, p2, conclusion))
+            complements.insert(0,
+                (f" Avec {confiance} sur 10 de confiance pour arriver à l’heure, tu attends surtout que cette promesse devienne une habitude."
+                 if langue == "fr" else
+                 f" Mit {confiance} von 10 Punkten Vertrauen in die pünktliche Ankunft soll dieses Versprechen nun zur Gewohnheit werden."))
+        for ajout in complements:
+            if _mots(corps) >= 60:
+                break
+            p2 += ajout
+            corps = "\n\n".join((p1, p2, conclusion))
 
     # Les modèles ci-dessus restent volontairement courts. Cette protection
     # évite toutefois qu'une valeur administrateur anormalement longue déborde.
