@@ -118,7 +118,7 @@ button{font:inherit}
 
 /* Échelle sans curseur */
 .scale-wrap{width:min(960px,84vw);display:flex;flex-direction:column;gap:16px}
-.scale-values{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:clamp(4px,.6vw,9px)}
+.scale-values{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:clamp(4px,.6vw,9px)}
 .scale-value{height:clamp(42px,6.4vw,74px);display:grid;place-items:center;border:2px solid var(--line);border-radius:11px;background:#17181c;color:var(--paper);font-size:clamp(15px,1.8vw,25px);font-weight:900;transition:.14s}
 .scale-value.selected{background:var(--yellow);border-color:var(--yellow);color:var(--ink);transform:translateY(-7px)}
 .scale-labels{display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:clamp(12px,1.15vw,16px);font-weight:750}
@@ -153,6 +153,7 @@ button{font:inherit}
 .reaction.selected{background:var(--yellow);border-color:var(--yellow);color:var(--ink);transform:translateY(-9px)}
 
 /* Voix */
+.voice-heading{display:flex;flex-direction:column;align-items:flex-start;gap:12px;width:min(880px,84vw)}
 .voice-area{display:flex;flex-direction:column;gap:clamp(14px,2.2vh,26px);align-items:flex-start;width:min(880px,84vw)}
 .meter{display:flex;align-items:flex-end;gap:9px;height:84px}
 .meter i{width:15px;height:14%;border-radius:9px;background:var(--yellow)}
@@ -236,6 +237,10 @@ button{font:inherit}
  .report-barcode{flex:1 1 140px;min-width:140px}
  .report-body{grid-template-columns:1fr;gap:12px}
  .scale-values{gap:4px}.scale-value{border-radius:8px}
+ /* 5 réactions avec flex:1 1 0 se répartissaient de façon inégale en
+    largeur étroite (ex: 4 sur une ligne + 1 tout seul, comme "oublié").
+    Largeur fixe à 3 par ligne: deux lignes propres et centrées (3 puis 2). */
+ .reaction{flex:0 1 auto;width:calc(33.333% - 8px);min-width:0;max-width:none}
 }
 </style>
 </head>
@@ -362,11 +367,13 @@ button{font:inherit}
 </section>
 
 <section class="screen question-layout" id="e-voice">
- <h2 class="question" id="voice-question"></h2>
+ <div class="voice-heading">
+  <h2 class="question" id="voice-question"></h2>
+  <p class="voice-status" id="voice-status"></p>
+ </div>
  <div class="voice-area">
   <div class="meter" id="voice-meter" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <span class="timer" id="voice-timer" hidden>0:45</span>
-  <p class="voice-status" id="voice-status"></p>
   <div class="choices" id="voice-review" hidden>
    <button class="choice" data-action="listen" tabindex="-1"><span class="number">1</span><span id="voice-listen"></span></button>
    <button class="choice" data-action="redo" tabindex="-1"><span class="number">2</span><span id="voice-redo"></span></button>
@@ -580,9 +587,16 @@ let voiceCache={fr:null,de:null};
    clavier), avec un utterance vide et muet: after that, tous les appels
    suivants, même différés, restent audibles pour le reste de la session. */
 let speechUnlocked=false;
+/* Le déverrouillage initial ne suffit pas: sur iPhone, la fenêtre
+   d'activation de speechSynthesis accordée par un geste utilisateur peut
+   expirer après un délai (souvent quelques secondes) — largement dépassé
+   par la séquence consentement + attente de l'autorisation micro avant la
+   toute première question, d'où des premières questions restées
+   silencieuses. On réarme donc ce déverrouillage à CHAQUE pression
+   (silencieux, quasi instantané), pas seulement à la première. */
 function unlockSpeech(){
- if(speechUnlocked||!("speechSynthesis" in window))return;
  speechUnlocked=true;
+ if(!("speechSynthesis" in window))return;
  try{const u=new SpeechSynthesisUtterance("");u.volume=0;speechSynthesis.speak(u)}catch{}
 }
 /* Sur iPhone, aucune voix ne contient "natural/online/neural/google" (ce
@@ -591,7 +605,7 @@ function unlockSpeech(){
    bonne qualité disponible sur iOS, d'où une voix perçue comme "bizarre".
    Les voix "Enhanced/Premium" (téléchargées par l'utilisateur) ou "Siri"
    sont nettement meilleures et doivent être préférées quand disponibles. */
-function voiceScore(v){const n=v.name.toLowerCase();return (n.includes("natural")?8:0)+(n.includes("online")?5:0)+(n.includes("neural")?5:0)+(n.includes("google")?3:0)+(n.includes("siri")?7:0)+(n.includes("enhanced")?6:0)+(n.includes("premium")?6:0)+(!v.localService?2:0)}
+function voiceScore(v){const n=v.name.toLowerCase();return (n.includes("natural")?8:0)+(n.includes("online")?5:0)+(n.includes("neural")?5:0)+(n.includes("google")?3:0)+(n.includes("siri")?7:0)+(n.includes("enhanced")?6:0)+(n.includes("premium")?6:0)+(n.includes("compact")?-4:0)+(!v.localService?2:0)}
 function browserVoice(){if(voiceCache[lang])return voiceCache[lang];const list=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(lang));if(!list.length)return null;const pref=(cfg.tts&&cfg.tts["voix_"+lang])||"auto";voiceCache[lang]=(pref!=="auto"&&list.find(v=>v.name===pref))||list.sort((a,b)=>voiceScore(b)-voiceScore(a))[0];return voiceCache[lang]}
 if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>voiceCache={fr:null,de:null};
 /* iOS/Safari a un bug WebKit connu: enchaîner cancel() puis speak() dans le
@@ -609,7 +623,12 @@ function speakQuestion(q,done){stopSpeech();const spoken=(q["parle_"+lang]||"").
 /* Écrans */
 function animateWords(screen){screen.classList.remove("play");screen.querySelectorAll(".headline,.question,.language-title,.report-title").forEach(el=>{if(el.dataset.animated==="1")return;const words=el.textContent.trim().split(/\s+/);el.innerHTML=words.map((w,i)=>`<span class="word" style="animation-delay:${i*28}ms">${w}</span>`).join(" ");el.dataset.animated="1"});void screen.offsetWidth;screen.classList.add("play")}
 function show(id){resetPress();transitioning=true;const wipe=$("#wipe");wipe.classList.remove("go");void wipe.offsetWidth;wipe.classList.add("go");soundTransition();setTimeout(()=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));const screen=$("#"+id);screen.classList.add("active");animateWords(screen);transitioning=false},230)}
-function helpText(value){$("#interaction-text").textContent=value;$("#interaction").style.display=value?"flex":"none";$("#chrome-scrim").style.display=value?"block":"none"}
+/* Sur l'écran vocal, #voice-status (déjà présent, juste sous la question
+   depuis .voice-heading) affiche une consigne précise et contextuelle
+   ("Appuie pour répondre librement.", "On t'écoute…", "Ta réponse est
+   prête."): le bandeau générique tout en bas de l'écran serait redondant
+   avec elle, donc masqué sur cet écran précis. */
+function helpText(value){$("#interaction-text").textContent=value;const surEcranVocal=state==="voice-intro"||state==="voice-recording";$("#interaction").style.display=value&&!surEcranVocal?"flex":"none";$("#chrome-scrim").style.display=value&&!surEcranVocal?"block":"none"}
 function setHelp(value){helpChooseMode=false;helpText(value)}
 function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(text().firstQuestionHint);pendingFirstHint=false}else{helpText(text().pressIdle)}}
 function hideChrome(){$("#progress").style.display="none";setHelp("")}
@@ -664,10 +683,15 @@ function refreshStars(){document.querySelectorAll("#stars-zone .star").forEach((
 function nextStars(){const max=document.querySelectorAll("#stars-zone .star").length;currentStars=currentStars%max+1;refreshStars();soundMove()}
 async function validateStars(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"impact",valeur:String(currentStars)});else{localAnswers["q"+currentQuestion.id]=String(currentStars);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentStars)})}later(260,()=>showStep())}
 
-function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;currentScale=Math.min(5,max);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();for(let i=0;i<=max;i++){const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.textContent=String(i);zone.appendChild(b)}const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
+/* Une échelle 0-10 complète, c'est jusqu'à 10 pressions courtes pour
+   atteindre la valeur voulue avec un seul buzzer — beaucoup trop long.
+   On garde la plage 0-max envoyée au format actuel des réponses, mais on
+   ne propose plus que quelques paliers bien répartis à faire défiler. */
+let currentScalePaliers=[];
+function showScale(q){state="scale";currentQuestion=q;const max=(q.params&&q.params.max)||10;const n=5;currentScalePaliers=max<=n?Array.from({length:max+1},(_,i)=>i):Array.from({length:n},(_,i)=>Math.round(i*max/(n-1)));currentScale=Math.floor(currentScalePaliers.length/2);fitQuestion($("#scale-question"),q.displayText||q[lang]||q.fr);const zone=$("#scale-values");zone.replaceChildren();currentScalePaliers.forEach(v=>{const b=document.createElement("button");b.className="scale-value";b.tabIndex=-1;b.textContent=String(v);zone.appendChild(b)});const p=q.params||{};$("#scale-min").textContent=p["min_libelle_"+lang]||p.min_libelle_fr||"0";$("#scale-max").textContent=p["max_libelle_"+lang]||p.max_libelle_fr||String(max);refreshScale();show("e-scale");setHelpChoose();speakQuestion(q)}
 function refreshScale(){document.querySelectorAll("#scale-values .scale-value").forEach((b,i)=>b.classList.toggle("selected",i===currentScale))}
 function nextScale(){const max=document.querySelectorAll("#scale-values .scale-value").length-1;currentScale=currentScale>=max?0:currentScale+1;refreshScale();soundMove()}
-async function validateScale(){state="sending";soundOk();if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur:String(currentScale)});else{localAnswers["q"+currentQuestion.id]=String(currentScale);await send({question_id:currentQuestion.id,cle:"reponse",valeur:String(currentScale)})}later(260,()=>showStep())}
+async function validateScale(){state="sending";soundOk();const valeur=String(currentScalePaliers[currentScale]);if(currentQuestion.concept)await send({concept_id:currentQuestion.concept.id,cle:"adoption",valeur});else{localAnswers["q"+currentQuestion.id]=valeur;await send({question_id:currentQuestion.id,cle:"reponse",valeur})}later(260,()=>showStep())}
 
 function showCompare(q){state="compare";currentQuestion=q;currentCompare=0;fitQuestion($("#compare-question"),q.displayText);const items=(q["options_"+lang]&&q["options_"+lang].length)?q["options_"+lang]:q.options_fr;currentItems=items;$("#compare-a").textContent=items[0]||"A";$("#compare-b").textContent=items[1]||"B";$("#compare-or").textContent=text().or;refreshCompare();show("e-compare");setHelpChoose();speakQuestion(q)}
 function refreshCompare(){$("#compare-a").classList.toggle("selected",currentCompare===0);$("#compare-b").classList.toggle("selected",currentCompare===1)}
