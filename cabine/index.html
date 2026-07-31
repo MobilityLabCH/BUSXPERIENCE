@@ -277,6 +277,14 @@ button{font:inherit}
  </div>
 </section>
 
+<section class="screen center" id="e-tutorial">
+ <div class="hero-stack">
+  <p class="eyebrow brand"><img src="/medias/Logo_Lockup_01_MobilityLab_White_Red.png" alt="MobilityLab">BUS XPERIENCE</p>
+  <h1 class="language-title" id="tutorial-title" data-animated="1"></h1>
+  <div class="choices" id="tutorial-choices"></div>
+ </div>
+</section>
+
 <section class="screen center" id="e-intro">
  <div class="hero-stack">
   <p class="eyebrow brand"><img src="/medias/Logo_Lockup_01_MobilityLab_White_Red.png" alt="MobilityLab">BUS XPERIENCE</p>
@@ -426,6 +434,9 @@ const TXT={
   firstQuestionHint:"Une pression pour changer. Maintiens jusqu’au signal pour valider.",
   scaleHelp:"Maintiens appuyé pour monter, relâche pour valider.",
   firstScaleHint:"Maintiens le buzzer appuyé: plus tu tiens, plus le score monte. Relâche pour valider.",
+  tutorialTitle:"Essaie le buzzer !",
+  tutorialHint:"Appuie court pour changer, appuie long pour valider.",
+  tutorialItems:["🚌 En route","🎉 Fiesta","⭐ Étoile","🚀 Décollage","🎯 Dans le mille"],
   introTitle:"TU MONTES À BORD. À PARTIR DE MAINTENANT, C’EST TON EXPÉRIENCE QUI COMPTE.",
   introSub:"5 minutes pour améliorer le bus.",consentKicker:"Avant de commencer",
   consentTitle:"À toi de décider.",
@@ -457,6 +468,9 @@ const TXT={
   firstQuestionHint:"Kurz drücken zum Wechseln. Bis zum Signal halten, um zu bestätigen.",
   scaleHelp:"Gedrückt halten zum Erhöhen, loslassen zum Bestätigen.",
   firstScaleHint:"Buzzer gedrückt halten: je länger, desto höher der Wert. Loslassen zum Bestätigen.",
+  tutorialTitle:"Probier den Buzzer aus!",
+  tutorialHint:"Kurz drücken zum Wechseln, lange drücken zum Bestätigen.",
+  tutorialItems:["🚌 Los geht's","🎉 Party","⭐ Stern","🚀 Abflug","🎯 Volltreffer"],
   introTitle:"DU STEIGST EIN. AB JETZT GEHT ES UM DEIN ERLEBNIS.",
   introSub:"5 Minuten für ein besseres Bus-Erlebnis.",consentKicker:"Bevor es losgeht",
   consentTitle:"Du entscheidest.",
@@ -634,7 +648,7 @@ function show(id){resetPress();transitioning=true;const wipe=$("#wipe");wipe.cla
    avec elle, donc masqué sur cet écran précis. */
 function helpText(value){$("#interaction-text").textContent=value;const surEcranVocal=state==="voice-intro"||state==="voice-recording";$("#interaction").style.display=value&&!surEcranVocal?"flex":"none";$("#chrome-scrim").style.display=value&&!surEcranVocal?"block":"none"}
 function setHelp(value){helpChooseMode=false;helpText(value)}
-function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(state==="scale"?text().firstScaleHint:text().firstQuestionHint);pendingFirstHint=false}else{helpText(state==="scale"?text().scaleHelp:text().pressIdle)}}
+function setHelpChoose(){helpChooseMode=true;if(pendingFirstHint){helpText(state==="scale"?text().firstScaleHint:text().firstQuestionHint);pendingFirstHint=false}else{helpText(state==="scale"?text().scaleHelp:state==="tutorial"?text().tutorialHint:text().pressIdle)}}
 function hideChrome(){$("#progress").style.display="none";setHelp("")}
 function resetAnimated(...ids){ids.forEach(id=>{const el=$(id);if(el)el.dataset.animated="0"})}
 
@@ -659,14 +673,29 @@ function confirmSelection(selector=".choice"){const nodes=[...document.querySele
 
 /* Démarrage */
 function start(){clearTimers();stopSpeech();state="language";selection=0;hideChrome();renderChoices($("#language-choices"),["Français","Deutsch"],0);show("e-language");setHelpChoose()}
-function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?priv.text_de:priv.text_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-title").textContent=text().privacyCardTitle;$("#consent-privacy-desc").textContent=text().privacyCardDesc;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyCardTitle;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");state="intro";show("e-intro");setHelp(text().press)}
+function chooseLanguage(){lang=selection===1?"de":"fr";document.documentElement.lang=lang;const priv=cfg.privacy||DEMO.privacy;$("#intro-title").textContent=text().introTitle;$("#intro-subtitle").textContent=text().introSub;$("#consent-kicker").textContent=text().consentKicker;$("#consent-title").textContent=text().consentTitle;$("#consent-copy").textContent=(lang==="de"?priv.text_de:priv.text_fr)||"";$("#consent-oui").textContent=text().consentOui;$("#consent-non").textContent=text().consentNon;$("#consent-privacy-title").textContent=text().privacyCardTitle;$("#consent-privacy-desc").textContent=text().privacyCardDesc;$("#consent-privacy-link").href=(lang==="de"?priv.url_de:priv.url_fr)||"#";$("#consent-qr").alt=text().privacyCardTitle;$("#consent-qr").src=demo?"":("/api/qr/"+lang+".svg");$("#mic-unavailable-title").textContent=text().micUnavailableTitle;$("#mic-unavailable-sub").textContent=text().micUnavailableSub;$("#stop-confirm-title").textContent=text().stopTitle;resetAnimated("#intro-title","#consent-title");showTutorial()}
+/* Petit jeu d'entraînement au buzzer avant l'intro: apprend les deux
+   gestes utilisés pour tout le parcours (pression courte = changer,
+   pression longue = valider) sur un choix ludique sans enjeu, avant de
+   les redemander pour de vrai sur consentement/questions. */
+function showTutorial(){state="tutorial";$("#tutorial-title").textContent=text().tutorialTitle;renderChoices($("#tutorial-choices"),text().tutorialItems,Math.floor(text().tutorialItems.length/2));resetAnimated("#tutorial-title");show("e-tutorial");setHelpChoose()}
+function validateTutorial(){soundOk();state="intro";show("e-intro");setHelp(text().press)}
 function showConsent(){state="consent";renderChoices($("#consent-choices"),[text().consentOui,text().consentNon],0);show("e-consent");setHelpChoose()}
 async function consentChoice(){if(selection===1)return refuse();await tryMicThenLaunch()}
 function refuse(){state="refused";hideChrome();$("#report-loading").textContent=text().noThanks;$("#report-card").hidden=true;show("e-report");later(3500,returnWaiting)}
 /* Le microphone n'est jamais ouvert avant validation explicite du "Oui".
    Les pistes obtenues pour le test sont arrêtées immédiatement; aucune
-   session n'est créée si l'autorisation est refusée ou indisponible. */
-async function tryMicThenLaunch(){state="sending";setHelp("");let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{return showMicUnavailable()}stream.getTracks().forEach(t=>t.stop());musicStart();await launchSession()}
+   session n'est créée si l'autorisation est refusée ou indisponible.
+
+   Sur iPhone, la boîte de dialogue système "Autoriser le microphone" met la
+   page en arrière-plan le temps que l'utilisateur réponde — ce qui semble
+   réinitialiser l'état d'activation de speechSynthesis au même titre qu'un
+   vrai changement d'onglet. Résultat observé: les toutes premières
+   questions restaient muettes sur iPhone alors que les suivantes se
+   lisaient normalement. On réarme donc explicitement juste après avoir
+   récupéré le focus (résolution de la promesse), avant la toute première
+   question. */
+async function tryMicThenLaunch(){state="sending";setHelp("");let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{unlockSpeech();return showMicUnavailable()}unlockSpeech();stream.getTracks().forEach(t=>t.stop());musicStart();await launchSession()}
 async function launchSession(){if(demo){participantCode="BX-DEMO-0000";buildSequence();stepIndex=0;showStep(0);return}const fd=new FormData();fd.set("lang",lang);fd.set("participants","1");fd.set("mic_ok","1");fd.set("consent_version",(cfg.privacy&&cfg.privacy.version)||"");try{const r=await fetch("/api/sessions",{method:"POST",body:fd});if(!r.ok)throw new Error("refuse");const d=await r.json();session=d.session_id;participantCode=d.participant_code}catch{return showMicUnavailable()}buildSequence();stepIndex=0;showStep(0)}
 function showMicUnavailable(){clearTimers();stopSpeech();musicHardMuted=false;musicStop();state="mic-unavailable";session=null;hideChrome();show("e-mic-unavailable");later(3500,returnWaiting)}
 async function abandonnerSession(){if(!demo&&session){try{await fetch(`/api/sessions/${session}/abandonner`,{method:"POST"})}catch{}}}
@@ -846,7 +875,7 @@ function pressUp(directTap){
  const duration=Date.now()-pressStarted;
  const wasScale=state==="scale";
  pressHeld=false;pressStarted=0;pressVisual(false);disarmVisuals();
- if(helpChooseMode)helpText(pendingFirstHint?text().firstQuestionHint:text().pressIdle);
+ if(helpChooseMode)helpText(pendingFirstHint?text().firstQuestionHint:state==="tutorial"?text().tutorialHint:text().pressIdle);
  if(transitioning)return; // une transition d'écran est en cours: ignorer, jamais de double validation
  if(duration>=STOP_PRESS&&ABORTABLE.has(state))return openStopConfirm();
  if(wasScale)return releaseScale(duration); // geste unique: la durée du maintien EST la réponse
@@ -862,9 +891,9 @@ function resetPress(){
  if(helpChooseMode)helpText(text().pressIdle);
 }
 
-function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="reaction")return nextReaction();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
+function shortPress(){resetIdle();if(state==="waiting")return start();if(state==="intro")return showConsent();if(state==="concept")return showStep();if(state==="report"||state==="refused"||state==="mic-unavailable")return returnWaiting();if(state==="language"||state==="consent"||state==="choice"||state==="stop-confirm"||state==="tutorial")return nextSelection(state==="language"?"#language-choices .choice":state==="consent"?"#consent-choices .choice":state==="stop-confirm"?"#stop-confirm-choices .choice":state==="tutorial"?"#tutorial-choices .choice":"#choice-options .choice");if(state==="stars")return nextStars();if(state==="reaction")return nextReaction();if(state==="compare")return nextCompare();if(state==="voice-intro")return startRecording();if(state==="voice-recording")return stopRecording();if(state==="voice-review")return nextSelection("#voice-review .choice")}
 function longPress(){resetIdle();if(["waiting","intro","concept","report","refused","mic-unavailable","voice-intro","voice-recording"].includes(state))return shortPress();validateCurrent()}
-function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="reaction")return validateReaction();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
+function validateCurrent(){if(state==="language")return chooseLanguage();if(state==="tutorial")return validateTutorial();if(state==="consent")return consentChoice();if(state==="choice")return validateChoice();if(state==="stars")return validateStars();if(state==="reaction")return validateReaction();if(state==="compare")return validateCompare();if(state==="voice-review")return reviewAction();if(state==="stop-confirm")return stopConfirmChoice()}
 
 /* "Tu peux arrêter à tout moment": appui de 4 s pendant le parcours. */
 function openStopConfirm(){clearTimers();if(state==="voice-recording"){try{recorder&&recorder.state!=="inactive"&&recorder.stop()}catch{}voiceStream&&voiceStream.getTracks().forEach(t=>t.stop())}preAbortState=state;const active=document.querySelector(".screen.active");preAbortScreen=active?active.id:"e-waiting";state="stop-confirm";renderChoices($("#stop-confirm-choices"),[text().stopContinue,text().stopDelete],0);show("e-stop-confirm");setHelpChoose()}
@@ -924,7 +953,7 @@ document.addEventListener("pointerup",e=>{
 });
 document.addEventListener("pointercancel",()=>{pressIgnoredGesture=false;pressDirectTap=false;resetPress()});
 window.addEventListener("blur",resetPress);
-document.addEventListener("visibilitychange",()=>{if(document.hidden)resetPress()});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){resetPress()}else if(speechUnlocked){unlockSpeech()}});
 
 function resetIdle(){clearTimeout(idleTimer);idleTimer=setTimeout(()=>{if(!["waiting","voice-recording","report"].includes(state))returnWaiting()},120000)}
 resetIdle();animateWords($("#e-waiting"));

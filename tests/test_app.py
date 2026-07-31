@@ -215,6 +215,46 @@ def test_deverrouillage_vocal_rearme_a_chaque_pression(client):
     assert "if(speechUnlocked" not in corps.replace(" ", "")
 
 
+def test_deverrouillage_vocal_reamre_apres_permission_micro(client):
+    """Root cause identifiée en usage réel: sur iPhone, la boîte de dialogue
+    système "Autoriser le microphone" (déclenchée par tryMicThenLaunch,
+    juste avant la toute première question) met la page en arrière-plan le
+    temps que l'utilisateur réponde, ce qui semble réinitialiser l'état
+    d'activation de speechSynthesis — d'où des premières questions
+    silencieuses même avec le réarmement à chaque pression (aucune pression
+    n'a lieu pendant que la boîte système est affichée). Il faut donc
+    réarmer explicitement dès que le focus revient (résolution de la
+    promesse getUserMedia, et plus généralement à chaque retour de
+    visibilité de la page)."""
+    h = client.get("/cabine/").text
+    debut = h.index("async function tryMicThenLaunch(){")
+    fin = h.index("async function launchSession(){", debut)
+    corps = h[debut:fin]
+    assert corps.count("unlockSpeech()") >= 2, (
+        "unlockSpeech() doit être réarmé après getUserMedia, succès et échec")
+    assert 'addEventListener("visibilitychange"' in h and "unlockSpeech()" in h[
+        h.index('addEventListener("visibilitychange"'):h.index('addEventListener("visibilitychange"') + 200]
+
+
+def test_tutoriel_buzzer_avant_le_consentement(client):
+    """Après avoir choisi la langue, un petit jeu sans enjeu (choisir un
+    emoji) fait pratiquer les deux gestes du buzzer (pression courte =
+    changer, pression longue = valider) avant de les redemander pour de
+    vrai sur le consentement puis les questions."""
+    h = client.get("/cabine/").text
+    assert 'id="e-tutorial"' in h and 'id="tutorial-choices"' in h
+    assert "tutorialHint" in h and "tutorialItems" in h
+    # chooseLanguage() doit maintenant mener au tutoriel plutôt que
+    # directement à l'écran d'intro
+    debut = h.index("function chooseLanguage(){")
+    fin = h.index("function showTutorial(){", debut)
+    assert "showTutorial()" in h[debut:fin] and 'show("e-intro")' not in h[debut:fin]
+    # court presse = change la sélection, longue presse = valide et avance
+    assert '"#tutorial-choices .choice"' in h
+    m = re.search(r"function validateTutorial\(\)\{([^}]*)\}", h)
+    assert m and 'show("e-intro")' in m.group(1)
+
+
 def test_lecture_vocale_ne_cancel_speak_pas_dans_le_meme_tick_ios(client):
     """Bug WebKit connu sur iPhone: enchaîner speechSynthesis.cancel() puis
     .speak() dans le même tick fait parfois disparaître silencieusement le
